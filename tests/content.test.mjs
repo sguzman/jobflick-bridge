@@ -68,6 +68,8 @@ function simulate(initialYaml = yaml, validateOK = true, probeOptions = {}) {
     createElement(tag) { return new Element(tag); },
     querySelectorAll(selector) {
       if (selector === "main pre") return pres;
+      if (selector === ".jobflick-bridge-run")
+        return pres.map(block => block.button).filter(button => button?.isConnected);
       if (selector.includes("#prompt-textarea")) {
         const count = probeOptions.composerCount ??
           (probeOptions.composerPresent ? 1 : 0);
@@ -202,6 +204,46 @@ test("YAML mutation during async validation cannot create a stale Run button", a
   assert.equal(app.messages.filter(x => x.type === "jobflick:validate").length, 2);
   assert.match(app.pre.button.textContent, /Run Jobflick/);
   assert.equal(app.messages.filter(x => x.type === "jobflick:submit").length, 0);
+});
+
+test("A-to-B-to-A SPA history revokes an unchanged Run control irreversibly",async()=>{
+  const app=simulate();
+  app.focus();
+  await app.pump();
+  const stale=app.pre.button;
+  assert.match(stale.textContent,/Run Jobflick/);
+  app.route.pathname="/c/other-1234";
+  const revoked=await app.runtimeListener({type:"jobflick:route-revoked"});
+  assert.equal(revoked.ok,true);
+  app.route.pathname="/c/testing-1234";
+  assert.equal(stale.isConnected,false,
+    "Returning to the original URL must not revive a stale Run grant");
+  await stale.handlers.click({isTrusted:true});
+  assert.equal(app.messages.some(m=>m.type==="jobflick:submit"),false);
+  app.focus();
+  await app.pump();
+  assert.notEqual(app.pre.button,stale);
+  assert.match(app.pre.button.textContent,/Run Jobflick/);
+  assert.equal(app.messages.filter(m=>m.type==="jobflick:validate").length,2);
+});
+
+test("A-to-B-to-A navigation revokes pending native YAML validation",async()=>{
+  let release;
+  const gate=new Promise(resolve=>{release=resolve;});
+  const app=simulate(yaml,true,{validationGate:gate});
+  app.focus();
+  await app.pump();
+  app.route.pathname="/c/other-1234";
+  await app.runtimeListener({type:"jobflick:route-revoked"});
+  app.route.pathname="/c/testing-1234";
+  release();
+  await app.pump();
+  assert.equal(app.pre.button,undefined,
+    "Late successful native validation cannot restore previous authorization");
+  app.focus();
+  await app.pump();
+  assert.match(app.pre.button.textContent,/Run Jobflick/);
+  assert.equal(app.messages.filter(m=>m.type==="jobflick:submit").length,0);
 });
 
 test("SPA route change revokes old Run button even when code node survives",async()=>{

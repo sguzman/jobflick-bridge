@@ -52,7 +52,13 @@ async function main(){
     ' if(message?.type==="jobflick:qa-probe")return browser.tabs.sendMessage(sender.tab.id,{type:"jobflick:probe-upload"});',
     ' if(message?.type==="jobflick:submit"){submitted++;return Promise.resolve({ok:false,message:"Synthetic fixture never queues work"});}',
     ' return Promise.resolve({ok:false,message:"Unknown synthetic action"});',
-    '});'
+    '});',
+    // Reproduce the production background History API revocation using the
+    // disposable localhost host allowance, without running native commands.
+    'browser.webNavigation.onHistoryStateUpdated.addListener(details=>{',
+    ' if(details.frameId===0)void browser.tabs.sendMessage(details.tabId,',
+    '  {type:"jobflick:route-revoked"}).catch(()=>{});',
+    '},{url:[{hostEquals:"127.0.0.1"}]});'
   ].join("\n"));
 
   const yaml=[
@@ -220,6 +226,41 @@ async function main(){
       return found.length===1 ? found[0] : false;
     },10000);
     assert.match(await newRouteButton.getText(),/Run Jobflick/);
+
+    // Exact same pre/code element, two rapid SPA route transitions, then
+    // return to the initial URL. Firefox must revoke the original button
+    // without needing a click on the intervening conversation.
+    await driver.navigate().refresh();
+    const returnedButton=await driver.wait(async()=>{
+      await driver.executeScript(
+        "document.querySelector('pre').dispatchEvent(new Event('focusin',{bubbles:true}));"
+      );
+      const found=await driver.findElements(By.css(".jobflick-bridge-run"));
+      return found[0] || false;
+    },10000);
+    const before=await driver.executeScript(
+      "return document.querySelector('main pre')");
+    assert(before);
+    await driver.executeScript(
+      "history.pushState({},'', '/intermediate-qa-route');"+
+      "history.pushState({},'', '/');");
+    await driver.wait(async()=>(
+      await driver.findElements(By.css(".jobflick-bridge-run"))
+    ).length===0,10000);
+    await driver.executeScript(
+      "document.querySelector('pre').dispatchEvent(new Event('focusin',{bubbles:true}));");
+    const restored=await driver.wait(async()=>{
+      const found=await driver.findElements(By.css(".jobflick-bridge-run"));
+      return found.length===1?found[0]:false;
+    },10000);
+    assert.match(await restored.getText(),/Run Jobflick/);
+    await driver.executeScript(
+      "document.dispatchEvent(new Event('jobflick-qa-count'));");
+    await driver.wait(async()=>await driver.executeScript(
+      "return document.documentElement.dataset.qaSubmitCount!==undefined"),5000);
+    assert.equal(await driver.executeScript(
+      "return document.documentElement.dataset.qaSubmitCount"),"0",
+      "Round-trip History navigation is never an execution gesture");
 
     // Read-only composer and FileList preflight in actual Firefox.
     await driver.executeScript(

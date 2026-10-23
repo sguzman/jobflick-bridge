@@ -22,6 +22,9 @@
   // Retain a small bounded status cache so early completion is not lost.
   const earlyStatus = new Map();
   const MAX_EARLY_STATUSES = 32;
+  // Firefox reports History API changes even when React reuses a DOM node.
+  // The epoch invalidates A->B->A round trips that URL equality alone misses.
+  let navigationEpoch = 0;
   const TERMINAL = new Set(["succeeded", "failed", "cancelled", "timed_out", "interrupted"]);
   const rank = value => TERMINAL.has(value) ? 2 : value === "running" ? 1 : 0;
   // A SPA may retain the exact same code node while changing conversations.
@@ -34,7 +37,8 @@
     return site.origin + (site.pathname.replace(/\/+$/, "") || "/");
   }
   function paintStatus(state, message) {
-    if (!state?.button?.isConnected || state.route !== routeIdentity()) return;
+    if (!state?.button?.isConnected || state.epoch !== navigationEpoch ||
+        state.route !== routeIdentity()) return;
     // Native completion is terminal. Firefox event delivery can lag behind
     // a newer acknowledgement; never repaint completion as running/queued.
     if (TERMINAL.has(state.renderedStatus) ||
@@ -74,8 +78,8 @@
     try {
       const reply = await browser.runtime.sendMessage({ type: "jobflick:validate", yaml: state.yaml });
       if (!reply?.ok || !pre.isConnected || !pre.closest("main") ||
-          states.get(pre) !== state || state.route !== routeIdentity() ||
-          candidate(pre) !== state.yaml) return;
+          states.get(pre) !== state || state.epoch !== navigationEpoch ||
+          state.route !== routeIdentity() || candidate(pre) !== state.yaml) return;
       const button = document.createElement("button");
       button.type = "button";
       button.className = "jobflick-bridge-run";
@@ -95,7 +99,7 @@
         // A chat rerender may detach its code block but retain our button.
         // Remove the orphaned control lazily, without an idle DOM observer.
         if (!pre.isConnected || !pre.closest("main") ||
-            state.route !== routeIdentity()) {
+            state.epoch !== navigationEpoch || state.route !== routeIdentity()) {
           button.remove();
           return;
         }
@@ -115,7 +119,7 @@
           // Jobflick owns that durable job; do not paint a result into a
           // different conversation or claim its old button is actionable.
           if (!button.isConnected || !pre.isConnected || !pre.closest("main") ||
-              state.route !== routeIdentity()) {
+              state.epoch !== navigationEpoch || state.route !== routeIdentity()) {
             button.remove();
             return;
           }
@@ -154,7 +158,7 @@
           }
         } catch (error) {
           if (!button.isConnected || !pre.isConnected || !pre.closest("main") ||
-              state.route !== routeIdentity()) {
+              state.epoch !== navigationEpoch || state.route !== routeIdentity()) {
             button.remove();
             return;
           }
@@ -184,10 +188,12 @@
       // A validated button from a prior SPA route cannot authorize code
       // under a new conversation, even if the DOM node and YAML are reused.
       if (old?.yaml === yaml && old.route === route &&
+          old.epoch === navigationEpoch &&
           (old.button?.isConnected || old.validating)) continue;
       if (old?.jobId) byJob.delete(old.jobId);
       old?.button?.remove();
-      const state = { yaml, route, submitted: false, button: null, jobId: null,
+      const state = { yaml, route, epoch: navigationEpoch,
+        submitted: false, button: null, jobId: null,
         validating: true, renderedStatus: null };
       states.set(pre, state);
       void validate(pre, state);
@@ -205,6 +211,21 @@
   document.addEventListener("focusin", intent, { capture: true });
 
   browser.runtime.onMessage.addListener(message => {
+    if (message?.type === "jobflick:route-revoked") {
+      // Only the extension background can deliver runtime.onMessage to a
+      // content script. Revoke stale Run controls on any top-level SPA event,
+      // including A->B->A when the URL has already returned to A.
+      navigationEpoch++;
+      dirty.clear();
+      if (timer !== null) clearTimeout(timer);
+      timer = null;
+      byJob.clear();
+      earlyStatus.clear();
+      for (const button of document.querySelectorAll(".jobflick-bridge-run")) {
+        button.remove();
+      }
+      return Promise.resolve({ ok: true });
+    }
     if (message?.type === "jobflick:probe-upload") {
       // Bounded, read-only inspection. We never read/return draft text or
       // file names, click attachment controls, create File objects, or send.
