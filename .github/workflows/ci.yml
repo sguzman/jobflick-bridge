@@ -37,7 +37,7 @@ jobs:
         uses: browser-actions/setup-firefox@v1
         with:
           firefox-version: latest-devedition
-      - uses: browser-actions/setup-geckodriver@v1
+      - uses: browser-actions/setup-geckodriver@5ef1526ed36211ab6cb531ec1cfb11f924ca2dee
       - name: Install CI-only WebDriver library
         run: npm install --no-save --no-package-lock selenium-webdriver@4.35.0
       - name: Headless Firefox Developer Edition add-on load
