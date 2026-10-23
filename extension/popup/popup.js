@@ -9,6 +9,7 @@ const probe = document.getElementById("probe-upload");
 const older = document.getElementById("load-older");
 const PAGE_SIZE = 40;
 let nextOffset = 0;
+let inboxGeneration = 0;
 const FINISHED = new Set(["succeeded", "failed", "cancelled", "timed_out", "interrupted"]);
 
 function say(message) {
@@ -194,11 +195,14 @@ function renderItem(job) {
 }
 
 async function loadOlder() {
+  const generation = inboxGeneration;
   older.disabled = true;
   try {
     const response = await ask("jobflick:inbox", {
       offset: nextOffset, limit: PAGE_SIZE
     });
+    // A Refresh may supersede this request while native messaging is busy.
+    if (generation !== inboxGeneration) return;
     if (!Array.isArray(response.jobs) || response.jobs.length > PAGE_SIZE ||
         !Number.isInteger(response.nextOffset) ||
         response.nextOffset !== nextOffset + response.jobs.length ||
@@ -212,11 +216,12 @@ async function loadOlder() {
     nextOffset = response.nextOffset;
     older.hidden = !response.hasMore;
   } finally {
-    older.disabled = false;
+    if (generation === inboxGeneration) older.disabled = false;
   }
 }
 
 async function load() {
+  inboxGeneration++;
   jobsElement.replaceChildren();
   nextOffset = 0;
   older.hidden = true;
