@@ -68,7 +68,9 @@ jobs:
 
   real-jobflick:
     name: Isolated real Jobflick native-host acceptance
-    runs-on: ubuntu-latest
+    # Pin stable LTS package mirrors; Ubuntu "latest" preview mirror downloads
+    # have repeatedly delayed or timed out on the Fish package.
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
