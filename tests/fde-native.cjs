@@ -46,10 +46,12 @@ async function main() {
   manifest.browser_specific_settings.gecko.id = originId;
   manifest.host_permissions = ["http://127.0.0.1/*"];
   manifest.content_scripts = [{ matches: ["http://127.0.0.1/*"],
-    js: ["content.js","qa-route.js"], run_at: "document_idle" }];
+    js: ["attachment-adapter.js","content.js","qa-route.js"], run_at: "document_idle" }];
   manifest.action = { default_title: "Firefox Native QA" };
   fs.writeFileSync(path.join(ext, "manifest.json"), JSON.stringify(manifest));
   // Use the complete unmodified production content script.
+  fs.copyFileSync(path.join(production,"attachment-adapter.js"),
+    path.join(ext,"attachment-adapter.js"));
   fs.copyFileSync(path.join(production, "content.js"), path.join(ext, "content.js"));
   // Disposable QA-only diagnostic; no user content or report is exposed.
   fs.writeFileSync(path.join(ext,"qa-route.js"), [

@@ -23,11 +23,13 @@ async function main(){
   manifest.host_permissions=["http://127.0.0.1/*"];
   manifest.content_scripts=[{
     matches:["http://127.0.0.1/*"],
-    js:["content.js"],run_at:"document_idle"
+    js:["attachment-adapter.js","content.js"],run_at:"document_idle"
   }];
   manifest.background={scripts:["qa-background.js"]};
   manifest.action={default_title:"Synthetic browser QA"};
   fs.writeFileSync(path.join(temporary,"manifest.json"),JSON.stringify(manifest));
+  fs.copyFileSync(path.join(extensionRoot,"attachment-adapter.js"),
+    path.join(temporary,"attachment-adapter.js"));
   fs.copyFileSync(path.join(extensionRoot,"content.js"),path.join(temporary,"content.js"));
   fs.writeFileSync(path.join(temporary,"qa-background.js"),[
     '"use strict";',
