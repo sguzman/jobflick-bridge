@@ -680,7 +680,7 @@ async function reconcileTabRoute(tabId, nextUrl) {
 browser.tabs.onUpdated.addListener((id, change, tab) => {
   if (typeof change.url === "string") {
     void reconcileTabRoute(id, change.url)
-      .then(() => checkJobs()).catch(() => {});
+      .then(() => canonical(change.url) ? checkJobs() : null).catch(() => {});
   } else if (change.status === "complete" && canonical(tab?.url)) {
     // Unrelated sites aren't Jobflick activity. Native alarm/startup paths
     // still reconcile unfinished jobs while Firefox is browsing elsewhere.
@@ -696,16 +696,30 @@ browser.webNavigation.onHistoryStateUpdated.addListener(details => {
 }, { url: [{ hostEquals: "chatgpt.com" }, { hostEquals: "chat.openai.com" }] });
 
 browser.tabs.onRemoved.addListener(id => {
-  void browser.storage.session.remove("jobflick_origin_" + id);
-  // Keep job data; do not interpret a recycled numeric tab ID as its origin.
-  void mutate(jobs => {
-    for (const record of Object.values(jobs)) {
-      if (knownRecord(record) && record.tabId === id) {
-        record.orphaned = true;
-        record.deliveryState = "manual_only";
+  // A tab may close while originFor() is still writing the session token.
+  // Clear it *after* that write finishes, so a delayed session.set cannot
+  // revive the identity of a closed/recycled numeric tab ID.
+  void (async () => {
+    const flight = originFlights.get(id);
+    if (flight) await flight.catch(() => {});
+    await browser.storage.session.remove("jobflick_origin_" + id);
+  })().catch(() => {});
+  // Closing an unrelated Firefox tab must not rewrite the entire stored
+  // inbox. Existing records stay durable, but lose delivery eligibility.
+  void (async () => {
+    await serializedWrite;
+    const records = Object.values(await saved());
+    if (!records.some(record => knownRecord(record) &&
+        record.tabId === id && !record.orphaned)) return;
+    await mutate(jobs => {
+      for (const record of Object.values(jobs)) {
+        if (knownRecord(record) && record.tabId === id) {
+          record.orphaned = true;
+          record.deliveryState = "manual_only";
+        }
       }
-    }
-  });
+    });
+  })().catch(() => {});
 });
 browser.runtime.onStartup.addListener(() => {
   void reconcileOrigins().then(() => checkJobs()).catch(() => {});
