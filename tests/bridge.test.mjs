@@ -75,4 +75,7 @@ test("extension popup is packaged locally and requires no new browser domains", 
   assert(!manifest.permissions.includes("downloads"));
   assert(!manifest.permissions.includes("clipboardRead"));
   assert(!manifest.permissions.includes("<all_urls>"));
+  const popup = read("extension/popup/popup.js");
+  assert(popup.includes('parts[2] === "c"'));
+  assert(popup.includes('destination.username'));
 });

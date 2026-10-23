@@ -107,9 +107,16 @@ function renderItem(job) {
   // Explicit user action to open a chat is not automatic report delivery.
   try {
     const destination = new URL(job.conversation);
+    const parts = destination.pathname.split("/").filter(Boolean);
+    const validPart = value => /^[a-zA-Z0-9_-]{4,256}$/.test(value || "");
+    const validDirect = parts.length === 2 &&
+      (parts[0] === "c" || parts[0] === "uc") && validPart(parts[1]);
+    const validNested = parts.length === 4 && parts[0] === "g" &&
+      validPart(parts[1]) && parts[2] === "c" && validPart(parts[3]);
     if (destination.protocol === "https:" &&
         ["chatgpt.com", "chat.openai.com"].includes(destination.hostname) &&
-        destination.pathname.startsWith("/c/")) {
+        !destination.port && !destination.username && !destination.password &&
+        (validDirect || validNested)) {
       const open = element("button", "", "Open chat");
       open.type = "button";
       open.addEventListener("click", () => {

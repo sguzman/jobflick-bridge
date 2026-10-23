@@ -36,3 +36,7 @@ Attachment delivery is subject to live Firefox/ChatGPT integration testing. Do n
 ## Pending-job polling budget
 
 Firefox alarms are used only while there are unfinished tracked jobs. A poll inspects **at most 24 jobs**, ordered by the oldest `lastCheckedAt`. Even if a native host inspection fails, its attempt time advances so other jobs are not starved. This limits per-minute process creation without losing durable queue records. Explicit Refresh shares any current inspection run. The 40-job mock test checks that two polling cycles cover all 40 IDs exactly once; runtime/idle load still requires actual Firefox QA.
+
+## Conversation-route allowlist
+
+Origin routing accepts only exact HTTPS `chatgpt.com` / `chat.openai.com` conversation routes: `/c/{id}`, `/uc/{id}`, and `/g/{gpt-or-project-id}/c/{id}`, with bounded opaque segments. Settings, shares, project landing pages, homepage and unrelated routes are not valid job origins or result destinations. Query strings and hash fragments do not participate in identity. These patterns are evidence-guided but must remain a tested browser compatibility boundary as ChatGPT evolves; fail closed on new route types instead of posting to an assumed destination.

@@ -17,9 +17,18 @@ function canonical(value) {
     const u = new URL(value);
     if (u.protocol !== "https:" || !SITES.has(u.hostname) ||
         u.port || u.username || u.password) return null;
-    // Homepage cannot be a durable conversation destination.
+    // Only established conversation routes have stable destination identity.
+    // Handles ordinary /c/{id}, /uc/{id} and GPT/project /g/{id}/c/{id}.
+    // In particular /share, /settings, /auth and /g/{id}/project fail closed.
     const path = u.pathname.replace(/\/+$/, "") || "/";
-    return path === "/" ? null : u.origin + path;
+    const parts = path.split("/").filter(Boolean);
+    const segment = value => typeof value === "string" &&
+      /^[a-zA-Z0-9_-]{4,256}$/.test(value);
+    const direct = parts.length === 2 &&
+      (parts[0] === "c" || parts[0] === "uc") && segment(parts[1]);
+    const nested = parts.length === 4 && parts[0] === "g" &&
+      segment(parts[1]) && parts[2] === "c" && segment(parts[3]);
+    return direct || nested ? u.origin + path : null;
   } catch {
     return null;
   }

@@ -347,3 +347,25 @@ test("unexpected successful validation of malformed probe fails connection check
   assert.equal(result.ok, false);
   assert.match(result.message, /unexpectedly accepted/);
 });
+
+test("conversation routing accepts ordinary/project chats and denies share/settings pages", async () => {
+  const app = boot();
+  const candidates = [
+    ["https://chatgpt.com/c/testing-1234", true],
+    ["https://chatgpt.com/g/g-p-1234/c/chat-5678", true],
+    ["https://chatgpt.com/uc/testing-1234", true],
+    ["https://chatgpt.com/share/testing-1234", false],
+    ["https://chatgpt.com/g/g-p-1234/project", false],
+    ["https://chatgpt.com/settings", false],
+    ["https://chatgpt.com/auth/login", false],
+    ["https://chatgpt.com/c/short", true],
+    ["https://chatgpt.com/c/", false],
+    ["https://attacker.invalid/c/testing-1234", false]
+  ];
+  for (const [url, expected] of candidates) {
+    const sender = { url, tab: { id: 11, url } };
+    const answer = await app.listeners.message({ type: "jobflick:validate", yaml: sample }, sender);
+    assert.equal(answer.ok, expected, url);
+  }
+  assert.equal(app.requests.filter(r => r.action === "submit_spec").length, 0);
+});
