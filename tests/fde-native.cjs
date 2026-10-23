@@ -163,6 +163,10 @@ async function main() {
   ].join("\n");
   const html = "<!doctype html><html><head><meta charset='utf-8'></head><body>" +
     "<main><pre><code>" + yaml + "</code></pre></main>" +
+    // Synthetic occupied draft and attachment chip must survive native
+    // completion and explicit File handoff. Not a live ChatGPT UI test.
+    "<div id='prompt-textarea' contenteditable='true'>Existing human draft, preserve verbatim</div>" +
+    "<div id='qa-existing-chip' data-origin='human'>Existing user attachment</div>" +
     "<input type='file' id='qa-file-input' accept='text/plain,.txt'>" +
     "<button type='button' id='qa-export'>Read native report locally</button>" +
     "<output id='qa-result'></output>" +
@@ -256,6 +260,15 @@ async function main() {
     // tests; browser acceptance here is the real native status path.
     phase="native finished status propagation";
     await driver.wait(async()=>/succeeded/.test(await button.getText()),10000);
+    const untouched=()=>driver.executeScript(
+      "const draft=document.getElementById('prompt-textarea');"+
+      "const chip=document.getElementById('qa-existing-chip');"+
+      "return draft?.textContent==='Existing human draft, preserve verbatim'"+
+      "&&draft?.getAttribute('contenteditable')==='true'"+
+      "&&chip?.textContent==='Existing user attachment'"+
+      "&&chip?.dataset.origin==='human';");
+    assert.equal(await untouched(),true,
+      "Native completion must leave existing draft and attachment untouched");
     let completedJobId=null;
     if (realHost) {
       const dir=path.join(process.env.XDG_DATA_HOME,"jobflick","jobs");
@@ -292,6 +305,11 @@ async function main() {
       assert(handoff.size>0&&handoff.size<=524288);
       assert.equal(await driver.executeScript(
         "return document.documentElement.dataset.qaHandoff"),"done");
+      assert.equal(await untouched(),true,
+        "Explicit File handoff must not paste into an occupied composer or erase its attachment chip");
+      assert.equal(await driver.executeScript(
+        "return document.querySelectorAll('#prompt-textarea input, #prompt-textarea button').length"),0,
+        "QA must not inject controls into the occupied composer");
     }
     // Real Firefox History API navigation, not merely a mocked event.
     // Its URL must revoke this finished job's origin even after returning.
