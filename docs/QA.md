@@ -428,3 +428,26 @@ daemon executing a fixed harmless Fish job.
 
 This verifies the M1-08 Firefox lifecycle task, not a full browser-process
 restart, authenticated site delivery, or real desktop compositor recovery.
+
+## Verified M7-01: adversarial Firefox and native protocol behavior
+
+Disposable Firefox Developer Edition explicitly tested both directions of
+the Run authorization boundary. A hostile `data:` page with Execarium-like
+YAML received no production extension control, reflecting the restrictive
+manifest host permissions. Separately, a synthetic QA conversation loaded
+the unmodified production content script and invoked `.click()` plus a
+dispatched `MouseEvent` from page JavaScript: zero `submit_spec` messages
+were emitted. Real WebDriver-generated trusted mouse and Enter/Space
+activation was tested separately and cannot implicitly retry an uncertain
+submission.
+
+The existing Node adversarial matrix also rejects prototype-property job
+IDs, conflicting top-level/nested native job ID or origin, quarantined
+report/cancel requests, missing or stale tab authorization, oversized
+or modified YAML and forged extension popup messages. A failed native
+submission is never automatically retried. Static tests, Mozilla lint,
+Firefox add-on installation, forged-click checks, local File checks and
+manual export all passed in
+[Firefox CI](https://github.com/sguzman/jobflick-bridge/actions/runs/40040280329).
+This closes M7-01's browser/native safety-test gate, not authenticated
+ChatGPT site end-to-end validation or user-profile security assessment.
