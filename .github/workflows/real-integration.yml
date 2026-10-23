@@ -1,0 +1,72 @@
+name: Firefox Bridge Real Jobflick Integration
+on:
+  push:
+    branches: [main]
+    paths:
+      - "extension/**"
+      - "tests/**"
+      - "scripts/**"
+      - "package.json"
+      - ".github/workflows/ci.yml"
+      - ".github/workflows/real-integration.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jobflick-real-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  real-jobflick:
+    name: Isolated real Jobflick native-host acceptance
+    # Pin stable LTS package mirrors; Ubuntu "latest" preview mirror downloads
+    # have repeatedly delayed or timed out on the Fish package.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check out pinned upstream Jobflick for CI only
+        uses: actions/checkout@v4
+        with:
+          repository: sguzman/jobflick
+          ref: cbff2a4cb90be4487e1bbb406777cf7fe3b6cc1d
+          path: .ci-jobflick
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ".ci-jobflick -> target"
+          key: real-jobflick-bridge
+      - name: Install Fish and native Linux build requirements
+        run: |
+          # Azure-backed Ubuntu mirrors occasionally pause during downloads;
+          # the previous 150s limit expired mid-transfer (not at compilation).
+          sudo env DEBIAN_FRONTEND=noninteractive timeout 480s apt-get update -qq
+          sudo env DEBIAN_FRONTEND=noninteractive timeout 480s apt-get install -y fish jq libwayland-dev libxkbcommon-dev libx11-dev libxcb-shape0-dev libxcb-xfixes0-dev libgl1-mesa-dev pkg-config
+      - name: Fish launcher syntax and disposable native-host registration
+        run: |
+          fish --no-execute scripts/install-native-host.fish
+          fish --no-execute scripts/qa-firefox-developer.fish
+          node tests/native-host-installer.test.cjs
+      - name: Compile pinned Jobflick
+        working-directory: .ci-jobflick
+        run: cargo build --locked --bin jobflick
+      - name: Real native-host protocol and harmless Fish execution
+        env:
+          JOBFLICK_QA_BINARY: ${{ github.workspace }}/.ci-jobflick/target/debug/jobflick
+        run: node tests/real-jobflick.cjs
+      - id: fde
+        uses: browser-actions/setup-firefox@v1
+        with:
+          firefox-version: latest-devedition
+      - uses: browser-actions/setup-geckodriver@5ef1526ed36211ab6cb531ec1cfb11f924ca2dee
+      - name: Install CI-only Selenium library
+        run: npm install --no-save --no-package-lock selenium-webdriver@4.35.0
+      - name: Firefox Developer Edition to real isolated Jobflick daemon
+        env:
+          FDE_BINARY: ${{ steps.fde.outputs.firefox-path }}
+          JOBFLICK_QA_BINARY: ${{ github.workspace }}/.ci-jobflick/target/debug/jobflick
+          JOBFLICK_QA_REAL: "true"
+        run: node tests/fde-native.cjs
