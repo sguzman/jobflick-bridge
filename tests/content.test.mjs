@@ -93,10 +93,12 @@ function simulate(initialYaml = yaml, validateOK = true, probeOptions = {}) {
           if (probeOptions.earlyStatus) {
             await runtimeListener({
               type: "jobflick:status", jobId: "job_12345678",
-              state: "succeeded", name: "QA", color: "#aabbcc"
+              state: probeOptions.earlyState || "succeeded",
+              name: "QA", color: "#aabbcc"
             });
           }
-          return { ok: true, job: { id: "job_12345678", name: "QA", color: "#aabbcc" } };
+          return { ok: true, job: { id: "job_12345678",
+            name: "QA", color: "#aabbcc", state: probeOptions.submitState } };
         }
         throw new Error("Unexpected message type");
       },
@@ -284,4 +286,39 @@ test("textarea drafts are treated as occupied without revealing text",async()=>{
   assert.equal(result.fileInputAmbiguous,false);
   assert.equal(result.selectedFilePresent,false);
   assert.equal(JSON.stringify(result).includes("private text"),false);
+});
+
+test("already-finished native submission reply paints the terminal state immediately",async()=>{
+  for(const state of ["succeeded","failed","cancelled","timed_out","interrupted"]){
+    const app=simulate(yaml,true,{submitState:state});
+    app.focus();
+    await app.pump();
+    await app.pre.button.handlers.click({isTrusted:true});
+    assert.match(app.pre.button.textContent,new RegExp(state),state);
+    assert.equal(app.pre.button.disabled,true);
+    assert.equal(app.messages.filter(x=>x.type==="jobflick:submit").length,1);
+  }
+});
+
+test("early terminal status outranks a late queued or running submit reply",async()=>{
+  for(const submitState of ["queued","running"]){
+    const app=simulate(yaml,true,{earlyStatus:true,submitState});
+    app.focus();
+    await app.pump();
+    await app.pre.button.handlers.click({isTrusted:true});
+    assert.match(app.pre.button.textContent,/succeeded/);
+    assert.doesNotMatch(app.pre.button.textContent,/Queued/);
+    assert.equal(app.messages.filter(x=>x.type==="jobflick:submit").length,1);
+  }
+});
+
+test("early running status outranks an older queued submit reply",async()=>{
+  const app=simulate(yaml,true,{
+    earlyStatus:true,earlyState:"running",submitState:"queued"
+  });
+  app.focus();
+  await app.pump();
+  await app.pre.button.handlers.click({isTrusted:true});
+  assert.match(app.pre.button.textContent,/running/);
+  assert.doesNotMatch(app.pre.button.textContent,/Queued/);
 });
