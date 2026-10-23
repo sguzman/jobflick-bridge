@@ -60,3 +60,7 @@ The native Jobflick daemon remains authoritative. Firefox's local storage retain
 ## Metadata-only search
 
 The popup queries local metadata through the trusted background worker, not the Jobflick native host. Input is length bounded; the reply returns only a bounded page, pagination fields and existing safe metadata, without job log text or ChatGPT draft data. Search changes do not alter origin tokens or durable Jobflick output.
+
+## Quiet browser behavior
+
+Browser tab completion events on unrelated sites do not poll Jobflick. Changes to a ChatGPT route revoke only relevant saved origins, while duplicate route notifications avoid full local-storage writes. Firefox's native one-minute alarm and startup reconciliation remain the recovery mechanisms for jobs that outlive their original tab. For long-running jobs with unchanged state, the bounded poll updates one batch of check timestamps instead of reserializing the complete inbox per result.

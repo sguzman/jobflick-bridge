@@ -178,3 +178,9 @@ Adversarial Node tests cover an unfinished quarantined job (no popup stop and no
 The disposable Firefox Developer Edition synthetic test additionally uses the **production** read-only composer probe, routed through a test-only background messenger. It creates a nonempty contenteditable draft and two file inputs, preselects a harmless test File, and confirms the returned message contains **only seven boolean flags**: no draft text, file names or bytes. The test compares the actual DOM draft and File selection after inspection and confirms they are unchanged. It then clears those synthetic elements and confirms the empty/single-input flags.
 
 This is a no-side-effect read-only test on localhost. It does not establish recognition of the real ChatGPT attachment chip UI or consent to upload/Send.
+
+## Idle browser and long-running-job write bounds
+
+Jobflick's status loop records `lastCheckedAt` once per nonempty bounded poll batch. Unchanged native job states no longer rewrite the whole local inbox or send duplicate Firefox tab messages. The first terminal state or changed metadata is still persisted and reported. With an empty pending batch, explicit refresh and unrelated tab events perform no local storage write.
+
+Only tracked/changed ChatGPT routes can orphan existing jobs. Repeated same-conversation route events, navigation in unrelated tabs, and closing unrelated tabs do not rewrite the local inbox. Browser tab closures wait for an in-progress token mint to settle before removing the session key, preventing a delayed `storage.session.set` from restoring a closed tab's identity. Node tests measure write counts, cancellation-safe identity cleanup, and the ability of explicit Refresh to inspect pending jobs after unrelated browsing. Real long-duration desktop idle profiling is still outstanding.

@@ -111,3 +111,7 @@ Only **QA-only** code exposes the report-read action or uses the synthetic page 
 ## Native identity quarantine
 
 If Jobflick's inspection or optional report metadata ever disagrees with the saved job ID or browser-origin token, Firefox permanently marks that record as requiring manual recovery. Its popup hides **Request stop** and **Save report** to avoid acting on the wrong native job; the authoritative Jobflick inbox still retains the original job/report, and an explicit finished-record Forget only removes Firefox metadata.
+
+## 💤 Low-overhead Firefox idle operation
+
+Unrelated site navigation and tab completion do not cause Jobflick native inspections. Empty-job refreshes and duplicate same-conversation route notifications avoid storage writes; repeated unchanged native status replies likewise avoid redundant UI notifications and full inbox writes. The durable Firefox alarm continues recovering long-running jobs.
