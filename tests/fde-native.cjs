@@ -37,11 +37,16 @@ async function main() {
   manifest.browser_specific_settings.gecko.id = originId;
   manifest.host_permissions = ["http://127.0.0.1/*"];
   manifest.content_scripts = [{ matches: ["http://127.0.0.1/*"],
-    js: ["content.js"], run_at: "document_idle" }];
-  manifest.action = { default_title: "Firefox Native QA" };
+    js: ["qa-popup-url.js", "content.js"], run_at: "document_idle" }];
+  manifest.action = { default_title: "Firefox Native QA", default_popup: "popup/index.html" };
   fs.writeFileSync(path.join(ext, "manifest.json"), JSON.stringify(manifest));
   // Use the complete unmodified production content script.
   fs.copyFileSync(path.join(production, "content.js"), path.join(ext, "content.js"));
+  fs.cpSync(path.join(production,"popup"),path.join(ext,"popup"),{recursive:true});
+  // QA-only marker on a synthetic localhost page, never a real ChatGPT tab.
+  fs.writeFileSync(path.join(ext,"qa-popup-url.js"),
+    "document.documentElement.dataset.jobflickQaPopupUrl = browser.runtime.getURL('popup/index.html');");
+
   // Only URL identity is adapted to synthetic localhost. All native protocol,
   // job tracking and other production background logic stays unchanged.
   const originalBackground = fs.readFileSync(path.join(production, "background.js"), "utf8");
@@ -128,8 +133,37 @@ async function main() {
     assert.match(submits[0].origin_tab_id, /^tab-[a-zA-Z0-9_-]{8,128}$/);
     assert.equal(requests.some(r => r.action === "show"), false, "Reports are never read automatically");
     assert.equal(requests.some(r => r.action === "cancel"), false);
+    // The QA-only page marker lets WebDriver navigate to this extension's
+    // popup page. No content-script change is included in production.
+    phase="opening installed Firefox popup";
+    const popupUrl=await driver.executeScript(
+      "return document.documentElement.dataset.jobflickQaPopupUrl || ''"
+    );
+    assert.match(popupUrl,/^moz-extension:\/\//);
+    await driver.get(popupUrl);
+    await driver.wait(until.elementLocated(By.css("#jobs .job")),10000);
+    assert.match(await driver.findElement(By.css("#jobs")).getText(),/Firefox native QA/);
+    phase="refreshing native job status";
+    await driver.findElement(By.id("refresh")).click();
+    await driver.wait(async()=>{
+      const items=await driver.findElements(By.css("#jobs .job .state"));
+      return items.length && /succeeded/.test(await items[0].getText());
+    },10000);
+    const save=await driver.findElement(By.xpath("//button[normalize-space()='Save report']"));
+    const beforeShow=fs.readFileSync(logFile,"utf8").split("\n").filter(Boolean)
+      .map(JSON.parse).filter(x=>x.action==="show").length;
+    assert.equal(beforeShow,0);
+    phase="retrieving report into popup without download";
+    await save.click();
+    await driver.wait(until.elementLocated(
+      By.xpath("//button[normalize-space()='Download prepared report']")),10000);
+    const showCalls=fs.readFileSync(logFile,"utf8").split("\n").filter(Boolean)
+      .map(JSON.parse).filter(x=>x.action==="show").length;
+    assert.equal(showCalls,1,"Only explicit Save report may invoke show");
+    // Do not download the file in this acceptance test. It should remain in
+    // popup memory until an explicit second click.
     await driver.uninstallAddon(id);
-    console.log("Headless FDE Native Messaging: real bridge validate, single submit, opaque origin succeeded using fake no-execution host");
+    console.log("Headless FDE: real background Native Messaging, popup inbox and explicit report preparation passed; no command, download or ChatGPT Send");
   } catch(error) {
     const logFile=path.join(state,"native-requests.jsonl");
     const actions=fs.existsSync(logFile) ?
