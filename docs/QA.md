@@ -140,3 +140,7 @@ Mocked tests submit a terminal job and then make a second native response return
 ## Native origin disagreement regression
 
 Synthetic tests cover three outcomes: (1) real-backend-style matching submission origin accepted; (2) a conflicting submission origin rejected as uncertain, without creating an extension routing record; (3) a subsequent inspection with conflicting origin permanently orphaned for automatic delivery, with no status message sent to the previous tab. This protects the conversation association but does not substitute for authenticated attachment/Send QA.
+
+## Native identity quarantine acceptance
+
+Adversarial Node tests return an inspected native job with a different ID or origin token. The bridge must never paint the unrelated status, change the original job's name, or call `show`. The record becomes manual-only with an explicit integrity issue; subsequent Refresh and alarms cannot automatically re-inspect it. The native report stays in Jobflick for manual recovery. Authentic Firefox Developer Edition acceptance of mismatched responses remains distinct.

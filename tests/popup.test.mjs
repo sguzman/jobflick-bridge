@@ -274,3 +274,13 @@ test("search with no matches renders a specific empty state and clearing restore
   assert.equal(app.named.jobs.children[0].tag,"section");
   assert.equal(app.calls.filter(x=>x.type==="jobflick:report").length,0);
 });
+
+test("native identity conflicts are visible and never trigger report or command actions",async()=>{
+  const app=await boot([{
+    ...running,orphaned:true,deliveryState:"manual_only",
+    integrityIssue:"native_job_id_mismatch"
+  }]);
+  assert(app.find("Native identity mismatch. Automatic status checks and delivery are disabled for this record; inspect Jobflick directly."));
+  assert.equal(app.calls.filter(x=>x.type==="jobflick:report").length,0);
+  assert.equal(app.calls.filter(x=>x.type==="jobflick:submit").length,0);
+});

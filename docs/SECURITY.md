@@ -64,3 +64,7 @@ A Jobflick native response may have been accepted before the browser sees it. If
 ## Native origin-token agreement
 
 The real Jobflick native host can return an `origin_tab_id` on submission or inspection. Whenever present, the bridge verifies that it matches the opaque Firefox session token recorded for that job. A conflicting submission response is marked uncertain and never bound to a chat; a conflicting inspection response makes the prior browser record `manual_only` without delivering status to its tab. Neither condition triggers a second submission or automatic report retrieval. Historical native versions omitting this optional field remain supported.
+
+## Native inspection response quarantine
+
+When Jobflick supplies an `inspect` response with a different `job.id` or a conflicting `origin_tab_id`, the extension does not adopt its name, state, output or origin. It persists an explicit `integrityIssue`, irreversibly marks the record manual-only for browser delivery, and removes it from routine native status polling until a human recovers the original report in Jobflick. This avoids repeated requests against an inconsistent host. The popup surfaces the condition. Older hosts that omit optional origin metadata are not rejected solely for the absence of that field.

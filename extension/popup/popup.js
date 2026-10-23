@@ -57,6 +57,9 @@ function renderItem(job) {
   const state = element("div", "meta state", job.state + (job.orphaned ? " · original tab unavailable" : ""));
   section.append(state);
   section.append(element("div", "meta", "Job " + job.id));
+  if (job.integrityIssue) {
+    section.append(element("div", "meta", "Native identity mismatch. Automatic status checks and delivery are disabled for this record; inspect Jobflick directly."));
+  }
   if (job.deliveryState === "manual_only" && FINISHED.has(job.state)) {
     section.append(element("div", "meta", "Manual result retrieval only: original tab identity unavailable"));
   } else if (job.deliveryState === "report_pending_manual_delivery" && FINISHED.has(job.state)) {
