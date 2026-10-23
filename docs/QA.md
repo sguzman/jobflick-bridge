@@ -110,3 +110,9 @@ The popup's `Open chat` control requires an explicit click and opens only a vali
 The synthetic FDE browser test also removes a validated code block while leaving its Run button in the DOM. A click on this detached control must be inert; a newly inserted code block is separately validated and gains its own Run button. The new button is activated with Firefox WebDriver's Enter key, which must reach the same intentionally non-executing QA background. This proves key handling and detached-node rejection in actual Firefox, not a screen-reader audit or authenticated ChatGPT React-internals compatibility.
 
 When React removes the original code block but its adjacent Run button survives, a real click removes the orphaned button without contacting the native host. Cleanup is triggered by interaction, not by any page-wide observer or idle scan.
+
+## Actual Firefox SPA navigation and bounded fast-status checks
+
+CI now opens a synthetic ChatGPT-like conversation in **headless Firefox Developer Edition**, runs a Jobflick job using the genuine native host, and performs two real History API transitions: from conversation A to B and back to A. A QA-only read-only probe checks that the old saved result stays `manual_only` and cannot become automatically deliverable again. The QA URL adapter and probe never enter the production extension. A separate mock proves iframe history events do not revoke a top-level conversation token.
+
+A short post-submission status burst catches quickly finished native jobs without waiting for the once-per-minute recovery alarm. There are no idle timers; at most 32 pending job IDs are tracked, four per tick, with six checks per ID and 1.2-second spacing. Excess submissions use the normal durable Jobflick inbox/alarm flow. Synthetic 40-job stress and quick/slow-job timer tests pass. Actual authenticated ChatGPT upload and Send remain unaccepted.

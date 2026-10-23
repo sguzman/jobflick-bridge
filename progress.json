@@ -128,7 +128,7 @@
           "title": "DOM rerender resilience",
           "status": "implemented",
           "evidence": [
-            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+            "Actual FDE synthetic rerender, stale Run control removal, changed YAML and pushState route revocation tested; authenticated ChatGPT React DOM acceptance pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40015025541"
           ]
         },
         {
@@ -136,7 +136,7 @@
           "title": "Firefox lifecycle tests",
           "status": "implemented",
           "evidence": [
-            "Real headless Firefox temporary addon install plus localhost synthetic UI and native messaging tests; event-page suspension and full browser restart still awaiting target QA. https://github.com/sguzman/jobflick-bridge/actions/runs/40008094593"
+            "Real disposable FDE add-on, native-host round trip and History API route transition tests; full restart/event-page suspension in authenticated desktop QA pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40015025541"
           ]
         }
       ],
@@ -262,7 +262,7 @@
           "title": "Alarm polling",
           "status": "verified",
           "evidence": [
-            "Bounded 24-job polling and fair 40-job coverage pass mocked tests; no idle Firefox QA: https://github.com/sguzman/jobflick-bridge/actions/runs/39996306288"
+            "Real FDE fast native completion updates and bounded Node status tests (24-job fair alarm queue plus 32-job burst, four per tick, six checks/job); no idle timer. https://github.com/sguzman/jobflick-bridge/actions/runs/40015025541"
           ]
         },
         {
@@ -357,7 +357,7 @@
           "title": "Multi-tab tests",
           "status": "implemented",
           "evidence": [
-            "16 simulated content scripts and exact-origin routing tests; same-tab navigation and composer-probe races tested. Authenticated multi-chat result delivery still pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40010624085"
+            "Real FDE synthetic conversation A→B→A pushState permanently revokes old origin, plus 16-tab mocked tests. Authenticated multi-conversation upload/draft race acceptance pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40015025541"
           ]
         }
       ],
@@ -522,7 +522,7 @@
           "title": "Scale/idle QA",
           "status": "implemented",
           "evidence": [
-            "Node bounded stress tests for 8,000 blocks and 16 content scripts, actual FDE browser event and native tests; long-run idle profiling outstanding. https://github.com/sguzman/jobflick-bridge/actions/runs/40008094593"
+            "Bounded Node stress: 8,000 blocks, 16 tabs, 40 jobs, and real headless FDE route/status checks. Long-duration authenticated idle profiling remains pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40015025541"
           ]
         },
         {
@@ -546,7 +546,7 @@
           "title": "Safe QA setup",
           "status": "implemented",
           "evidence": [
-            "Disposable FDE + actual daemon CI checks with isolated HOME/XDG and test-only localhost origin; local EndeavourOS QA profile acceptance pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40010624085"
+            "Disposable Firefox Developer Edition and isolated Jobflick daemon on Linux CI; target EndeavourOS/Hyprland authenticated QA profile still pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40015025541"
           ]
         },
         {
@@ -578,8 +578,8 @@
   ],
   "last_ci": {
     "result": "success",
-    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40010624085",
-    "commit": "4fbf5bf706210ce5e288e0919548e39bb49e57a2",
-    "scope": "Node behavioral tests, actual headless Firefox Developer Edition content/background and Native Messaging integration against fake and real Jobflick; real pinned upstream daemon, single hardcoded Fish printf, durable origin, succeeded UI, report retrieval from native protocol. No authenticated ChatGPT upload, composer mutation or Send. Static and FDE tests include navigation-race hardening."
+    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40015025541",
+    "commit": "d68b0c18ac53d7c925977297f8b75c14aa9b435f",
+    "scope": "Node behavior and scale, actual disposable headless Firefox Developer Edition bridge to pinned real Jobflick backend (hardcoded Fish printf only), terminal state and bounded quick checks, synthetic History API A→B→A destination revocation; neither authenticated ChatGPT nor actual file attachment and Send acceptance."
   }
 }

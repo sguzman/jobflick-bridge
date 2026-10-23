@@ -69,3 +69,9 @@ Finished jobs whose original tab still matches its opaque session token and **ex
 The full **synthetic Firefox Developer Edition → actual Jobflick native-host → durable daemon → harmless Fish execution → finished-status UI** path passes in CI. The runner compiles a pinned upstream Jobflick revision and operates on private temporary XDG paths with a separate Gecko test ID. The exact executed command is a hardcoded `printf`, and no authenticated ChatGPT session is used. A separate no-execution native fixture continues to verify that the browser does not automatically fetch reports or send messages.
 
 The **Firefox popup itself** remains covered by behavioral tests because ordinary WebDriver refuses privileged `moz-extension://` browsing contexts. Uploading a report attachment, preserving a real ChatGPT draft, and automatic Send are still unavailable and must pass authenticated FDE acceptance before activation.
+
+## 🧭 Conversation navigation and responsive status
+
+Jobflick Bridge uses a narrowly filtered, read-only Firefox `webNavigation` listener for ChatGPT's History API transitions, in addition to normal tab URL updates. If the tab visits a different conversation, the old job becomes permanently `manual_only` for automatic delivery, even if the URL is later revisited. This was exercised with actual `history.pushState()` in disposable Firefox Developer Edition; nothing is read from another website or saved as browser history.
+
+After a confirmed submission, short-lived status rechecks run every 1.2 seconds for at most six attempts, with at most four jobs checked per tick and 32 jobs in the fast queue. The existing one-minute Firefox alarm remains responsible for long-running jobs and event-page restarts. There is no continuous idle poll. This behavior is verified with Node burst tests and actual Firefox-to-Jobflick completion checks.
