@@ -118,9 +118,9 @@
         {
           "id": "M1-06",
           "title": "Bounded queues",
-          "status": "implemented",
+          "status": "verified",
           "evidence": [
-            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+            "Behavioral bounds: max 16 hover candidates; 8,000 historical blocks inert until explicit scan; 16 mock conversations. Evidence: https://github.com/sguzman/jobflick-bridge/actions/runs/40001190037"
           ]
         },
         {
@@ -140,10 +140,10 @@
           ]
         }
       ],
-      "verified": 4,
+      "verified": 5,
       "total": 8,
-      "percent": 50,
-      "implemented": 4
+      "percent": 62,
+      "implemented": 3
     },
     {
       "id": "M2",
@@ -169,9 +169,9 @@
         {
           "id": "M2-03",
           "title": "Bounded native messages",
-          "status": "implemented",
+          "status": "verified",
           "evidence": [
-            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+            "Framed binary Native Messaging fake-host round trip, 256 KiB YAML and 512 KiB report bounds tested. Evidence: https://github.com/sguzman/jobflick-bridge/actions/runs/40001190037"
           ]
         },
         {
@@ -207,10 +207,10 @@
           ]
         }
       ],
-      "verified": 4,
+      "verified": 5,
       "total": 7,
-      "percent": 57,
-      "implemented": 3
+      "percent": 71,
+      "implemented": 2
     },
     {
       "id": "M3",
@@ -276,8 +276,10 @@
         {
           "id": "M3-08",
           "title": "Cancel option",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "Two-click popup stop request; one native cancel attempt under concurrent requests; awaiting real Jobflick stop acceptance. Evidence: https://github.com/sguzman/jobflick-bridge/actions/runs/40001190037"
+          ]
         },
         {
           "id": "M3-09",
@@ -291,7 +293,7 @@
       "verified": 7,
       "total": 9,
       "percent": 77,
-      "implemented": 1
+      "implemented": 2
     },
     {
       "id": "M4",
@@ -353,14 +355,16 @@
         {
           "id": "M4-08",
           "title": "Multi-tab tests",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "16-conversation mock tests and wrong-tab origin safeguards; full report delivery not yet implemented. Evidence: https://github.com/sguzman/jobflick-bridge/actions/runs/40001190037"
+          ]
         }
       ],
       "verified": 3,
       "total": 8,
       "percent": 37,
-      "implemented": 2
+      "implemented": 3
     },
     {
       "id": "M5",
@@ -441,9 +445,9 @@
         {
           "id": "M6-01",
           "title": "Versioned storage",
-          "status": "implemented",
+          "status": "verified",
           "evidence": [
-            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+            "Versioned v1 records, non-destructive support for older unversioned records and future-version exclusion tested. Evidence: https://github.com/sguzman/jobflick-bridge/actions/runs/40001190037"
           ]
         },
         {
@@ -457,8 +461,10 @@
         {
           "id": "M6-03",
           "title": "Delivery states",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "Explicit waiting/manual-ready/manual-only browser states; confirmed ChatGPT delivered state deliberately unavailable. Evidence: https://github.com/sguzman/jobflick-bridge/actions/runs/40001190037"
+          ]
         },
         {
           "id": "M6-04",
@@ -491,9 +497,9 @@
           ]
         }
       ],
-      "verified": 1,
+      "verified": 2,
       "total": 7,
-      "percent": 14,
+      "percent": 28,
       "implemented": 4
     },
     {
@@ -528,8 +534,10 @@
         {
           "id": "M7-04",
           "title": "Accessibility",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "Native button controls and status text in popup; accessibility audit/screen reader QA outstanding. Evidence: https://github.com/sguzman/jobflick-bridge/actions/runs/40001190037"
+          ]
         },
         {
           "id": "M7-05",
@@ -563,13 +571,13 @@
       "verified": 1,
       "total": 8,
       "percent": 12,
-      "implemented": 4
+      "implemented": 5
     }
   ],
   "last_ci": {
     "result": "success",
-    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/39998399853",
-    "commit": "bf99ab5d63ac354a60e8d44a35e836569bace602",
-    "scope": "Node mock behavior including read-only composer probe, Fish installer tests, Mozilla lint/packaging, and actual headless FDE addon install/uninstall. No authenticated ChatGPT, live Jobflick execution, or file attachment/Send acceptance."
+    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40001190037",
+    "commit": "b9b8601c92f226d969a515d80f2979a49b4fbf45",
+    "scope": "Node behavior including popup controls, exact-origin preflight, 8k-block/16-tab mocks; Fish native installer/framing; Mozilla lint, unsigned package, disposable headless FDE add-on install. No authenticated ChatGPT execution/attachment acceptance."
   }
 }
