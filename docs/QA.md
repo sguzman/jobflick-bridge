@@ -192,3 +192,7 @@ Mock native submission returns reserved JavaScript property names, including `__
 ## Very fast native job completion at submit acknowledgement
 
 A very short Fish job may finish before the native `submit_spec` response arrives. The Run control now accepts a terminal state directly from that response rather than displaying a stale Queued label indefinitely. When a terminal `inspect` status arrived even earlier, a subsequent queued or running submission acknowledgement must never downgrade it. Node regression cases cover all Jobflick terminal states, early-running vs queued and early-terminal vs queued/running. This does not enable automatic report retrieval or Send.
+
+## Malformed native metadata regression
+
+Adversarial mocked host replies include `origin_tab_id: null`, numeric IDs, arrays and objects during submission, inspection and explicit report retrieval. Each supplied contradictory field must fail closed: no browser origin bind, no status propagation for the mismatched job, and no report export. Omitted optional metadata remains accepted for older compatible native hosts. Real pinned Jobflick returns valid UUIDs and a browser-origin token in CI.

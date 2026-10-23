@@ -84,3 +84,7 @@ Users can still explicitly forget a *finished* corrupted browser record, which d
 Although real Jobflick generates UUIDs, native responses are untrusted input. Firefox's durable job index is a plain JavaScript object; a malformed ID such as `__proto__`, `constructor`, `toString`, or `hasOwnProperty` could alias an inherited property rather than an independent job. The bridge now validates the ID's shape **and** rejects own keys of `Object.prototype` and the reserved `prototype` name before submission persistence, popup actions, polling, startup origin reconciliation and inbox rendering.
 
 An invalid confirmed native submit reply remains **submission-uncertain**, never silently retried. Existing malformed records are left intact in storage rather than reinterpreted as executable jobs; recover their associated real jobs directly in Jobflick.
+
+## Malformed optional identity metadata
+
+A legacy Jobflick host may legitimately omit an optional `origin_tab_id` field. Omission is different from an explicit `null`, object, number or other nonmatching value. When any identity field is provided by a native `submit_spec`, `inspect` or `show` response, it must equal the expected job ID/origin token exactly. Present but malformed metadata is treated as a contradiction, not as if the field were absent. This avoids accidental browser-side reinterpretation of a native report under the wrong ChatGPT origin while remaining compatible with genuinely omitted optional fields.
