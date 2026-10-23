@@ -920,3 +920,41 @@ test("fast native status polling stops after six bounded checks of a slow job",a
   assert.equal(app.requests.filter(x=>x.action==="inspect").length,7);
   assert.equal(app.requests.filter(x=>x.action==="submit_spec").length,1);
 });
+
+test("burst of 40 jobs has a fixed-size fast polling queue; others use alarms",async()=>{
+  const timers=[];
+  let nextId=0;
+  const app=boot(request=>{
+    if(request.action==="submit_spec")return {
+      ok:true,job:{
+        id:"job_"+String(++nextId).padStart(8,"0"),
+        state:"queued"
+      }
+    };
+    if(request.action==="inspect")return {
+      ok:true,job:{id:request.id,state:"running"}
+    };
+    return {ok:true};
+  },{
+    setTimeout:(fn,delay)=>{
+      timers.push(fn);
+      return timers.length;
+    }
+  });
+  for(let i=0;i<40;i++){
+    await app.listeners.message({type:"jobflick:submit",yaml:sample},app.sender);
+  }
+  for(let i=0;i<8;i++) await pause();
+  assert.equal(timers.length,1);
+  let ticks=0;
+  while(timers.length&&ticks<100){
+    await timers.shift()();
+    ticks++;
+  }
+  assert.equal(ticks,48,"32 queued jobs × six checks, four per timer tick");
+  assert.equal(timers.length,0);
+  assert.equal(app.requests.filter(r=>r.action==="submit_spec").length,40);
+  assert.equal(app.requests.filter(r=>r.action==="show").length,0);
+  assert.equal(app.storage.jobflick_bridge_jobs_v1 &&
+    Object.keys(app.storage.jobflick_bridge_jobs_v1).length,40);
+});
