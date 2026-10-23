@@ -184,6 +184,13 @@ async function onBridgeMessage(message, sender) {
   // The trusted DOM click is checked in the content script. The extension
   // background does not take authorizations from the page's JS context.
   const origin = await originFor(sender.tab.id);
+  // Origin allocation is asynchronous. The user might have closed or
+  // navigated the tab before Native Messaging starts. Reject stale work
+  // rather than enqueueing against a former conversation's authorization.
+  const stillHere = await trustedTab(sender.tab.id, url, origin);
+  if (!stillHere) {
+    return { ok: false, message: "Conversation changed before submission; nothing was queued" };
+  }
   const result = await native({
     action: "submit_spec", spec_yaml: message.yaml, origin_tab_id: origin
   });

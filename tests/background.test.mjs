@@ -40,7 +40,10 @@ function boot(nativeOverride = null, options = {}) {
       },
       session: {
         get: async key => ({ [key]: session[key] }),
-        set: async data => Object.assign(session, data),
+        set: async data => {
+          if (options.beforeSessionWrite) await options.beforeSessionWrite(data);
+          Object.assign(session, data);
+        },
         remove: async key => { delete session[key]; }
       }
     },
@@ -498,4 +501,27 @@ test("ambiguous cancel disconnection never triggers a background retry", async (
   await pause();
   assert.equal(app.requests.filter(request => request.action === "cancel").length, 1);
   assert.equal(app.requests.filter(request => request.action === "submit_spec").length, 1);
+});
+
+test("navigation during asynchronous tab-token creation prevents native submission", async () => {
+  let app;
+  app = boot(null, {
+    beforeSessionWrite: async () => {
+      app.tabs.set(11, { id: 11, url: "https://chatgpt.com/c/different-5678" });
+    }
+  });
+  const result = await app.listeners.message({ type: "jobflick:submit", yaml: sample }, app.sender);
+  assert.equal(result.ok, false);
+  assert.match(result.message, /Conversation changed before submission/);
+  assert.equal(app.requests.some(x => x.action === "submit_spec"), false);
+});
+
+test("tab closure during asynchronous token creation cannot queue a job", async () => {
+  let app;
+  app = boot(null, {
+    beforeSessionWrite: async () => { app.tabs.delete(11); }
+  });
+  const response = await app.listeners.message({ type: "jobflick:submit", yaml: sample }, app.sender);
+  assert.equal(response.ok, false);
+  assert.equal(app.requests.filter(x => x.action === "submit_spec").length, 0);
 });

@@ -32,3 +32,7 @@ No telemetry. No remote job execution backend. No clipboard watcher. No self-upd
 ## Firefox least-privilege tab access
 
 The extension intentionally does **not** request the broad `tabs` permission. Firefox 86+ allows `tabs.get` and `tabs.query` to expose `Tab.url` when the target tab has a matching narrow `host_permissions` grant; the rest of the tabs API is available without the broad permission. Since Jobflick Bridge targets Firefox Developer Edition 140+, only the exact ChatGPT host matches are needed. Reading a URL outside those hosts is unsupported and fails the exact-origin check. Source: [Mozilla tabs API](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/tabs).
+
+## Submission navigation race
+
+The background worker validates sender and conversation URL when the user-triggered message first arrives **and again after asynchronously obtaining the tab-origin token**, immediately before Native Messaging submission. If the tab closed or navigated away during origin creation, the job is not queued. Once Native Messaging starts, a subsequent navigation cannot undo a legitimately authorized command; the delivered result still requires an exact surviving origin check. Mocked tests cover navigation and close during token creation; real FDE execution remains separately gated.
