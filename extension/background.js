@@ -63,7 +63,7 @@ async function saved() {
 
 async function refreshAlarm(jobs) {
   const hasPending = Object.values(jobs).some(record =>
-    !FINISHED.has(record.state) && record.state !== "unknown");
+    knownRecord(record) && !FINISHED.has(record.state) && record.state !== "unknown");
   if (hasPending) {
     await browser.alarms.create(ALARM, { periodInMinutes: 1 });
   } else {

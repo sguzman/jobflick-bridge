@@ -11,6 +11,7 @@ function boot(nativeOverride = null, options = {}) {
   const session = options.session || {};
   const requests = [];
   const sentTabMessages = [];
+  const alarmActions = [];
   const tabs = new Map([[11, { id: 11, url: "https://chatgpt.com/c/testing-1234" }]]);
   const browser = {
     runtime: {
@@ -48,8 +49,8 @@ function boot(nativeOverride = null, options = {}) {
       }
     },
     alarms: {
-      create: async () => {},
-      clear: async () => {},
+      create: async (name, details) => { alarmActions.push({ type: "create", name, details }); },
+      clear: async name => { alarmActions.push({ type: "clear", name }); },
       onAlarm: { addListener: callback => { listeners.alarm = callback; } }
     },
     tabs: {
@@ -76,7 +77,7 @@ function boot(nativeOverride = null, options = {}) {
     console, Date, Set, Promise, Object
   }, { filename: "background.js" });
   return {
-    listeners, storage, session, requests, tabs, sentTabMessages,
+    listeners, storage, session, requests, tabs, sentTabMessages, alarmActions,
     popupSender: {
       id: "jobflick-bridge@sguzman.github.io",
       url: "moz-extension://unit/popup/index.html"
@@ -623,4 +624,17 @@ test("concurrent popup cancellation messages issue at most one native request", 
   assert.equal(app.requests.filter(x => x.action === "cancel").length, 1);
   finish({ ok: true, message: "Stop requested" });
   assert.equal((await first).ok, true);
+});
+
+test("unknown future records do not keep the Firefox polling alarm alive", async () => {
+  const unknown = { job_12345678: {
+    id: "job_12345678", recordVersion: 999, state: "running",
+    tabId: 11, origin: "unknown", conversation: "https://chatgpt.com/c/testing-1234"
+  } };
+  const app = boot(null, { storage: { jobflick_bridge_jobs_v1: unknown } });
+  await app.listeners.message({ type: "jobflick:refresh" }, app.popupSender);
+  assert.equal(app.requests.length, 0);
+  assert.equal(app.alarmActions.some(action => action.type === "create"), false);
+  assert.equal(app.alarmActions.at(-1).type, "clear");
+  assert.deepEqual(app.storage.jobflick_bridge_jobs_v1.job_12345678, unknown.job_12345678);
 });
