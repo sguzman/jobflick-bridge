@@ -63,3 +63,8 @@ jobs:
         env:
           FDE_BINARY: ${{ steps.fde.outputs.firefox-path }}
         run: node tests/fde-smoke.cjs
+
+      - name: Headless Firefox Developer Edition synthetic content-script acceptance
+        env:
+          FDE_BINARY: ${{ steps.fde.outputs.firefox-path }}
+        run: node tests/fde-synthetic.cjs

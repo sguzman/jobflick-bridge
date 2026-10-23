@@ -66,10 +66,15 @@ async function main(){
     // Deliberately trigger only non-executing validation from the page.
     // The browser's actual content script still creates its own Run button.
     await driver.wait(until.elementLocated(By.css("main pre code")),10000);
-    await driver.executeScript(
-      "document.querySelector('pre').dispatchEvent(new Event('focusin',{bubbles:true}));"
-    );
-    const button=await driver.wait(until.elementLocated(By.css(".jobflick-bridge-run")),10000);
+    // The content script may be injected shortly after navigation; repeat
+    // the non-executing focus event until the Firefox extension button exists.
+    const button=await driver.wait(async()=>{
+      await driver.executeScript(
+        "document.querySelector('pre').dispatchEvent(new Event('focusin',{bubbles:true}));"
+      );
+      const matches=await driver.findElements(By.css(".jobflick-bridge-run"));
+      return matches[0] || false;
+    },10000);
     assert.match(await button.getText(),/Run Jobflick/);
 
     // Native Firefox/Marionette click generates trusted input, but the QA

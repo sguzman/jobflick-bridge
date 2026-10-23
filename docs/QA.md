@@ -76,3 +76,7 @@ For queued or running jobs, the popup offers **Request stop** and then **Confirm
 ## Per-job read-only destination preflight
 
 For a finished job whose originating tab identity is still live, **Check original chat** verifies both the session token and exact ChatGPT conversation URL, then asks that *same tab* for composer presence, draft occupancy and exposed file-input flags. No report, draft text, attachment name, or content is transferred. A changed tab becomes **manual-only** and cannot be automatically reattached. Presence flags are not permission or proof that upload works; the real attachment and Send gates remain locked until live FDE acceptance.
+
+## Actual Firefox synthetic code-block test (QA-only manifest)
+
+CI now also boots **headless Firefox Developer Edition** with a separate, disposable QA add-on whose content script is the unmodified production `extension/content.js`. Its temporary manifest alone permits `127.0.0.1` to serve synthetic ChatGPT-like `main pre code` markup; its mock background **never invokes native messaging or queues real jobs**. Selenium triggers a code-block focus, checks that **Run Jobflick** appears, then sends a browser click and verifies the mock deliberately refuses submission. This exercises actual Firefox DOM/event behavior while leaving production host permissions, the production background worker, the user's Firefox profiles, and Jobflick untouched. It is **not** authenticated ChatGPT or native-host execution acceptance.
