@@ -9,6 +9,19 @@
   const dirty = new Set();
   const states = new WeakMap();
   const byJob = new Map();
+  // Jobflick may complete before submit_spec's response reaches this tab.
+  // Retain a small bounded status cache so early completion is not lost.
+  const earlyStatus = new Map();
+  const MAX_EARLY_STATUSES = 32;
+  function paintStatus(state, message) {
+    if (!state?.button?.isConnected) return;
+    state.button.textContent =
+      (message.state === "succeeded" ? "✓ " : "● ") +
+      message.state + " · " + message.jobId.slice(0, 8);
+    if (/^#[0-9a-f]{6}$/i.test(message.color || "")) {
+      state.button.style.borderColor = message.color;
+    }
+  }
   let timer = null;
   let validating = 0;
 
@@ -70,7 +83,13 @@
           }
           state.jobId = result.job.id;
           byJob.set(state.jobId, state);
-          button.textContent = "Queued " + result.job.id.slice(0, 8);
+          const early = earlyStatus.get(state.jobId);
+          if (early) {
+            earlyStatus.delete(state.jobId);
+            paintStatus(state, early);
+          } else {
+            button.textContent = "Queued " + result.job.id.slice(0, 8);
+          }
           if (/^#[0-9a-f]{6}$/i.test(result.job.color || "")) {
             button.style.borderColor = result.job.color;
           }
@@ -140,15 +159,19 @@
     }
     if (message?.type === "jobflick:status") {
       const state = byJob.get(message.jobId);
-      if (state?.button?.isConnected) {
-        state.button.textContent =
-          (message.state === "succeeded" ? "✓ " : "● ") +
-          message.state + " · " + message.jobId.slice(0, 8);
-        if (/^#[0-9a-f]{6}$/i.test(message.color || "")) {
-          state.button.style.borderColor = message.color;
+      if (state) {
+        paintStatus(state, message);
+      } else if (typeof message.jobId === "string" &&
+                 /^[a-zA-Z0-9_-]{8,128}$/.test(message.jobId) &&
+                 typeof message.state === "string") {
+        if (earlyStatus.size >= MAX_EARLY_STATUSES) {
+          earlyStatus.delete(earlyStatus.keys().next().value);
         }
-        // Reports remain in Jobflick; attachment + guarded send are future gates.
+        earlyStatus.set(message.jobId, {
+          jobId: message.jobId, state: message.state, color: message.color
+        });
       }
+      // Reports remain in Jobflick; attachment + guarded send are future gates.
       return Promise.resolve({ ok: true });
     }
     return undefined;

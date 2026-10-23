@@ -72,6 +72,12 @@ function simulate(initialYaml = yaml, validateOK = true, probeOptions = {}) {
         runtimeMessages.push(message);
         if (message.type === "jobflick:validate") return { ok: validateOK };
         if (message.type === "jobflick:submit") {
+          if (probeOptions.earlyStatus) {
+            await runtimeListener({
+              type: "jobflick:status", jobId: "job_12345678",
+              state: "succeeded", name: "QA", color: "#aabbcc"
+            });
+          }
           return { ok: true, job: { id: "job_12345678", name: "QA", color: "#aabbcc" } };
         }
         throw new Error("Unexpected message type");
@@ -209,4 +215,14 @@ test("16 independent conversation content scripts never submit without clicks", 
   assert.equal(apps.reduce((sum, app) =>
     sum + app.messages.filter(x => x.type === "jobflick:validate").length, 0), 16);
   assert(apps.every(app => app.messages.every(x => x.type !== "jobflick:submit")));
+});
+
+test("terminal status arriving before submit reply is never lost", async () => {
+  const app = simulate(yaml, true, { earlyStatus: true });
+  app.focus();
+  await app.pump();
+  await app.pre.button.handlers.click({ isTrusted: true });
+  assert.match(app.pre.button.textContent, /succeeded/);
+  assert.equal(app.pre.button.disabled, true);
+  assert.equal(app.messages.filter(x => x.type === "jobflick:submit").length, 1);
 });
