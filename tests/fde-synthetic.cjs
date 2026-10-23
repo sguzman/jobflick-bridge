@@ -33,6 +33,10 @@ async function main(){
   fs.copyFileSync(path.join(extensionRoot,"content.js"),path.join(temporary,"content.js"));
   fs.writeFileSync(path.join(temporary,"qa-probe.js"),[
     '"use strict";',
+    'document.addEventListener("jobflick-qa-count",async()=>{',
+    ' const result=await browser.runtime.sendMessage({type:"jobflick:qa-count"});',
+    ' document.documentElement.dataset.qaSubmitCount=String(result.count);',
+    '});',
     'document.getElementById("qa-inspect").addEventListener("click",async event=>{',
     ' if(!event.isTrusted)return;',
     ' const reply=await browser.runtime.sendMessage({type:"jobflick:qa-probe"});',
@@ -41,10 +45,12 @@ async function main(){
   ].join("\n"));
   fs.writeFileSync(path.join(temporary,"qa-background.js"),[
     '"use strict";',
+    'let submitted=0;',
     'browser.runtime.onMessage.addListener((message,sender)=>{',
+    ' if(message?.type==="jobflick:qa-count")return Promise.resolve({ok:true,count:submitted});',
     ' if(message?.type==="jobflick:validate")return Promise.resolve({ok:true});',
     ' if(message?.type==="jobflick:qa-probe")return browser.tabs.sendMessage(sender.tab.id,{type:"jobflick:probe-upload"});',
-    ' if(message?.type==="jobflick:submit")return Promise.resolve({ok:false,message:"Synthetic fixture never queues work"});',
+    ' if(message?.type==="jobflick:submit"){submitted++;return Promise.resolve({ok:false,message:"Synthetic fixture never queues work"});}',
     ' return Promise.resolve({ok:false,message:"Unknown synthetic action"});',
     '});'
   ].join("\n"));
@@ -89,6 +95,22 @@ async function main(){
       const matches=await driver.findElements(By.css(".jobflick-bridge-run"));
       return matches[0] || false;
     },10000);
+    assert.match(await button.getText(),/Run Jobflick/);
+    // A malicious chat page can call .click() or dispatch a MouseEvent,
+    // but those calls are never a trusted user Run grant. Prove this in
+    // actual Firefox, not only the VM's synthetic isTrusted property.
+    await driver.executeScript(
+      "document.querySelector('.jobflick-bridge-run').click();"+
+      "document.querySelector('.jobflick-bridge-run').dispatchEvent("+
+      "new MouseEvent('click',{bubbles:true}));");
+    await driver.executeScript(
+      "document.dispatchEvent(new Event('jobflick-qa-count'))");
+    await driver.wait(async()=>await driver.executeScript(
+      "return document.documentElement.dataset.qaSubmitCount!==undefined"),5000);
+    assert.equal(await driver.executeScript(
+      "return document.documentElement.dataset.qaSubmitCount"),"0",
+      "A page-scripted click must not reach background submit_spec");
+    assert.equal(await button.isEnabled(),true);
     assert.match(await button.getText(),/Run Jobflick/);
 
     // Native Firefox/Marionette click generates trusted input, but the QA
