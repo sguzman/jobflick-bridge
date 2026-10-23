@@ -20,6 +20,17 @@ let fastRecheckTimer = null;
 const originFlights = new Map();
 const cancelFlights = new Set();
 const RECORD_VERSION = 1;
+const JOB_ID_PATTERN = /^[a-zA-Z0-9_-]{8,128}$/;
+
+// Native IDs are dynamic keys in a plain storage object. In addition to the
+// wire format, reject reserved/inherited keys such as "__proto__" and
+// "constructor" so a malformed native reply can never mutate that object's
+// prototype or collide with an inherited member.
+function validJobId(id) {
+  return typeof id === "string" && JOB_ID_PATTERN.test(id) &&
+    id !== "prototype" &&
+    !Object.prototype.hasOwnProperty.call(Object.prototype, id);
+}
 
 // Existing unversioned records from the Firefox pilot are v1-compatible.
 // Future unsupported records are kept untouched, not guessed or discarded.
@@ -134,7 +145,7 @@ async function reconcileOrigins() {
   const records = Object.values(await saved());
   const orphanIds = [];
   for (const record of records) {
-    if (!knownRecord(record) || record.orphaned || typeof record.id !== "string") continue;
+    if (!knownRecord(record) || record.orphaned || !validJobId(record.id)) continue;
     try {
       const tab = await trustedTab(record.tabId, record.conversation, record.origin);
       if (!tab) orphanIds.push(record.id);
@@ -173,7 +184,7 @@ async function checkJobs(onlyId = null) {
     // Oldest-checked-first ordering rotates fairly through pending jobs.
     const pending = Object.entries(await saved())
       .filter(([id, record]) => (onlyId === null || id === onlyId) &&
-        knownRecord(record) && !record.integrityIssue &&
+        validJobId(id) && knownRecord(record) && !record.integrityIssue &&
         !FINISHED.has(record.state) && record.state !== "unknown")
       .sort((a, b) => (a[1].lastCheckedAt || 0) - (b[1].lastCheckedAt || 0))
       .slice(0, MAX_STATUS_PER_POLL);
@@ -340,7 +351,7 @@ async function onBridgeMessage(message, sender) {
   });
   if (!result.ok) return result;
   const id = result.job?.id;
-  if (typeof id !== "string" || !/^[a-zA-Z0-9_-]{8,128}$/.test(id)) {
+  if (!validJobId(id)) {
     throw new Error("Submission uncertain; inspect Jobflick before retrying");
   }
   if (typeof result.job.origin_tab_id === "string" &&
@@ -405,7 +416,7 @@ async function onPopupMessage(message, sender) {
       }
       const search = query.trim().toLocaleLowerCase();
       const items = Object.values(jobs).filter(item =>
-        knownRecord(item) && typeof item.id === "string" &&
+        knownRecord(item) && validJobId(item.id) &&
         (!search || [item.id, item.name, item.state]
           .some(value => String(value || "").toLocaleLowerCase().includes(search))))
         .map(item => ({
@@ -433,7 +444,7 @@ async function onPopupMessage(message, sender) {
     }
     case "jobflick:preflight": {
       const id = message.id;
-      if (typeof id !== "string" || !/^[a-zA-Z0-9_-]{8,128}$/.test(id)) {
+      if (!validJobId(id)) {
         return { ok: false, message: "Invalid job ID" };
       }
       const record = (await saved())[id];
@@ -540,7 +551,7 @@ async function onPopupMessage(message, sender) {
     }
     case "jobflick:cancel": {
       const id = message.id;
-      if (typeof id !== "string" || !/^[a-zA-Z0-9_-]{8,128}$/.test(id)) {
+      if (!validJobId(id)) {
         return { ok: false, message: "Invalid job ID" };
       }
       const current = (await saved())[id];
@@ -572,7 +583,7 @@ async function onPopupMessage(message, sender) {
     }
     case "jobflick:forget": {
       const id = message.id;
-      if (typeof id !== "string" || !/^[a-zA-Z0-9_-]{8,128}$/.test(id)) {
+      if (!validJobId(id)) {
         return { ok: false, message: "Invalid job ID" };
       }
       const current = (await saved())[id];
@@ -586,7 +597,7 @@ async function onPopupMessage(message, sender) {
     }
     case "jobflick:report": {
       const id = message.id;
-      if (typeof id !== "string" || !/^[a-zA-Z0-9_-]{8,128}$/.test(id)) {
+      if (!validJobId(id)) {
         return { ok: false, message: "Invalid job ID" };
       }
       const record = (await saved())[id];
