@@ -791,6 +791,11 @@ async function reconcileTabRoute(tabId, nextUrl) {
   if (!records.some(([id, record]) => matchedRecord(id, record) &&
       record.tabId === tabId && !record.orphaned &&
       record.conversation === next)) {
+    // A previous conversation may still be minting its tab token. Clear
+    // session identity *after* that in-flight write, just like tab closure,
+    // or a late session.set can resurrect a revoked browser origin.
+    const flight = originFlights.get(tabId);
+    if (flight) await flight.catch(() => {});
     await browser.storage.session.remove("jobflick_origin_" + tabId);
   }
 }

@@ -1939,6 +1939,32 @@ test("malformed stored ID stays untouched when its Firefox tab closes",async()=>
   assert.equal(app.requests.length,0);
 });
 
+test("SPA navigation during pending origin mint clears the late session token",async()=>{
+  let releaseToken;
+  let called=false;
+  const app=boot(null,{
+    beforeSessionWrite:()=>new Promise(resolve=>{
+      called=true;
+      releaseToken=resolve;
+    })
+  });
+  const submit=app.listeners.message({type:"jobflick:submit",yaml:sample},app.sender);
+  for(let n=0;n<12&&!called;n++)await pause();
+  assert.equal(called,true);
+  app.tabs.set(11,{id:11,url:"https://chatgpt.com/c/other-conversation"});
+  app.listeners.historyState({
+    frameId:0,tabId:11,url:"https://chatgpt.com/c/other-conversation"
+  });
+  releaseToken();
+  const result=await submit;
+  assert.equal(result.ok,false,"Navigation prevents stale submission");
+  for(let n=0;n<15;n++)await pause();
+  assert.equal(app.session.jobflick_origin_11,undefined,
+    "Late tab token must not survive navigation reconciliation");
+  assert.equal(app.requests.filter(r=>r.action==="submit_spec").length,0);
+  assert.equal(app.storageWrites.length,0);
+});
+
 test("closing tab during pending session token write cannot leave recycled ID token",async()=>{
   let allowSessionWrite=null;
   const app=boot(null,{
