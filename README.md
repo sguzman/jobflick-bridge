@@ -53,3 +53,7 @@ The automated suite runs Node behavioral tests, Fish native-host installer tests
 An unsigned Firefox QA ZIP is also produced by CI (artifact `jobflick-bridge-fde-qa-unsigned`). It is intended only for **temporary installation** in the dedicated QA profile via `about:debugging`, not for a release or an automatic native-host setup.
 
 Before testing real local work, use the toolbar popup's **Check connection** action. It invokes `validate_spec` on intentionally invalid YAML, never `submit_spec`; it helps distinguish a missing Firefox native host from a malformed Execarium document.
+
+## Read-only attachment capability probe
+
+The Firefox popup's **Inspect composer** button checks only whether the active ChatGPT conversation exposes a recognized editable composer, whether it appears occupied, and whether a file input is currently present. It reads neither draft contents nor filenames. It makes no DOM mutations and cannot attach or send a report. These observations are deliberately only preliminary evidence; the actual upload path is still an unaccepted milestone.

@@ -370,8 +370,10 @@
         {
           "id": "M5-01",
           "title": "Live upload discovery",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "Read-only user-triggered ChatGPT composer/file-input presence probe passes mocked tests, but live authenticated Firefox upload DOM and attachment acceptance remain pending: https://github.com/sguzman/jobflick-bridge/actions/runs/39998399853"
+          ]
         },
         {
           "id": "M5-02",
@@ -429,7 +431,7 @@
       "verified": 0,
       "total": 9,
       "percent": 0,
-      "implemented": 2
+      "implemented": 3
     },
     {
       "id": "M6",
@@ -566,8 +568,8 @@
   ],
   "last_ci": {
     "result": "success",
-    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/39998033616",
-    "commit": "361a4fbd6a44b89a867e1dd8247f5ca2dcb65166",
-    "scope": "Headless Firefox Developer Edition add-on install/uninstall, static/behavioral tests, narrowed tab permission, bounded conversation routes, native-host diagnostic mocks, disposable Fish installer. No authenticated ChatGPT / live Jobflick execution / actual upload/send acceptance."
+    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/39998399853",
+    "commit": "bf99ab5d63ac354a60e8d44a35e836569bace602",
+    "scope": "Node mock behavior including read-only composer probe, Fish installer tests, Mozilla lint/packaging, and actual headless FDE addon install/uninstall. No authenticated ChatGPT, live Jobflick execution, or file attachment/Send acceptance."
   }
 }
