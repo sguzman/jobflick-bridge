@@ -3,11 +3,18 @@ on:
   push:
     branches: [main]
     paths:
-      - "extension/**"
-      - "tests/**"
+      # Only source/protocol changes that affect Firefox -> native execution.
+      # Popup-only, mock-only and documentation edits retain fast Firefox CI.
+      - "extension/background.js"
+      - "extension/content.js"
+      - "extension/manifest.json"
+      - "tests/fde-native.cjs"
+      - "tests/real-jobflick.cjs"
+      - "tests/native-frame.test.mjs"
+      - "tests/native-host-installer.test.cjs"
+      - "tests/fixtures/**"
       - "scripts/**"
       - "package.json"
-      - ".github/workflows/ci.yml"
       - ".github/workflows/real-integration.yml"
   workflow_dispatch:
 
