@@ -224,3 +224,21 @@ both synchronous clearing and detachment on `change`. A successful return
 still means only that the file remained assigned in the DOM at that instant;
 it is **not** evidence of ChatGPT upload acknowledgment or server persistence.
 [Passing Firefox file-handoff checks](https://github.com/sguzman/jobflick-bridge/actions/runs/40030357579).
+
+## Keyboard activation and stored-record ID consistency
+
+The disposable Firefox Developer Edition synthetic page now activates a
+production Run control through both Enter and Space. In both tests, the
+QA-only background explicitly refuses native submission; no command runs.
+These native browser keyboard tests support accessibility work but do not
+constitute screen-reader or authenticated ChatGPT acceptance.
+[Passing keyboard/browser CI](https://github.com/sguzman/jobflick-bridge/actions/runs/40030568393).
+
+For each persisted browser record, the native job ID is the local map key.
+An older, imported or corrupted object that claims a different `record.id`
+cannot appear as an actionable inbox row, be status-polled, be selected for
+report export, pass original-chat preflight, or be forgotten under the false
+identity. The mismatched record remains in browser storage for explicit
+recovery rather than being deleted or rewritten. Node regression tests and
+the Firefox check workflow passed.
+[Passing identity consistency CI](https://github.com/sguzman/jobflick-bridge/actions/runs/40030699492).
