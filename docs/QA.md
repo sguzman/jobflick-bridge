@@ -124,3 +124,7 @@ Job status metadata writes no longer replace an existing Firefox alarm. This pre
 The Firefox popup now loads 40 job records at a time with a keyboard-accessible **Load older jobs** control. Records beyond the former 300-item display cap remain discoverable and can still be manually exported. The background validates page bounds (maximum 50 entries); popup tests page through 325 saved jobs without calling `show`, attaching a file or submitting a command. Refresh restarts pagination, ignoring late responses from earlier generations. This changes only the browser's bounded view of local metadata; all durable reports remain in Jobflick.
 
 These behaviors are covered by CI mocks; authenticated Firefox Developer Edition popup UX remains a separate acceptance gate.
+
+## Local job search acceptance
+
+Background inbox pagination accepts at most 128 characters of search text and filters existing local job metadata before bounded page delivery. Case-insensitive queries match IDs, titles and states; malformed or excessive queries fail closed. The popup offers a native search form (Enter or Find), preserving keyboard navigation and pagination. Node behavioral tests cover search over 130 records, paging through matching results, clearing a search, no-result feedback, and rejection of oversized queries. Search neither reads a report nor submits/executes any job. Real authenticated FDE popup visual QA remains outstanding.

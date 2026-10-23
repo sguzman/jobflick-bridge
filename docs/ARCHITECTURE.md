@@ -56,3 +56,7 @@ New Firefox job records carry `recordVersion: 1`. Historical pilot records witho
 ## Bounded local inbox pagination
 
 The native Jobflick daemon remains authoritative. Firefox's local storage retains only submission/routing metadata and does not automatically discard old completed jobs. The popup obtains paginated metadata from the trusted background worker via `jobflick:inbox` with validated `offset` and `limit`; no extension-wide transcript scan or log retrieval occurs to load a page. Users must still click **Save report**, then **Download prepared report** for a bounded text export. No action rebinds an orphaned origin or automates ChatGPT Send.
+
+## Metadata-only search
+
+The popup queries local metadata through the trusted background worker, not the Jobflick native host. Input is length bounded; the reply returns only a bounded page, pagination fields and existing safe metadata, without job log text or ChatGPT draft data. Search changes do not alter origin tokens or durable Jobflick output.

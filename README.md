@@ -79,3 +79,7 @@ After a confirmed submission, short-lived status rechecks run every 1.2 seconds 
 ## ♻️ Browsing older jobs
 
 The Firefox popup paginates local job records in batches of 40. **Load older jobs** makes saved history beyond the previous 300-row display limit accessible without bulk-rendering the full inbox. Firefox status checks reuse an existing durable alarm rather than postponing its next run whenever metadata changes. Short post-submit checks remain bounded and do not consume attempts while another full native inspection is in progress.
+
+## 🔎 Local inbox search
+
+The popup's keyboard-accessible search form filters saved Jobflick records by job name, ID or state. Results still load in 40-job pages, and searching never reads job output or calls Native Messaging. A blank search restores the complete saved history.
