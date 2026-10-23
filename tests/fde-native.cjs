@@ -60,6 +60,17 @@ async function main() {
     '    .then(reply=>{document.documentElement.dataset.jobflickQaRoute=',
     '      reply?.count===1 ? (reply.manualOnly?"manual_only":"active") : "missing";',
     '    }).catch(()=>{});',
+    '});',
+    'document.addEventListener("jobflick-qa-seed-pending",()=>{',
+    ' browser.runtime.sendMessage({type:"jobflick:qa-seed-pending"})',
+    ' .then(reply=>{document.documentElement.dataset.qaSeedPending=reply?.ok?"ok":"error";})',
+    ' .catch(()=>{document.documentElement.dataset.qaSeedPending="error";});',
+    '});',
+    'document.addEventListener("jobflick-qa-resume",()=>{',
+    ' browser.runtime.sendMessage({type:"jobflick:qa-resume"})',
+    ' .then(reply=>{document.documentElement.dataset.qaResumed=',
+    '  reply?.ok?(reply.state+":"+(reply.manualOnly?"manual_only":"active")):"error";})',
+    ' .catch(()=>{document.documentElement.dataset.qaResumed="error";});',
     '});'
   ].join("\n"));
   // Disposable CI-only request to restart the same production event script.
@@ -108,6 +119,41 @@ async function main() {
       return Promise.resolve({ok:false});
     browser.runtime.reload();
     return Promise.resolve({ok:true});
+  }
+  // QA-only pending-record fixture for durable event-page recovery.
+  // The production extension cannot be messaged with these actions.
+  if(message?.type==="jobflick:qa-seed-pending"){
+    if(!sender?.tab?.url?.startsWith("http://127.0.0.1:"))
+      return Promise.resolve({ok:false});
+    return saved().then(async records=>{
+      const entries=Object.entries(records).filter(([id,record])=>matchedRecord(id,record));
+      if(entries.length!==1)return {ok:false};
+      const [id,original]=entries[0];
+      if(!original.orphaned || !FINISHED.has(original.state))return {ok:false};
+      let seeded=false;
+      await mutate(jobs=>{
+        if(sameIdentity(id,jobs[id],recordIdentity(original)) &&
+            jobs[id].orphaned && FINISHED.has(jobs[id].state) &&
+            !jobs[id].integrityIssue){
+          jobs[id].state="queued";
+          jobs[id].deliveryState="manual_only";
+          jobs[id].lastCheckedAt=0;
+          seeded=true;
+        }
+      });
+      return {ok:seeded};
+    });
+  }
+  if(message?.type==="jobflick:qa-resume"){
+    if(!sender?.tab?.url?.startsWith("http://127.0.0.1:"))
+      return Promise.resolve({ok:false});
+    return checkJobs().then(async()=>{
+      const records=Object.entries(await saved()).filter(([id,record])=>matchedRecord(id,record));
+      if(records.length!==1)return {ok:false};
+      const record=records[0][1];
+      return {ok:true,state:record.state,
+        manualOnly:record.orphaned && record.deliveryState==="manual_only"};
+    });
   }
   if(message?.type==="jobflick:qa-report"){
     if(!sender?.tab?.url?.startsWith("http://127.0.0.1:"))
@@ -391,9 +437,19 @@ async function main() {
       assert.equal(await driver.findElement(By.id("qa-result")).getText(),"");
     }
 
-    // Firefox reloads its MV3 background event script. Durable local records
-    // remain, and a revoked origin must not silently regain permission or
-    // trigger another submit after the page is refreshed.
+    // Simulate a durable browser record still awaiting inspection when its
+    // original ChatGPT tab has already been revoked. This writes only QA
+    // data, never enqueues or cancels the real native job.
+    phase="seed durable pending record before extension reload";
+    await driver.executeScript(
+      "document.documentElement.dataset.qaSeedPending='';"+
+      "document.dispatchEvent(new Event('jobflick-qa-seed-pending'));");
+    await driver.wait(async()=>await driver.executeScript(
+      "return document.documentElement.dataset.qaSeedPending==='ok'"),7000);
+
+    // Firefox reloads its MV3 background event script. Production checkJobs
+    // must recover the authoritative terminal native state, preserving
+    // manual-only provenance and never scheduling another submit.
     phase="Firefox extension event-script reload";
     await driver.executeScript(
       "document.dispatchEvent(new Event('jobflick-qa-reload-extension'));");
@@ -408,6 +464,13 @@ async function main() {
     await driver.wait(async()=>await reloadState()==="manual_only",10000);
     assert.equal((await driver.findElements(By.css(".jobflick-bridge-run"))).length,0,
       "Reload must not resubmit or inject actionable Run controls without focus");
+    phase="resume pending inspection in reloaded background event script";
+    await driver.wait(async()=>{
+      await driver.executeScript(
+        "document.dispatchEvent(new Event('jobflick-qa-resume'));");
+      return await driver.executeScript(
+        "return document.documentElement.dataset.qaResumed==='succeeded:manual_only'");
+    },12000);
     if(!realHost){
       const actions=fs.readFileSync(logFile,"utf8").split("\n").filter(Boolean).map(JSON.parse);
       assert.equal(actions.filter(x=>x.action==="submit_spec").length,1,
