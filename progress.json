@@ -538,7 +538,7 @@
         {
           "id": "M7-01",
           "title": "Adversarial security tests",
-          "status": "implemented",
+          "status": "verified",
           "evidence": [
             "Adversarial Node tests reject reserved object-prototype job IDs, mismatched native origin/ID on submission, inspection and report retrieval, including explicitly supplied null, numeric, object and array identity metadata. Firefox and pinned real-native acceptance passing; authenticated ChatGPT security acceptance pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40028499706 https://github.com/sguzman/jobflick-bridge/actions/runs/40028499789",
             "Additional adversarial validation and file handoff tests passed: concurrent pointer/focus does not duplicate in-flight validation, edited YAML rejects late replies, and Firefox reports failure after synchronous page-side FileList clear/detach. https://github.com/sguzman/jobflick-bridge/actions/runs/40030357579",
@@ -546,7 +546,8 @@
             "Async origin/identity adversarial Node regressions passed for stale report return after Forget, native inspection writes after replacement/quarantine, confirmed native stop after replacement/quarantine, and read-only probe/scan navigation races. https://github.com/sguzman/jobflick-bridge/actions/runs/40032306863.",
             "Additional adversarial browser tests refuse moved/out-of-main code and reused Run controls after SPA route changes, including late validation replies. https://github.com/sguzman/jobflick-bridge/actions/runs/40032659397.",
             "Additional adversarial regressions test Forget/startup same-ID replacement, navigation during pending origin token mint, delayed submit acknowledgments, and monotonic displayed terminal statuses: https://github.com/sguzman/jobflick-bridge/actions/runs/40033650901.",
-            "Adversarial native protocol tests quarantine contradictory top-level and nested job/origin identity metadata on submit/inspect/show and preserve unknown data; tests passed: https://github.com/sguzman/jobflick-bridge/actions/runs/40036931931."
+            "Adversarial native protocol tests quarantine contradictory top-level and nested job/origin identity metadata on submit/inspect/show and preserve unknown data; tests passed: https://github.com/sguzman/jobflick-bridge/actions/runs/40036931931.",
+            "Real disposable Firefox Developer Edition production-manifest test confirms Execarium-looking YAML on a forbidden data: origin never receives content-script controls. Separately the unmodified production content script under synthetic localhost routing rejects programmatically scripted .click() and dispatched MouseEvents as untrusted (zero submit messages) but permits genuine trusted WebDriver activation only once. Firefox accepts these adversarial tests alongside malformed-YAML, stale-DOM, and route tests; background Node tests reject forged popup senders, prototype job IDs, conflicting native job/origin metadata on submit/inspect/show, and over-limit documents. Full static, lint and Firefox suite PASSED: https://github.com/sguzman/jobflick-bridge/actions/runs/40040280329. Authenticated live ChatGPT and desktop red-team remain M7-06, not M7-01."
           ]
         },
         {
@@ -605,10 +606,11 @@
           "evidence": []
         }
       ],
-      "verified": 2,
+      "verified": 3,
       "total": 8,
-      "percent": 25,
-      "implemented": 4
+      "percent": 37,
+      "implemented": 3,
+      "planned": 2
     }
   ],
   "last_ci": {
@@ -622,10 +624,10 @@
   },
   "overall": {
     "total": 63,
-    "verified": 40,
-    "implemented": 16,
+    "verified": 41,
+    "implemented": 15,
     "planned": 7,
-    "percent": 63,
+    "percent": 65,
     "basis": "Only verified atomic tasks count toward percentage"
   }
 }
