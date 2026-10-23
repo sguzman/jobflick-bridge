@@ -246,9 +246,11 @@ async function checkJobs(onlyId = null) {
         // this record. Conflicting origin tokens have the same severity.
         // Quarantine once to avoid repeatedly polling corrupted identity.
         // Older hosts omitting these optional fields remain supported.
-        const wrongId = contradictsIdentity(status.job, "id", id);
+        const wrongId = contradictsIdentity(status, "id", id) ||
+          contradictsIdentity(status.job, "id", id);
         const wrongOrigin = contradictsIdentity(
-          status.job, "origin_tab_id", record.origin);
+          status, "origin_tab_id", record.origin) ||
+          contradictsIdentity(status.job, "origin_tab_id", record.origin);
         if (wrongId || wrongOrigin) {
           await mutate(jobs => {
             if (sameIdentity(id, jobs[id], recordIdentity(record)) &&
@@ -403,7 +405,8 @@ async function onBridgeMessage(message, sender) {
   if (!validJobId(id)) {
     throw new Error("Submission uncertain; inspect Jobflick before retrying");
   }
-  if (contradictsIdentity(result.job, "origin_tab_id", origin)) {
+  if (contradictsIdentity(result, "origin_tab_id", origin) ||
+      contradictsIdentity(result.job, "origin_tab_id", origin)) {
     // The command may already be queued. Do not bind its report to a
     // contradictory native origin or attempt a new submission.
     throw new Error("Native job origin did not match this Firefox tab; inspect Jobflick");
@@ -723,7 +726,8 @@ async function onPopupMessage(message, sender) {
       const wrongJobId = contradictsIdentity(response, "id", id) ||
         contradictsIdentity(response.job, "id", id);
       const wrongOrigin = contradictsIdentity(
-        response.job, "origin_tab_id", record.origin);
+        response, "origin_tab_id", record.origin) ||
+        contradictsIdentity(response.job, "origin_tab_id", record.origin);
       if (wrongJobId || wrongOrigin) {
         await mutate(jobs => {
           if (!sameIdentity(id, jobs[id], identity)) return;

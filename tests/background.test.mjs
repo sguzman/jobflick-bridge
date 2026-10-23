@@ -2041,6 +2041,73 @@ test("closing tab during pending session token write cannot leave recycled ID to
   assert.equal(app.storageWrites.length,0);
 });
 
+test("top-level native origin contradictions fail closed for submit",async()=>{
+  for(const origin_tab_id of ["tab-foreign",null,17]){
+    const app=boot(request=>{
+      if(request.action==="submit_spec")return {
+        ok:true,origin_tab_id,job:{id:"job_12345678",state:"queued"}
+      };
+      return {ok:true};
+    });
+    const reply=await app.listeners.message({
+      type:"jobflick:submit",yaml:sample
+    },app.sender);
+    assert.equal(reply.ok,false);
+    assert.match(reply.message,/submission may have succeeded/i);
+    assert.equal(app.storage.jobflick_bridge_jobs_v1,undefined);
+    assert.equal(app.requests.filter(x=>x.action==="submit_spec").length,1);
+  }
+});
+
+test("top-level native inspect contradictions quarantine the tracked record",async()=>{
+  for(const conflicting of [
+    {id:"job_87654321"},
+    {origin_tab_id:"tab-foreign"},
+    {origin_tab_id:null}
+  ]){
+    const app=boot(request=>{
+      if(request.action==="submit_spec")return {
+        ok:true,job:{id:"job_12345678",state:"queued"}
+      };
+      if(request.action==="inspect")return {
+        ok:true,...conflicting,job:{id:"job_12345678",state:"running"}
+      };
+      return {ok:true};
+    });
+    await app.listeners.message({type:"jobflick:submit",yaml:sample},app.sender);
+    await app.listeners.message({type:"jobflick:refresh"},app.popupSender);
+    const record=app.storage.jobflick_bridge_jobs_v1.job_12345678;
+    assert.equal(record.orphaned,true);
+    assert.equal(record.deliveryState,"manual_only");
+    assert.equal(record.integrityIssue, "id" in conflicting ?
+      "native_job_id_mismatch":"native_origin_mismatch");
+    const requests=app.requests.filter(x=>x.action==="inspect").length;
+    await app.listeners.message({type:"jobflick:refresh"},app.popupSender);
+    assert.equal(app.requests.filter(x=>x.action==="inspect").length,requests);
+  }
+});
+
+test("top-level native report origin contradictions suppress export",async()=>{
+  const id="job_12345678";
+  for(const origin_tab_id of ["tab-foreign",null]){
+    const app=boot(request=>{
+      if(request.action==="show")return {
+        ok:true,origin_tab_id,report:"another origin's report"
+      };
+      return {ok:true};
+    },{storage:{jobflick_bridge_jobs_v1:{[id]:{
+      id,recordVersion:1,state:"succeeded",origin:"tab-original",
+      tabId:11,conversation:"https://chatgpt.com/c/testing-1234"
+    }}}});
+    const reply=await app.listeners.message({type:"jobflick:report",id},app.popupSender);
+    assert.equal(reply.ok,false);
+    assert.equal(reply.report,undefined);
+    assert.equal(app.storage.jobflick_bridge_jobs_v1[id].integrityIssue,
+      "native_origin_mismatch");
+    assert.equal(app.requests.filter(x=>x.action==="show").length,1);
+  }
+});
+
 test("native submit refuses inherited/reserved JavaScript object-key job IDs",async()=>{
   for(const id of ["__proto__","constructor","prototype","toString",
     "valueOf","hasOwnProperty","__defineGetter__"]){
