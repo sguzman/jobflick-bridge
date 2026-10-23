@@ -28,3 +28,7 @@ Before any real shell job:
 | Long histories, many tabs, idle hours | Bounded overhead, no runaway activity | Not run |
 
 Do not mark tests passed based on code review alone. Automated QA should drive Firefox itself, not require the user to manually test repeatedly; initial one-time setup is acceptable when genuinely unavoidable.
+
+## Local inbox pilot
+
+The extension action opens a Firefox popup rather than immediately triggering a scan. Use the popup's **Scan visible YAML** control with an active ChatGPT conversation; validation still requires the native host, and execution still requires clicking **Run Jobflick** in the page. The popup lists saved jobs and supports read-only status refresh. **Save report** retrieves a finished report on explicit click; files are downloaded locally and not uploaded. This is tested with automated mocks but must still be accepted in real FDE.

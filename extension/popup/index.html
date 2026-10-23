@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Jobflick Bridge</title>
+  <link rel="stylesheet" href="popup.css">
+  <script src="popup.js" defer></script>
+</head>
+<body>
+  <header>
+    <h1>🦊 Jobflick Bridge</h1>
+    <p>Firefox · local jobs</p>
+  </header>
+  <nav aria-label="Job actions">
+    <button id="scan" type="button">Scan visible YAML</button>
+    <button id="refresh" type="button">Refresh jobs</button>
+  </nav>
+  <p id="notice" role="status" aria-live="polite"></p>
+  <main id="jobs" aria-label="Jobs"></main>
+  <footer>Reports stay in local Jobflick. Nothing is sent to ChatGPT automatically.</footer>
+</body>
+</html>

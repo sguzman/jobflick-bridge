@@ -35,3 +35,9 @@ Execarium defines the format. Jobflick owns validation enforcement, Fish executi
 - Linux/EndeavourOS + Fish native host; keep the browser bridge small and dependency-light.
 
 **Current pilot:** Firefox MV3 scripts implement intent-driven YAML validation, a genuine-click Run control, Native Messaging submission, durable job tracking, and background status inspection. Reports remain in Jobflick; **there is deliberately no automatic ChatGPT Send or file attachment yet**. Mocked Node tests and CI can pass without proving a real authenticated Firefox/ChatGPT session. See progress and acceptance gates.
+
+## Local job inbox (Firefox toolbar)
+
+The Firefox toolbar popup lists jobs previously submitted by this extension, including jobs whose originating tabs closed. `Scan visible YAML` replaces the old no-popup toolbar action. `Refresh jobs` checks pending statuses; `Save report` requests a finished report from Jobflick **only after a user click** and saves a local text file. Reports are not stored inside browser extension storage or automatically uploaded. The file export is bounded at 512 KiB; the authoritative complete report/log remains with Jobflick. `Open chat` is manual navigation, not automatic delivery.
+
+This is a recovery and inspection surface, **not** a claim that the future ChatGPT attachment/auto-send milestone has passed.

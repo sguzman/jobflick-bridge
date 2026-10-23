@@ -97,19 +97,11 @@ async function checkJobs() {
         if (!status.ok || !status.job || typeof status.job.state !== "string") continue;
         const state = status.job.state;
         if (!["queued", "running", ...FINISHED].includes(state)) continue;
-        let report = null;
-        if (FINISHED.has(state)) {
-          const response = await native({ action: "show", id });
-          if (response.ok && typeof response.report === "string") {
-            report = response.report;
-          }
-        }
         await mutate(jobs => {
           if (!jobs[id]) return;
           jobs[id].state = state;
           jobs[id].name = typeof status.job.name === "string" ? status.job.name : jobs[id].name;
           jobs[id].color = typeof status.job.color === "string" ? status.job.color : jobs[id].color;
-          if (report !== null) jobs[id].report = report;
         });
         const tab = await trustedTab(record.tabId, record.conversation, record.origin);
         if (!tab) {
@@ -120,6 +112,8 @@ async function checkJobs() {
           type: "jobflick:status", jobId: id, state, name: status.job.name || "",
           color: status.job.color || ""
         }).catch(() => {});
+        // No automatic delivery. A finished report stays durable in Jobflick until an
+        // authorized user retrieves it; never store potentially large logs here.
         // Intentionally NO automated ChatGPT composer injection in this stage.
         // Real attachment + send must pass explicit FDE acceptance first.
       } catch {
@@ -160,7 +154,7 @@ async function onBridgeMessage(message, sender) {
     jobs[id] = {
       id, tabId: sender.tab.id, origin, conversation: url,
       state: result.job.state || "queued", name: result.job.name || "",
-      color: result.job.color || "", orphaned: false, report: null,
+      color: result.job.color || "", orphaned: false,
       submittedAt: Date.now()
     };
   });
@@ -168,18 +162,82 @@ async function onBridgeMessage(message, sender) {
   return result;
 }
 
-browser.runtime.onMessage.addListener((message, sender) =>
-  onBridgeMessage(message, sender).catch(error => ({
-    ok: false,
-    message: String(error?.message || error) +
-      (message?.type === "jobflick:submit" ?
-        "; submission may have succeeded; inspect the Jobflick inbox before trying again" : "")
-  }))
-);
-browser.action.onClicked.addListener(tab => {
-  if (Number.isInteger(tab.id)) {
-    void browser.tabs.sendMessage(tab.id, { type: "jobflick:scan" }).catch(() => {});
+
+// Firefox extension popup is trusted only by its own sender identity and URL.
+// An arbitrary ChatGPT content script cannot call these privileged operations.
+function isPopup(sender) {
+  return sender?.id === browser.runtime.id &&
+    !sender?.tab &&
+    sender.url === browser.runtime.getURL("popup/index.html");
+}
+
+async function onPopupMessage(message, sender) {
+  if (!isPopup(sender)) return { ok: false, message: "Unauthorized extension page" };
+  switch (message?.type) {
+    case "jobflick:inbox": {
+      await serializedWrite;
+      const jobs = await saved();
+      const items = Object.values(jobs).filter(item => item && typeof item.id === "string")
+        .map(item => ({
+          id: item.id,
+          name: item.name || "",
+          state: item.state || "unknown",
+          color: item.color || "",
+          conversation: item.conversation || "",
+          orphaned: !!item.orphaned,
+          submittedAt: item.submittedAt || 0
+        })).sort((a, b) => b.submittedAt - a.submittedAt).slice(0, 300);
+      return { ok: true, jobs: items };
+    }
+    case "jobflick:refresh": {
+      await checkJobs();
+      return { ok: true };
+    }
+    case "jobflick:scan": {
+      const active = await browser.tabs.query({ active: true, currentWindow: true });
+      const tab = active[0];
+      if (!tab || !Number.isInteger(tab.id) || !canonical(tab.url)) {
+        return { ok: false, message: "Open a ChatGPT conversation to scan" };
+      }
+      await browser.tabs.sendMessage(tab.id, { type: "jobflick:scan" });
+      return { ok: true };
+    }
+    case "jobflick:report": {
+      const id = message.id;
+      if (typeof id !== "string" || !/^[a-zA-Z0-9_-]{8,128}$/.test(id)) {
+        return { ok: false, message: "Invalid job ID" };
+      }
+      const record = (await saved())[id];
+      if (!record || !FINISHED.has(record.state)) {
+        return { ok: false, message: "The job is unknown or not finished" };
+      }
+      const response = await native({ action: "show", id });
+      if (!response.ok || typeof response.report !== "string") {
+        return { ok: false, message: "Report unavailable in Jobflick" };
+      }
+      // Browser messaging and Blob export are bounded independently of the
+      // native host's framing limit. Full logs remain available in Jobflick.
+      if (response.report.length > 524288 ||
+          new TextEncoder().encode(response.report).byteLength > 524288) {
+        return { ok: false, message: "Report exceeds 512 KiB; use the Jobflick inbox to access its full log" };
+      }
+      return { ok: true, report: response.report };
+    }
+    default:
+      return { ok: false, message: "Unsupported popup action" };
   }
+}
+
+browser.runtime.onMessage.addListener((message, sender) => {
+  const fromPopup = typeof message?.type === "string" &&
+    ["jobflick:inbox", "jobflick:refresh", "jobflick:scan", "jobflick:report"].includes(message.type);
+  return (fromPopup ? onPopupMessage(message, sender) : onBridgeMessage(message, sender))
+    .catch(error => ({
+      ok: false,
+      message: String(error?.message || error) +
+        (message?.type === "jobflick:submit" ?
+          "; submission may have succeeded; inspect the Jobflick inbox before trying again" : "")
+    }));
 });
 browser.alarms.onAlarm.addListener(alarm => {
   if (alarm.name === ALARM) void checkJobs();

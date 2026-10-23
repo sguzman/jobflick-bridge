@@ -37,6 +37,7 @@
     }
   ],
   "action": {
-    "default_title": "Scan visible Execarium jobs"
+    "default_title": "Jobflick jobs and reports",
+    "default_popup": "popup/index.html"
   }
 }
