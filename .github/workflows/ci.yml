@@ -73,3 +73,33 @@ jobs:
         env:
           FDE_BINARY: ${{ steps.fde.outputs.firefox-path }}
         run: node tests/fde-native.cjs
+
+  real-jobflick:
+    name: Isolated real Jobflick native-host acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check out pinned upstream Jobflick for CI only
+        uses: actions/checkout@v4
+        with:
+          repository: sguzman/jobflick
+          ref: cbff2a4cb90be4487e1bbb406777cf7fe3b6cc1d
+          path: .ci-jobflick
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ".ci-jobflick -> target"
+          key: real-jobflick-bridge
+      - name: Install Fish and native Linux build requirements
+        run: |
+          sudo env DEBIAN_FRONTEND=noninteractive timeout 150s apt-get update -qq
+          sudo env DEBIAN_FRONTEND=noninteractive timeout 150s apt-get install -y fish libwayland-dev libxkbcommon-dev libx11-dev libxcb-shape0-dev libxcb-xfixes0-dev libgl1-mesa-dev pkg-config
+      - name: Compile pinned Jobflick
+        working-directory: .ci-jobflick
+        run: cargo build --locked --bin jobflick
+      - name: Real native-host protocol and harmless Fish execution
+        env:
+          JOBFLICK_QA_BINARY: ${{ github.workspace }}/.ci-jobflick/target/debug/jobflick
+        run: node tests/real-jobflick.cjs

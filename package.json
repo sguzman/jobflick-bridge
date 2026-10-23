@@ -6,6 +6,6 @@
   "description": "Firefox Developer Edition Jobflick bridge",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
-    "check": "node --check extension/background.js && node --check extension/content.js && npm test"
+    "check": "node --check extension/background.js && node --check extension/content.js && node --check tests/real-jobflick.cjs && npm test"
   }
 }
