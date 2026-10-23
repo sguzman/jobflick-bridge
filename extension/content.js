@@ -90,9 +90,26 @@
           state.jobId = result.job.id;
           byJob.set(state.jobId, state);
           const early = earlyStatus.get(state.jobId);
-          if (early) {
-            earlyStatus.delete(state.jobId);
-            paintStatus(state, early);
+          if (early) earlyStatus.delete(state.jobId);
+          // A harmless job can finish before submit_spec replies. Do not
+          // display "Queued" forever when the reply already knows it is
+          // terminal. Conversely an early terminal event must beat a stale
+          // queued/running submission acknowledgement.
+          const terminal = new Set([
+            "succeeded", "failed", "cancelled", "timed_out", "interrupted"
+          ]);
+          const precedence = value => terminal.has(value) ? 2 :
+            value === "running" ? 1 : 0;
+          const acknowledged = {
+            jobId: state.jobId,
+            state: result.job.state,
+            color: result.job.color || ""
+          };
+          const latest = early &&
+            precedence(early.state) >= precedence(acknowledged.state)
+            ? early : acknowledged;
+          if (latest.state && latest.state !== "queued") {
+            paintStatus(state, latest);
           } else {
             button.textContent = "Queued " + result.job.id.slice(0, 8);
           }
