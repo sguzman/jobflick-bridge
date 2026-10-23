@@ -638,3 +638,49 @@ test("unknown future records do not keep the Firefox polling alarm alive", async
   assert.equal(app.alarmActions.at(-1).type, "clear");
   assert.deepEqual(app.storage.jobflick_bridge_jobs_v1.job_12345678, unknown.job_12345678);
 });
+
+test("per-job preflight is read-only and checks exact original tab + conversation", async () => {
+  const app = boot(request => {
+    if (request.action === "submit_spec") return {
+      ok: true, job: { id: "job_12345678", state: "succeeded" }
+    };
+    throw new Error("No native action expected for preflight");
+  });
+  await app.listeners.message({ type: "jobflick:submit", yaml: sample }, app.sender);
+  const bad = await app.listeners.message({
+    type: "jobflick:preflight", id: "job_12345678"
+  }, app.sender);
+  assert.equal(bad.ok, false);
+  const ok = await app.listeners.message({
+    type: "jobflick:preflight", id: "job_12345678"
+  }, app.popupSender);
+  assert.equal(ok.ok, true);
+  assert.equal(ok.originalConversationVerified, true);
+  assert.equal(ok.composerPresent, true);
+  assert.equal(ok.fileInputPresent, false);
+  assert.equal(ok.composerOccupied, false);
+  assert.equal("report" in ok, false);
+  assert.equal("draft" in ok, false);
+  assert.equal(app.sentTabMessages.filter(x =>
+    x.message.type === "jobflick:probe-upload").length, 1);
+  assert.equal(app.requests.filter(x => x.action === "show").length, 0);
+});
+
+test("per-job preflight fails closed on navigation and never reroutes", async () => {
+  const app = boot(request => {
+    if (request.action === "submit_spec") return {
+      ok: true, job: { id: "job_12345678", state: "succeeded" }
+    };
+    throw new Error("No native action expected");
+  });
+  await app.listeners.message({ type: "jobflick:submit", yaml: sample }, app.sender);
+  app.tabs.set(11, { id: 11, url: "https://chatgpt.com/c/unrelated-5678" });
+  const result = await app.listeners.message({
+    type: "jobflick:preflight", id: "job_12345678"
+  }, app.popupSender);
+  assert.equal(result.ok, false);
+  assert.equal(app.storage.jobflick_bridge_jobs_v1.job_12345678.orphaned, true);
+  assert.equal(app.storage.jobflick_bridge_jobs_v1.job_12345678.deliveryState, "manual_only");
+  assert.equal(app.sentTabMessages.filter(x =>
+    x.message.type === "jobflick:probe-upload").length, 0);
+});

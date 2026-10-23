@@ -141,6 +141,27 @@ function renderItem(job) {
     });
     controls.append(forget);
   }
+  // Read-only per-job destination validation; no file is retrieved or sent.
+  if (FINISHED.has(job.state) && !job.orphaned) {
+    const inspect = element("button", "", "Check original chat");
+    inspect.type = "button";
+    inspect.addEventListener("click", async () => {
+      inspect.disabled = true;
+      try {
+        const flags = await ask("jobflick:preflight", { id: job.id });
+        say("Original chat verified · composer: " +
+          (flags.composerPresent ? "found" : "not found") +
+          " · draft: " + (flags.composerOccupied ? "occupied" : "empty/unknown") +
+          " · file input: " + (flags.fileInputPresent ? "exposed" : "not exposed") +
+          ". Read-only: nothing attached or sent.");
+      } catch (error) {
+        say(error.message);
+      } finally {
+        inspect.disabled = false;
+      }
+    });
+    controls.append(inspect);
+  }
   // Explicit user action to open a chat is not automatic report delivery.
   try {
     const destination = new URL(job.conversation);

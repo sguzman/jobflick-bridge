@@ -288,6 +288,43 @@ async function onPopupMessage(message, sender) {
         })).sort((a, b) => b.submittedAt - a.submittedAt).slice(0, 300);
       return { ok: true, jobs: items };
     }
+    case "jobflick:preflight": {
+      const id = message.id;
+      if (typeof id !== "string" || !/^[a-zA-Z0-9_-]{8,128}$/.test(id)) {
+        return { ok: false, message: "Invalid job ID" };
+      }
+      const record = (await saved())[id];
+      if (!knownRecord(record) || !FINISHED.has(record.state) || record.orphaned) {
+        return { ok: false, message: "This job has no verified active original conversation" };
+      }
+      const tab = await trustedTab(record.tabId, record.conversation, record.origin);
+      if (!tab) {
+        await mutate(jobs => {
+          if (knownRecord(jobs[id])) {
+            jobs[id].orphaned = true;
+            jobs[id].deliveryState = "manual_only";
+          }
+        });
+        return { ok: false, message: "Original tab changed or closed; use manual report delivery" };
+      }
+      const response = await browser.tabs.sendMessage(record.tabId, {
+        type: "jobflick:probe-upload"
+      });
+      if (!response || response.ok !== true ||
+          typeof response.composerPresent !== "boolean" ||
+          typeof response.fileInputPresent !== "boolean" ||
+          typeof response.composerOccupied !== "boolean") {
+        return { ok: false, message: "Unrecognized composer probe response" };
+      }
+      // No report payload, draft text, file names, DOM edits or Send action.
+      // Flags alone never imply an attachment can safely be inserted.
+      return {
+        ok: true, originalConversationVerified: true,
+        composerPresent: response.composerPresent,
+        composerOccupied: response.composerOccupied,
+        fileInputPresent: response.fileInputPresent
+      };
+    }
     case "jobflick:probe-upload": {
       const active = await browser.tabs.query({ active: true, currentWindow: true });
       const tab = active[0];
@@ -408,7 +445,7 @@ async function onPopupMessage(message, sender) {
 
 browser.runtime.onMessage.addListener((message, sender) => {
   const fromPopup = typeof message?.type === "string" &&
-    ["jobflick:inbox", "jobflick:refresh", "jobflick:scan", "jobflick:report", "jobflick:forget", "jobflick:cancel", "jobflick:diagnose", "jobflick:probe-upload"].includes(message.type);
+    ["jobflick:inbox", "jobflick:refresh", "jobflick:scan", "jobflick:report", "jobflick:forget", "jobflick:cancel", "jobflick:diagnose", "jobflick:probe-upload", "jobflick:preflight"].includes(message.type);
   return (fromPopup ? onPopupMessage(message, sender) : onBridgeMessage(message, sender))
     .catch(error => ({
       ok: false,

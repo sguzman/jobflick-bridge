@@ -72,3 +72,7 @@ The toolbar's **Inspect composer** action is a read-only probe of the active per
 ## Explicit stop request
 
 For queued or running jobs, the popup offers **Request stop** and then **Confirm stop**. Only a confirmed popup action issues the existing Jobflick `cancel` native request; content scripts cannot invoke it. Once Jobflick acknowledges the request, the browser records a stop-request flag and suppresses duplicate offers while the job remains active. **Accepted is not the same as cancelled**: the job might finish concurrently or a process may take time to stop. On an uncertain native disconnect the popup does not retry automatically; inspect Jobflick before another stop. Confirm real cancellation behavior separately in FDE/local Jobflick acceptance.
+
+## Per-job read-only destination preflight
+
+For a finished job whose originating tab identity is still live, **Check original chat** verifies both the session token and exact ChatGPT conversation URL, then asks that *same tab* for composer presence, draft occupancy and exposed file-input flags. No report, draft text, attachment name, or content is transferred. A changed tab becomes **manual-only** and cannot be automatically reattached. Presence flags are not permission or proof that upload works; the real attachment and Send gates remain locked until live FDE acceptance.
