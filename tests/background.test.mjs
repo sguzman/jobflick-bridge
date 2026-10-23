@@ -313,6 +313,6 @@ test("alarm checks at most 24 pending jobs and rotates fairly through 40", async
   assert.equal(first.length, 24);
   await app.listeners.message({ type: "jobflick:refresh" }, app.popupSender);
   const all = app.requests.filter(r => r.action === "inspect");
-  assert.equal(all.length, 40);
-  assert.equal(new Set(all.map(x => x.id)).size, 40);
+  assert.equal(all.length, 48); // Two bounded 24-job inspection cycles.
+  assert.equal(new Set(all.map(x => x.id)).size, 40); // Every job eventually checked.
 });
