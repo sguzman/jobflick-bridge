@@ -578,8 +578,8 @@
   ],
   "last_ci": {
     "result": "success",
-    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40015025541",
-    "commit": "d68b0c18ac53d7c925977297f8b75c14aa9b435f",
-    "scope": "Node behavior and scale, actual disposable headless Firefox Developer Edition bridge to pinned real Jobflick backend (hardcoded Fish printf only), terminal state and bounded quick checks, synthetic History API A→B→A destination revocation; neither authenticated ChatGPT nor actual file attachment and Send acceptance."
+    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40015713008",
+    "commit": "dc5ab4a1917f07013c896c28c446897117d5b0d7",
+    "scope": "Full static and FDE suites; real Firefox Developer Edition to pinned native Jobflick daemon with harmless Fish execution; synthetic history.pushState A→B→A revocation; six bounded short status rechecks; 40-job burst/32-ID cap; explicit real native cancellation; safe manual chat opener. No authenticated ChatGPT, file attachment or Send acceptance."
   }
 }
