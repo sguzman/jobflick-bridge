@@ -45,7 +45,17 @@
       throw new Error("Firefox FileList handoff was not confirmed");
     }
     input.dispatchEvent(new Event("change", { bubbles: true }));
-    // A page handler can still reject this; do not call this 'attached'.
+    // A page listener may synchronously clear the FileList, replace its
+    // contents, disable the control or detach the input. Do not report even
+    // DOM-level success after that has happened.
+    if (!input.isConnected || input.disabled ||
+        input.files?.length !== 1 ||
+        input.files[0]?.name !== file.name ||
+        input.files[0]?.size !== file.size ||
+        input.files[0]?.type !== file.type) {
+      throw new Error("File input changed during handoff; no attachment confirmed");
+    }
+    // A page can still reject asynchronously. This is never proof of upload.
     return { ok: true, domHandoffOnly: true, filename: file.name };
   }
 
