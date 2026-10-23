@@ -47,11 +47,27 @@ jobs:
           workspaces: ".ci-jobflick -> target"
           key: real-jobflick-bridge
       - name: Install Fish and native Linux build requirements
+        shell: bash
         run: |
-          # Azure-backed Ubuntu mirrors occasionally pause during downloads;
-          # the previous 150s limit expired mid-transfer (not at compilation).
-          sudo env DEBIAN_FRONTEND=noninteractive timeout 480s apt-get update -qq
-          sudo env DEBIAN_FRONTEND=noninteractive timeout 480s apt-get install -y fish jq libwayland-dev libxkbcommon-dev libx11-dev libxcb-shape0-dev libxcb-xfixes0-dev libgl1-mesa-dev pkg-config
+          set -euo pipefail
+          packages=(fish jq libwayland-dev libxkbcommon-dev libx11-dev
+            libxcb-shape0-dev libxcb-xfixes0-dev libgl1-mesa-dev pkg-config)
+          # Hosted runner images normally have apt package indexes already.
+          # Install from them first; only refresh on a stale/missing-index
+          # failure. This avoids an unnecessary full mirror round-trip on
+          # every expensive pinned Rust/native-host acceptance run.
+          apt_install() {
+            sudo env DEBIAN_FRONTEND=noninteractive timeout 240s \
+              apt-get install -y --no-install-recommends \
+              -o Acquire::Retries=2 -o Acquire::http::Timeout=30 \
+              -o Acquire::https::Timeout=30 "${packages[@]}"
+          }
+          if ! apt_install; then
+            sudo env DEBIAN_FRONTEND=noninteractive timeout 240s \
+              apt-get update -qq -o Acquire::Retries=2 \
+              -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30
+            apt_install
+          fi
       - name: Fish launcher syntax and disposable native-host registration
         run: |
           fish --no-execute scripts/install-native-host.fish
