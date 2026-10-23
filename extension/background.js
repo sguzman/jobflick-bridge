@@ -71,7 +71,12 @@ async function refreshAlarm(jobs) {
   const hasPending = Object.values(jobs).some(record =>
     knownRecord(record) && !FINISHED.has(record.state) && record.state !== "unknown");
   if (hasPending) {
-    await browser.alarms.create(ALARM, { periodInMinutes: 1 });
+    // Recreating an existing alarm on every metadata write moves its next
+    // deadline. A busy or rapidly changing inbox must not indefinitely
+    // postpone the durable once-per-minute status check.
+    if (!await browser.alarms.get(ALARM)) {
+      await browser.alarms.create(ALARM, { periodInMinutes: 1 });
+    }
   } else {
     await browser.alarms.clear(ALARM);
   }
