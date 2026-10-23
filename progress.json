@@ -571,9 +571,10 @@
         {
           "id": "M7-04",
           "title": "Accessibility",
-          "status": "implemented",
+          "status": "verified",
           "evidence": [
-            "Native button controls and status text in popup; accessibility audit/screen reader QA outstanding. Evidence: https://github.com/sguzman/jobflick-bridge/actions/runs/40001190037"
+            "Native button controls and status text in popup; accessibility audit/screen reader QA outstanding. Evidence: https://github.com/sguzman/jobflick-bridge/actions/runs/40001190037",
+            "Real disposable Firefox Developer Edition verifies W3C computed accessibility roles/names for native Run and production popup scan, refresh, diagnose, composer probe, searchbox, Save and Download controls. Actual Enter/Space keyboard gestures operate Run and the separate two-click local export; Run disables on uncertain submit. Popup polite aria-live status, system light/dark Canvas/CanvasText rendering, and zero animation/transition durations are asserted. Actual FDE CI green: https://github.com/sguzman/jobflick-bridge/actions/runs/40040280329. This closes automated accessibility/keyboard/theme tests; it does not imply independent human screen-reader or authenticated ChatGPT acceptance (M7-06)."
           ]
         },
         {
@@ -606,10 +607,10 @@
           "evidence": []
         }
       ],
-      "verified": 3,
+      "verified": 4,
       "total": 8,
-      "percent": 37,
-      "implemented": 3,
+      "percent": 50,
+      "implemented": 2,
       "planned": 2
     }
   ],
@@ -624,10 +625,10 @@
   },
   "overall": {
     "total": 63,
-    "verified": 41,
-    "implemented": 15,
+    "verified": 42,
+    "implemented": 14,
     "planned": 7,
-    "percent": 65,
+    "percent": 66,
     "basis": "Only verified atomic tasks count toward percentage"
   }
 }

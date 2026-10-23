@@ -451,3 +451,21 @@ manual export all passed in
 [Firefox CI](https://github.com/sguzman/jobflick-bridge/actions/runs/40040280329).
 This closes M7-01's browser/native safety-test gate, not authenticated
 ChatGPT site end-to-end validation or user-profile security assessment.
+
+## Verified M7-04: Firefox accessibility, keyboard and system themes
+
+Native Firefox/Marionette accessibility APIs verify the production Run
+button's role/name and the production popup's action and search controls.
+Real Enter/Space key events work without synthetic page-granted execution;
+the uncertain Run state disables repeat activation. The popup reports
+status via a polite live region. A real Firefox keyboard Save gesture only
+prepares a local File, and a separate keyboard Download gesture produces
+the verified complete report. Under forced light and dark color schemes,
+Canvas/CanvasText resolve to distinct contrasting foreground/backgrounds,
+while buttons have no animations or transitions.
+
+[Firefox CI acceptance](https://github.com/sguzman/jobflick-bridge/actions/runs/40040280329)
+uses the original content and popup source in disposable Firefox Developer
+Edition. External human screen-reader use, a real logged-in ChatGPT composer,
+and full desktop usability validation are still gated by M7-06; they are not
+implied by these automated accessibility API checks.
