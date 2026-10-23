@@ -71,6 +71,10 @@ jobs:
         env:
           FDE_BINARY: ${{ steps.fde.outputs.firefox-path }}
         run: node tests/fde-attachment.cjs
+      - name: Headless Firefox Developer Edition privileged popup acceptance
+        env:
+          FDE_BINARY: ${{ steps.fde.outputs.firefox-path }}
+        run: node tests/fde-privileged-popup.cjs
       - name: Headless Firefox Developer Edition two-click local report export
         env:
           FDE_BINARY: ${{ steps.fde.outputs.firefox-path }}
