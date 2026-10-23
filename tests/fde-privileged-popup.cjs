@@ -40,7 +40,19 @@ async function main(){
     matches:["http://127.0.0.1/*"],js:["qa-seed.js"],run_at:"document_idle"
   }];
   fs.writeFileSync(path.join(ext,"manifest.json"),JSON.stringify(manifest));
-  fs.copyFileSync(path.join(source,"background.js"),path.join(ext,"background.js"));
+  // QA-only authorized extension tab opening. Marionette does not permit
+  // direct driver.get() of moz-extension URLs; Firefox itself may open
+  // extension pages through browser.tabs.create without lowering production
+  // popup sender authentication.
+  const originalBackground=fs.readFileSync(path.join(source,"background.js"),"utf8");
+  const qaOpen=[
+    'browser.runtime.onMessage.addListener((message,sender)=>{',
+    ' if(message?.type==="qa:open-popup" &&',
+    '    sender?.tab?.url?.startsWith("http://127.0.0.1:"))',
+    '   void browser.tabs.create({url:browser.runtime.getURL("popup/index.html"),active:true});',
+    '});'
+  ].join("\n");
+  fs.writeFileSync(path.join(ext,"background.js"),qaOpen+"\n"+originalBackground);
   fs.mkdirSync(path.join(ext,"popup"));
   for(const filename of ["index.html","popup.css","popup.js"]){
     fs.copyFileSync(path.join(source,"popup",filename),path.join(ext,"popup",filename));
@@ -59,6 +71,9 @@ async function main(){
     '    orphaned:true,deliveryState:"manual_only"};',
     '}',
     'await browser.storage.local.set({jobflick_bridge_jobs_v1:data});',
+    'document.querySelector("#qa-open").addEventListener("click",event=>{',
+    ' if(event.isTrusted)void browser.runtime.sendMessage({type:"qa:open-popup"});',
+    '});',
     'document.documentElement.dataset.qaPopupUrl=browser.runtime.getURL("popup/index.html");',
     'document.documentElement.dataset.qaSeeded="true";',
     '})().catch(()=>{document.documentElement.dataset.qaSeeded="error";});'
@@ -83,7 +98,7 @@ async function main(){
   try{
     server=http.createServer((_req,response)=>{
       response.writeHead(200,{"Content-Type":"text/html; charset=utf-8"});
-      response.end('<!doctype html><html lang="en"><body><main>Disposable popup QA</main></body></html>');
+      response.end('<!doctype html><html lang="en"><body><main>Disposable popup QA</main><button type="button" id="qa-open">Open privileged popup</button></body></html>');
     });
     await new Promise((resolve,reject)=>{
       server.once("error",reject);
@@ -104,7 +119,14 @@ async function main(){
     const url=await driver.executeScript(
       "return document.documentElement.dataset.qaPopupUrl");
     assert.match(url,/^moz-extension:\/\/[^/]+\/popup\/index\.html$/);
-    await driver.get(url);
+    const handles=await driver.getAllWindowHandles();
+    await (await driver.findElement(By.id("qa-open"))).click();
+    await driver.wait(async()=>(
+      await driver.getAllWindowHandles()).length===handles.length+1,10000);
+    const popupTab=(await driver.getAllWindowHandles()).find(h=>!handles.includes(h));
+    assert(popupTab,"Firefox extension did not create the privileged popup tab");
+    await driver.switchTo().window(popupTab);
+    assert.equal(await driver.getCurrentUrl(),url);
     assert.equal(await driver.getTitle(),"Jobflick Bridge");
     await driver.wait(async()=>(
       await driver.findElements(By.css("main#jobs section.job"))
