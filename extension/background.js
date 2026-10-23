@@ -526,7 +526,8 @@ async function onPopupMessage(message, sender) {
         return { ok: false, message: "Invalid job ID" };
       }
       const current = (await saved())[id];
-      if (!knownRecord(current) || !["queued", "running"].includes(current.state)) {
+      if (!knownRecord(current) || current.integrityIssue ||
+          !["queued", "running"].includes(current.state)) {
         return { ok: false, message: "Only queued or running jobs can be stopped" };
       }
       if (current.cancelRequestedAt || cancelFlights.has(id)) {
@@ -574,7 +575,27 @@ async function onPopupMessage(message, sender) {
       if (!knownRecord(record) || !FINISHED.has(record.state)) {
         return { ok: false, message: "The job is unknown or not finished" };
       }
+      if (record.integrityIssue) {
+        return { ok: false, message: "Native identity mismatch; recover this report directly in Jobflick" };
+      }
       const response = await native({ action: "show", id });
+      // A host's optional response metadata may reveal a different record.
+      // Once this happens never continue exposing reports through the
+      // extension, even when the local job previously finished.
+      const wrongJobId = (typeof response.id === "string" && response.id !== id) ||
+        (typeof response.job?.id === "string" && response.job.id !== id);
+      const wrongOrigin = typeof response.job?.origin_tab_id === "string" &&
+        response.job.origin_tab_id !== record.origin;
+      if (wrongJobId || wrongOrigin) {
+        await mutate(jobs => {
+          if (!knownRecord(jobs[id])) return;
+          jobs[id].orphaned = true;
+          jobs[id].deliveryState = "manual_only";
+          jobs[id].integrityIssue = wrongJobId
+            ? "native_job_id_mismatch" : "native_origin_mismatch";
+        });
+        return { ok: false, message: "Native report identity mismatch; recover directly in Jobflick" };
+      }
       if (!response.ok || typeof response.report !== "string") {
         return { ok: false, message: "Report unavailable in Jobflick" };
       }
