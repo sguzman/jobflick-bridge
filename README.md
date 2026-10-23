@@ -34,4 +34,4 @@ Execarium defines the format. Jobflick owns validation enforcement, Fish executi
 - Keep sensitive YAML, reports, tokens and private conversation material out of the public repository, issues and CI logs.
 - Linux/EndeavourOS + Fish native host; keep the browser bridge small and dependency-light.
 
-**The manifest/scaffold is not proof of a tested, working extension.** See progress and acceptance gates.
+**Current pilot:** Firefox MV3 scripts implement intent-driven YAML validation, a genuine-click Run control, Native Messaging submission, durable job tracking, and background status inspection. Reports remain in Jobflick; **there is deliberately no automatic ChatGPT Send or file attachment yet**. Mocked Node tests and CI can pass without proving a real authenticated Firefox/ChatGPT session. See progress and acceptance gates.
