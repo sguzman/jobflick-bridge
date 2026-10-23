@@ -1539,3 +1539,71 @@ test("legacy local records using reserved keys cannot be polled or exported",asy
   assert.equal(app.storageWrites.length,0);
   assert.equal(Object.getPrototypeOf(malicious),Object.prototype);
 });
+
+test("supplied malformed native origin types fail closed on accepted submit",async()=>{
+  for(const origin_tab_id of [null,42,{},["tab-fake"]]){
+    const app=boot(request=>{
+      if(request.action==="submit_spec")return {
+        ok:true,job:{id:"job_12345678",state:"queued",origin_tab_id}
+      };
+      return {ok:true};
+    });
+    const reply=await app.listeners.message({
+      type:"jobflick:submit",yaml:sample
+    },app.sender);
+    assert.equal(reply.ok,false);
+    assert.match(reply.message,/submission may have succeeded/i);
+    assert.equal(app.storage.jobflick_bridge_jobs_v1,undefined);
+    assert.equal(app.requests.filter(x=>x.action==="submit_spec").length,1);
+  }
+});
+
+test("supplied null or numeric inspected identity quarantines native record",async()=>{
+  for(const job of [
+    {id:null,state:"running"},
+    {id:1234,state:"running"},
+    {id:"job_12345678",state:"running",origin_tab_id:null}
+  ]){
+    const app=boot(request=>{
+      if(request.action==="submit_spec")return {
+        ok:true,job:{id:"job_12345678",state:"queued"}
+      };
+      if(request.action==="inspect")return {ok:true,job};
+      return {ok:true};
+    });
+    await app.listeners.message({type:"jobflick:submit",yaml:sample},app.sender);
+    await app.listeners.message({type:"jobflick:refresh"},app.popupSender);
+    const record=app.storage.jobflick_bridge_jobs_v1.job_12345678;
+    assert.equal(record.orphaned,true);
+    assert.equal(record.deliveryState,"manual_only");
+    assert(record.integrityIssue);
+    const count=app.requests.filter(x=>x.action==="inspect").length;
+    await app.listeners.message({type:"jobflick:refresh"},app.popupSender);
+    assert.equal(app.requests.filter(x=>x.action==="inspect").length,count);
+  }
+});
+
+test("supplied malformed show response identity cannot escape as a report",async()=>{
+  for(const nativeReply of [
+    {ok:true,report:"wrong",id:null},
+    {ok:true,report:"wrong",job:{id:42}},
+    {ok:true,report:"wrong",job:{origin_tab_id:[]}}
+  ]){
+    const id="job_12345678";
+    const app=boot(request=>{
+      if(request.action==="show")return nativeReply;
+      throw Error("Unexpected native request");
+    },{storage:{jobflick_bridge_jobs_v1:{[id]:{
+      id,recordVersion:1,state:"succeeded",origin:"tab-original",
+      orphaned:false,conversation:"https://chatgpt.com/c/testing-1234"
+    }}}});
+    const result=await app.listeners.message({
+      type:"jobflick:report",id
+    },app.popupSender);
+    assert.equal(result.ok,false);
+    assert.equal(result.report,undefined);
+    assert.equal(app.storage.jobflick_bridge_jobs_v1[id].orphaned,true);
+    assert(app.storage.jobflick_bridge_jobs_v1[id].integrityIssue);
+    assert.equal(app.requests.length,1);
+  }
+});
