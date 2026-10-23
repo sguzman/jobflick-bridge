@@ -8,6 +8,13 @@ end
 
 set -l data_dir "$HOME/.local/share"
 if set -q XDG_DATA_HOME
+    # XDG_DATA_HOME is required to be an absolute path. An empty or
+    # relative override could otherwise create a QA profile in an
+    # unintended working directory or at the filesystem root.
+    if test -z "$XDG_DATA_HOME"; or not string match -qr '^/' -- "$XDG_DATA_HOME"; or test "$XDG_DATA_HOME" = /
+        echo "XDG_DATA_HOME must be a non-root absolute path; refusing to launch" >&2
+        exit 2
+    end
     set data_dir "$XDG_DATA_HOME"
 end
 set -l qa_root "$data_dir/jobflick-bridge-fde-qa"
