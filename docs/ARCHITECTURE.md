@@ -23,7 +23,7 @@ User-installed native host: jobflick native-host
 - Promise-based `browser.*` APIs; stable `browser_specific_settings.gecko.id`.
 - Firefox native host uses `allowed_extensions` and Linux `~/.mozilla/native-messaging-hosts`. Chromium `allowed_origins` and `~/.config/google-chrome` directories are wrong here.
 - The host registration is *user-level*, not profile-level. A dedicated Firefox QA profile separates browsing state, **not** native command authority.
-- Only allowed ChatGPT origins receive content scripts. No extension-wide DOM observer, clipboard watcher, arbitrary website access or browser preference modifications.
+- Only allowed ChatGPT origins receive content scripts. The broad `tabs` permission is omitted; matching ChatGPT host permissions provide the tab URL needed for precise routing. No extension-wide DOM observer, clipboard watcher, arbitrary website access or browser preference modifications.
 
 ## Routing and lifecycle
 

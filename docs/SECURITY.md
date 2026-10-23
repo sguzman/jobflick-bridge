@@ -28,3 +28,7 @@ No browser extension can establish that a command is harmless simply because its
 Do not run host install scripts automatically from CI, a package installation, or extension startup. Document exact changes, offer explicit uninstall, and never touch existing personal Firefox profiles or prefs. The Linux native host manifest directory is shared by Firefox profiles for the OS user; remove only this app's own manifest, never the directory itself.
 
 No telemetry. No remote job execution backend. No clipboard watcher. No self-update of Jobflick from inside a running Jobflick job.
+
+## Firefox least-privilege tab access
+
+The extension intentionally does **not** request the broad `tabs` permission. Firefox 86+ allows `tabs.get` and `tabs.query` to expose `Tab.url` when the target tab has a matching narrow `host_permissions` grant; the rest of the tabs API is available without the broad permission. Since Jobflick Bridge targets Firefox Developer Edition 140+, only the exact ChatGPT host matches are needed. Reading a URL outside those hosts is unsupported and fails the exact-origin check. Source: [Mozilla tabs API](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/tabs).

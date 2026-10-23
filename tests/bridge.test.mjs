@@ -13,6 +13,7 @@ test("Firefox-specific MV3 manifest, never Chrome service worker", () => {
   assert.deepEqual(manifest.background, { scripts: ["background.js"] });
   assert.deepEqual(manifest.host_permissions, ["https://chatgpt.com/*", "https://chat.openai.com/*"]);
   assert(manifest.permissions.includes("nativeMessaging"));
+  assert(!manifest.permissions.includes("tabs"), "Host permissions cover ChatGPT tab URL without general tabs permission");
 });
 
 test("native host is Firefox-specific, explicit and uses correct allowlist", () => {
