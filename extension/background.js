@@ -12,6 +12,13 @@ const SITES = new Set(["chatgpt.com", "chat.openai.com"]);
 let serializedWrite = Promise.resolve();
 let checking = null;
 const originFlights = new Map();
+const cancelFlights = new Set();
+const RECORD_VERSION = 1;
+
+// Existing unversioned records from the Firefox pilot are v1-compatible.
+// Future unsupported records are kept untouched, not guessed or discarded.
+const knownRecord = record => record && typeof record === "object" &&
+  (record.recordVersion === undefined || record.recordVersion === RECORD_VERSION);
 
 function canonical(value) {
   try {
@@ -115,7 +122,7 @@ async function reconcileOrigins() {
   const records = Object.values(await saved());
   const orphanIds = [];
   for (const record of records) {
-    if (!record || record.orphaned || typeof record.id !== "string") continue;
+    if (!knownRecord(record) || record.orphaned || typeof record.id !== "string") continue;
     try {
       const tab = await trustedTab(record.tabId, record.conversation, record.origin);
       if (!tab) orphanIds.push(record.id);
@@ -126,7 +133,10 @@ async function reconcileOrigins() {
   if (orphanIds.length) {
     await mutate(jobs => {
       for (const id of orphanIds) {
-        if (jobs[id]) jobs[id].orphaned = true;
+        if (knownRecord(jobs[id])) {
+          jobs[id].orphaned = true;
+          jobs[id].deliveryState = "manual_only";
+        }
       }
     });
   }
@@ -144,7 +154,7 @@ async function checkJobs() {
     // unbounded number of short-lived native host processes at each alarm.
     // Oldest-checked-first ordering rotates fairly through pending jobs.
     const pending = Object.entries(await saved())
-      .filter(([, record]) => record && !FINISHED.has(record.state) &&
+      .filter(([, record]) => knownRecord(record) && !FINISHED.has(record.state) &&
         record.state !== "unknown")
       .sort((a, b) => (a[1].lastCheckedAt || 0) - (b[1].lastCheckedAt || 0))
       .slice(0, MAX_STATUS_PER_POLL);
@@ -166,6 +176,9 @@ async function checkJobs() {
         await mutate(jobs => {
           if (!jobs[id]) return;
           jobs[id].state = state;
+          if (FINISHED.has(state) && !jobs[id].orphaned) {
+            jobs[id].deliveryState = "report_pending_manual_delivery";
+          }
           jobs[id].name = typeof status.job.name === "string" ? status.job.name : jobs[id].name;
           jobs[id].color = typeof status.job.color === "string" ? status.job.color : jobs[id].color;
         });
@@ -229,9 +242,12 @@ async function onBridgeMessage(message, sender) {
   }
   await mutate(jobs => {
     jobs[id] = {
-      id, tabId: sender.tab.id, origin, conversation: url,
+      id, recordVersion: RECORD_VERSION,
+      tabId: sender.tab.id, origin, conversation: url,
       state: result.job.state || "queued", name: result.job.name || "",
       color: result.job.color || "", orphaned: false,
+      deliveryState: FINISHED.has(result.job.state)
+        ? "report_pending_manual_delivery" : "awaiting_completion",
       submittedAt: Date.now()
     };
   });
@@ -254,7 +270,8 @@ async function onPopupMessage(message, sender) {
     case "jobflick:inbox": {
       await serializedWrite;
       const jobs = await saved();
-      const items = Object.values(jobs).filter(item => item && typeof item.id === "string")
+      const items = Object.values(jobs).filter(item =>
+        knownRecord(item) && typeof item.id === "string")
         .map(item => ({
           id: item.id,
           name: item.name || "",
@@ -263,7 +280,11 @@ async function onPopupMessage(message, sender) {
           conversation: item.conversation || "",
           orphaned: !!item.orphaned,
           submittedAt: item.submittedAt || 0,
-          cancelRequested: !!item.cancelRequestedAt
+          cancelRequested: !!item.cancelRequestedAt,
+          deliveryState: item.deliveryState ||
+            (item.orphaned ? "manual_only" :
+              FINISHED.has(item.state) ? "report_pending_manual_delivery" :
+                "awaiting_completion")
         })).sort((a, b) => b.submittedAt - a.submittedAt).slice(0, 300);
       return { ok: true, jobs: items };
     }
@@ -320,25 +341,30 @@ async function onPopupMessage(message, sender) {
         return { ok: false, message: "Invalid job ID" };
       }
       const current = (await saved())[id];
-      if (!current || !["queued", "running"].includes(current.state)) {
+      if (!knownRecord(current) || !["queued", "running"].includes(current.state)) {
         return { ok: false, message: "Only queued or running jobs can be stopped" };
       }
-      if (current.cancelRequestedAt) {
+      if (current.cancelRequestedAt || cancelFlights.has(id)) {
         return { ok: false, message: "Stop already requested; check Jobflick before another attempt" };
       }
       // An explicit popup confirmation is required. A successful native
       // acknowledgement means the request was accepted, NOT that a running
       // process definitely stopped before completion. Never auto-retry.
-      const response = await native({ action: "cancel", id });
-      if (!response.ok) {
-        return { ok: false, message: response.message || "Jobflick did not accept the stop request" };
-      }
-      await mutate(jobs => {
-        if (jobs[id] && !FINISHED.has(jobs[id].state)) {
-          jobs[id].cancelRequestedAt = Date.now();
+      cancelFlights.add(id);
+      try {
+        const response = await native({ action: "cancel", id });
+        if (!response.ok) {
+          return { ok: false, message: response.message || "Jobflick did not accept the stop request" };
         }
-      });
-      return { ok: true, message: "Stop request accepted; final state is not yet confirmed" };
+        await mutate(jobs => {
+          if (knownRecord(jobs[id]) && !FINISHED.has(jobs[id].state)) {
+            jobs[id].cancelRequestedAt = Date.now();
+          }
+        });
+        return { ok: true, message: "Stop request accepted; final state is not yet confirmed" };
+      } finally {
+        cancelFlights.delete(id);
+      }
     }
     case "jobflick:forget": {
       const id = message.id;
@@ -346,7 +372,7 @@ async function onPopupMessage(message, sender) {
         return { ok: false, message: "Invalid job ID" };
       }
       const current = (await saved())[id];
-      if (!current || !FINISHED.has(current.state)) {
+      if (!knownRecord(current) || !FINISHED.has(current.state)) {
         return { ok: false, message: "Only finished bridge records may be forgotten" };
       }
       // Forget only the extension's routing metadata. No native action, no
@@ -360,7 +386,7 @@ async function onPopupMessage(message, sender) {
         return { ok: false, message: "Invalid job ID" };
       }
       const record = (await saved())[id];
-      if (!record || !FINISHED.has(record.state)) {
+      if (!knownRecord(record) || !FINISHED.has(record.state)) {
         return { ok: false, message: "The job is unknown or not finished" };
       }
       const response = await native({ action: "show", id });
@@ -402,7 +428,10 @@ browser.tabs.onRemoved.addListener(id => {
   // Keep job data; do not interpret a recycled numeric tab ID as its origin.
   void mutate(jobs => {
     for (const record of Object.values(jobs)) {
-      if (record.tabId === id) record.orphaned = true;
+      if (knownRecord(record) && record.tabId === id) {
+        record.orphaned = true;
+        record.deliveryState = "manual_only";
+      }
     }
   });
 });

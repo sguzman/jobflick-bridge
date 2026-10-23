@@ -563,3 +563,64 @@ test("startup keeps a verified living origin attached", async () => {
   for (let n = 0; n < 10; n++) await pause();
   assert.equal(app.storage.jobflick_bridge_jobs_v1.job_12345678.orphaned, false);
 });
+
+test("tracked Firefox records have an explicit version and non-delivered result state", async () => {
+  const app = boot(request => {
+    if (request.action === "submit_spec") return {
+      ok: true, job: { id: "job_12345678", state: "queued" }
+    };
+    if (request.action === "inspect") return {
+      ok: true, job: { id: request.id, state: "succeeded" }
+    };
+    return { ok: true };
+  });
+  await app.listeners.message({ type: "jobflick:submit", yaml: sample }, app.sender);
+  const initial = app.storage.jobflick_bridge_jobs_v1.job_12345678;
+  assert.equal(initial.recordVersion, 1);
+  assert.equal(initial.deliveryState, "awaiting_completion");
+  await app.listeners.message({ type: "jobflick:refresh" }, app.popupSender);
+  const record = app.storage.jobflick_bridge_jobs_v1.job_12345678;
+  assert.equal(record.deliveryState, "report_pending_manual_delivery");
+  assert.equal(record.orphaned, false);
+  assert.equal("report" in record, false);
+  assert.notEqual(record.deliveryState, "delivered", "No automatic Send exists");
+});
+
+test("unsupported future record versions survive untouched and cannot be exported or cancelled", async () => {
+  const future = { job_12345678: {
+    id: "job_12345678", recordVersion: 200, state: "running",
+    tabId: 11, origin: "tab-other", conversation: "https://chatgpt.com/c/testing-1234"
+  } };
+  const app = boot(null, { storage: { jobflick_bridge_jobs_v1: future } });
+  const inbox = await app.listeners.message({ type: "jobflick:inbox" }, app.popupSender);
+  assert.equal(inbox.ok, true);
+  assert.equal(inbox.jobs.length, 0);
+  for (const type of ["jobflick:cancel", "jobflick:forget", "jobflick:report"]) {
+    const response = await app.listeners.message({ type, id: "job_12345678" }, app.popupSender);
+    assert.equal(response.ok, false);
+  }
+  await app.listeners.message({ type: "jobflick:refresh" }, app.popupSender);
+  assert.equal(app.requests.length, 0);
+  assert.equal(app.storage.jobflick_bridge_jobs_v1.job_12345678.recordVersion, 200);
+});
+
+test("concurrent popup cancellation messages issue at most one native request", async () => {
+  let finish;
+  const app = boot(request => {
+    if (request.action === "submit_spec") return {
+      ok: true, job: { id: "job_12345678", state: "running" }
+    };
+    if (request.action === "inspect") return { ok: true, job: { id: request.id, state: "running" } };
+    if (request.action === "cancel") return new Promise(resolve => { finish = resolve; });
+    throw new Error("Unexpected host action");
+  });
+  await app.listeners.message({ type: "jobflick:submit", yaml: sample }, app.sender);
+  const first = app.listeners.message({ type: "jobflick:cancel", id: "job_12345678" }, app.popupSender);
+  for (let i = 0; i < 10 && !finish; i++) await pause();
+  assert.equal(typeof finish, "function");
+  const second = await app.listeners.message({ type: "jobflick:cancel", id: "job_12345678" }, app.popupSender);
+  assert.equal(second.ok, false);
+  assert.equal(app.requests.filter(x => x.action === "cancel").length, 1);
+  finish({ ok: true, message: "Stop requested" });
+  assert.equal((await first).ok, true);
+});
