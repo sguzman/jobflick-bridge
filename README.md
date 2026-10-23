@@ -83,3 +83,7 @@ The Firefox popup paginates local job records in batches of 40. **Load older job
 ## 🔎 Local inbox search
 
 The popup's keyboard-accessible search form filters saved Jobflick records by job name, ID or state. Results still load in 40-job pages, and searching never reads job output or calls Native Messaging. A blank search restores the complete saved history.
+
+## 🧪 Two-tier Firefox CI
+
+`Firefox Bridge Checks` runs Node/behavioral tests, Mozilla lint, unsigned QA packaging, and actual headless Firefox Developer Edition installation/UI checks on every `main` update. `Firefox Bridge Real Jobflick Integration` separately builds pinned Jobflick and verifies a harmless Fish job through Native Messaging when production native-facing code, native test fixtures, host installer or its workflow changes. Documentation and popup-only changes do not trigger a needless Rust rebuild; their fast Firefox checks still run.

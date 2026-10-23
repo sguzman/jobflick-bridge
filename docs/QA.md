@@ -128,3 +128,7 @@ These behaviors are covered by CI mocks; authenticated Firefox Developer Edition
 ## Local job search acceptance
 
 Background inbox pagination accepts at most 128 characters of search text and filters existing local job metadata before bounded page delivery. Case-insensitive queries match IDs, titles and states; malformed or excessive queries fail closed. The popup offers a native search form (Enter or Find), preserving keyboard navigation and pagination. Node behavioral tests cover search over 130 records, paging through matching results, clearing a search, no-result feedback, and rejection of oversized queries. Search neither reads a report nor submits/executes any job. Real authenticated FDE popup visual QA remains outstanding.
+
+## CI change scoping
+
+The lightweight workflow runs on every push to `main` and on explicit dispatch. The separate real-backend workflow runs automatically only for changes to the native-facing background/content/manifest, real-host tests and fixtures, native-host installer, package manifest, or integration workflow. It can still be dispatched manually. A passing lightweight run is **not** evidence of newly rerun real Jobflick integration; both statuses must be reported separately, using the latest native run relevant to the changed code. No release or authenticated ChatGPT automation is inferred from either.
