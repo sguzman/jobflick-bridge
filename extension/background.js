@@ -352,15 +352,18 @@ async function drainFastRechecks() {
     try {
       const inspected = await checkJobs(id);
       const record = (await saved())[id];
-      if (!matchedRecord(id, record) || FINISHED.has(record.state) ||
-          record.state === "unknown") {
+      if (!matchedRecord(id, record) || record.integrityIssue ||
+          FINISHED.has(record.state) || record.state === "unknown") {
         fastRechecks.delete(id);
       } else if (inspected) {
         fastRechecks.set(id, remaining - 1);
       }
       // A coalesced check does not use up this job's attempt budget.
     } catch {
-      // The normal one-minute alarm remains authoritative. Never resubmit.
+      // A failed browser storage operation must not turn an otherwise
+      // six-attempt fast path into an infinite 1.2-second timer loop.
+      // The durable minute alarm handles future reconciliation; no resubmit.
+      fastRechecks.set(id, remaining - 1);
     }
     if (fastRechecks.get(id) === 0) fastRechecks.delete(id);
   }

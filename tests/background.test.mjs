@@ -1164,6 +1164,62 @@ test("fast native status polling stops after six bounded checks of a slow job",a
   assert.equal(app.requests.filter(x=>x.action==="submit_spec").length,1);
 });
 
+test("failed browser-storage reads do not cause unbounded fast rechecks",async()=>{
+  const timers=[];
+  let storageUnavailable=false;
+  const app=boot(request=>{
+    if(request.action==="submit_spec")return {
+      ok:true,job:{id:"job_12345678",state:"queued"}
+    };
+    if(request.action==="inspect")return {
+      ok:true,job:{id:request.id,state:"running"}
+    };
+    throw Error("Unexpected native action");
+  },{
+    setTimeout:fn=>{timers.push(fn);return timers.length;},
+    beforeLocalRead:()=>{
+      if(storageUnavailable)throw Error("temporary Firefox storage error");
+    }
+  });
+  await app.listeners.message({type:"jobflick:submit",yaml:sample},app.sender);
+  for(let i=0;i<10;i++)await pause();
+  assert.equal(timers.length,1);
+  storageUnavailable=true;
+  let ticks=0;
+  while(timers.length && ticks<20){
+    await timers.shift()();
+    ticks++;
+  }
+  assert.equal(ticks,6,"Failed checks must consume the bounded fast retry budget");
+  assert.equal(timers.length,0,"No busy-loop timers survive an ongoing storage outage");
+  assert.equal(app.requests.filter(x=>x.action==="submit_spec").length,1);
+  assert.equal(app.requests.filter(x=>x.action==="show").length,0);
+});
+
+test("quarantined job cancels its fast status polling immediately",async()=>{
+  const timers=[];
+  const id="job_12345678";
+  const app=boot(request=>{
+    if(request.action==="submit_spec")return {
+      ok:true,job:{id,state:"queued"}
+    };
+    if(request.action==="inspect")return {
+      ok:true,job:{id,state:"running"}
+    };
+    throw Error("Unexpected native action");
+  },{setTimeout:fn=>{timers.push(fn);return timers.length;}});
+  await app.listeners.message({type:"jobflick:submit",yaml:sample},app.sender);
+  for(let i=0;i<10;i++)await pause();
+  assert.equal(timers.length,1);
+  const record=app.storage.jobflick_bridge_jobs_v1[id];
+  record.integrityIssue="native_origin_mismatch";
+  record.orphaned=true;
+  await timers.shift()();
+  assert.equal(timers.length,0,"Integrity quarantine halts redundant short-lived checks");
+  assert.equal(app.requests.filter(x=>x.action==="submit_spec").length,1);
+  assert.equal(app.requests.filter(x=>x.action==="show").length,0);
+});
+
 test("burst of 40 jobs has a fixed-size fast polling queue; others use alarms",async()=>{
   const timers=[];
   let nextId=0;
