@@ -5,6 +5,7 @@ const HOST = "io.github.sguzman.jobflick";
 const KEY = "jobflick_bridge_jobs_v1";
 const ALARM = "jobflick_bridge_pending_v1";
 const MAX_YAML_BYTES = 262144;
+const MAX_STATUS_PER_POLL = 24;
 const FINISHED = new Set(["succeeded", "failed", "cancelled", "timed_out", "interrupted"]);
 const SITES = new Set(["chatgpt.com", "chat.openai.com"]);
 
@@ -93,7 +94,23 @@ async function checkJobs() {
   checking = new Promise(resolve => { release = resolve; });
   try {
     await serializedWrite;
-    for (const [id, record] of Object.entries(await saved())) {
+    // Bounded polling: a busy developer with many chats must not launch an
+    // unbounded number of short-lived native host processes at each alarm.
+    // Oldest-checked-first ordering rotates fairly through pending jobs.
+    const pending = Object.entries(await saved())
+      .filter(([, record]) => record && !FINISHED.has(record.state) &&
+        record.state !== "unknown")
+      .sort((a, b) => (a[1].lastCheckedAt || 0) - (b[1].lastCheckedAt || 0))
+      .slice(0, MAX_STATUS_PER_POLL);
+    // Record attempts even if the native host is temporarily unavailable;
+    // otherwise one broken record can starve later jobs indefinitely.
+    const checkedAt = Date.now();
+    await mutate(jobs => {
+      for (const [id] of pending) {
+        if (jobs[id]) jobs[id].lastCheckedAt = checkedAt;
+      }
+    });
+    for (const [id, record] of pending) {
       if (FINISHED.has(record.state) || record.state === "unknown") continue;
       try {
         const status = await native({ action: "inspect", id });

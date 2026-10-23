@@ -32,3 +32,7 @@ Never accept a conversation identity authored inside the YAML. Derive the curren
 Keep finished but undelivered reports inspectable; browser restart cannot prove a new tab is the original. Never automatically send to a guessed replacement tab. A native submission transport failure is **uncertain**, not necessarily failed; do not retry it blindly. Delivery retries are a separate operation from **job submission**.
 
 Attachment delivery is subject to live Firefox/ChatGPT integration testing. Do not claim upload success based only on dispatching synthetic file input events.
+
+## Pending-job polling budget
+
+Firefox alarms are used only while there are unfinished tracked jobs. A poll inspects **at most 24 jobs**, ordered by the oldest `lastCheckedAt`. Even if a native host inspection fails, its attempt time advances so other jobs are not starved. This limits per-minute process creation without losing durable queue records. Explicit Refresh shares any current inspection run. The 40-job mock test checks that two polling cycles cover all 40 IDs exactly once; runtime/idle load still requires actual Firefox QA.

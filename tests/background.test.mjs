@@ -292,3 +292,27 @@ test("navigation to a different chat blocks even a same-tab status message", asy
   assert.equal(app.sentTabMessages.length, 0);
   assert.equal(app.storage.jobflick_bridge_jobs_v1.job_12345678.orphaned, true);
 });
+
+test("alarm checks at most 24 pending jobs and rotates fairly through 40", async () => {
+  const records = {};
+  for (let n = 0; n < 40; n++) {
+    const id = "job_" + String(n).padStart(8, "0");
+    records[id] = {
+      id, tabId: 11, origin: "tab-old", conversation: "https://chatgpt.com/c/testing-1234",
+      state: "running", submittedAt: n, orphaned: true
+    };
+  }
+  const app = boot(request => {
+    if (request.action === "inspect") return {
+      ok: true, job: { id: request.id, state: "running" }
+    };
+    throw new Error("Only inspect is expected during polling");
+  }, { storage: { jobflick_bridge_jobs_v1: records }, session: {} });
+  await app.listeners.message({ type: "jobflick:refresh" }, app.popupSender);
+  const first = app.requests.filter(r => r.action === "inspect");
+  assert.equal(first.length, 24);
+  await app.listeners.message({ type: "jobflick:refresh" }, app.popupSender);
+  const all = app.requests.filter(r => r.action === "inspect");
+  assert.equal(all.length, 40);
+  assert.equal(new Set(all.map(x => x.id)).size, 40);
+});
