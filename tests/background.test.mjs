@@ -225,3 +225,25 @@ test("untrusted sender cannot invoke scan or report even with valid IDs", async 
   }
   assert.equal(app.requests.length, 0);
 });
+
+test("forgetting requires a finished job and cannot cancel or delete its native output", async () => {
+  const app = boot(request => {
+    if (request.action === "submit_spec") return {
+      ok: true, job: { id: "job_12345678", state: "queued" }
+    };
+    if (request.action === "inspect") return {
+      ok: true, job: { id: request.id, state: "succeeded" }
+    };
+    return { ok: true };
+  });
+  await app.listeners.message({ type: "jobflick:submit", yaml: sample }, app.sender);
+  const bad = await app.listeners.message({ type: "jobflick:forget", id: "job_12345678" }, app.sender);
+  assert.equal(bad.ok, false);
+  await app.listeners.message({ type: "jobflick:refresh" }, app.popupSender);
+  const forgotten = await app.listeners.message({
+    type: "jobflick:forget", id: "job_12345678"
+  }, app.popupSender);
+  assert.equal(forgotten.ok, true);
+  assert.equal(app.storage.jobflick_bridge_jobs_v1.job_12345678, undefined);
+  assert.equal(app.requests.some(v => ["cancel", "consume", "delete"].includes(v.action)), false);
+});

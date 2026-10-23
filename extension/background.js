@@ -206,6 +206,20 @@ async function onPopupMessage(message, sender) {
       await browser.tabs.sendMessage(tab.id, { type: "jobflick:scan" });
       return { ok: true };
     }
+    case "jobflick:forget": {
+      const id = message.id;
+      if (typeof id !== "string" || !/^[a-zA-Z0-9_-]{8,128}$/.test(id)) {
+        return { ok: false, message: "Invalid job ID" };
+      }
+      const current = (await saved())[id];
+      if (!current || !FINISHED.has(current.state)) {
+        return { ok: false, message: "Only finished bridge records may be forgotten" };
+      }
+      // Forget only the extension's routing metadata. No native action, no
+      // cancellation, no deletion of Jobflick's durable job or output.
+      await mutate(jobs => { if (FINISHED.has(jobs[id]?.state)) delete jobs[id]; });
+      return { ok: true };
+    }
     case "jobflick:report": {
       const id = message.id;
       if (typeof id !== "string" || !/^[a-zA-Z0-9_-]{8,128}$/.test(id)) {
@@ -234,7 +248,7 @@ async function onPopupMessage(message, sender) {
 
 browser.runtime.onMessage.addListener((message, sender) => {
   const fromPopup = typeof message?.type === "string" &&
-    ["jobflick:inbox", "jobflick:refresh", "jobflick:scan", "jobflick:report"].includes(message.type);
+    ["jobflick:inbox", "jobflick:refresh", "jobflick:scan", "jobflick:report", "jobflick:forget"].includes(message.type);
   return (fromPopup ? onPopupMessage(message, sender) : onBridgeMessage(message, sender))
     .catch(error => ({
       ok: false,

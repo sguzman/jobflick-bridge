@@ -40,3 +40,7 @@ Run `fish scripts/qa-firefox-developer.fish`. This script exclusively launches t
 In the QA window, open `about:debugging` → **This Firefox** → **Load Temporary Add-on**, and select `extension/manifest.json`. Temporary add-ons ordinarily need loading again after browser restart; avoid recommending insecure signature preferences as the normal development workflow. <https://firefox-source-docs.mozilla.org/devtools-user/about_colon_debugging/index.html>
 
 For the first browser-only smoke test, do **not** run the native-host installer: verify the extension popup opens, Scan Visible responds on ChatGPT, no browser instability occurs, and absence of the host does not queue work. Explicit native-host installation comes only after the browser-only gate; **Firefox's native host registration is per OS user, not isolated to this profile**.
+
+## Bridge-only retention
+
+Finished records may be forgotten from the toolbar inbox through two explicit clicks: **Forget bridge record** and **Confirm forget**. This removes only Firefox-extension routing metadata. It neither cancels, consumes, nor deletes jobs or logs inside Jobflick. Running jobs cannot be forgotten via this control. This is a local data-management action, not an execution action.

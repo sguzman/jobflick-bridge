@@ -63,6 +63,31 @@ function renderItem(job) {
       }
     });
     controls.append(button);
+
+    const forget = element("button", "", "Forget bridge record");
+    forget.type = "button";
+    let armed = false;
+    forget.addEventListener("click", async () => {
+      if (!armed) {
+        armed = true;
+        forget.textContent = "Confirm forget";
+        say("This only forgets the extension's routing record. Jobflick keeps its job and report.");
+        return;
+      }
+      forget.disabled = true;
+      try {
+        await ask("jobflick:forget", { id: job.id });
+        section.remove();
+        say("Bridge record forgotten; Jobflick retains the durable job.");
+        if (!jobsElement.children.length) {
+          jobsElement.append(element("p", "", "No jobs tracked in the extension."));
+        }
+      } catch (error) {
+        say(error.message);
+        forget.disabled = false;
+      }
+    });
+    controls.append(forget);
   }
   // Explicit user action to open a chat is not automatic report delivery.
   try {
