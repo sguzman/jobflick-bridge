@@ -88,7 +88,10 @@ function simulate(initialYaml = yaml, validateOK = true, probeOptions = {}) {
     runtime: {
       sendMessage: async message => {
         runtimeMessages.push(message);
-        if (message.type === "jobflick:validate") return { ok: validateOK };
+        if (message.type === "jobflick:validate") {
+          if (probeOptions.validationGate) await probeOptions.validationGate;
+          return { ok: validateOK };
+        }
         if (message.type === "jobflick:submit") {
           if (probeOptions.earlyStatus) {
             await runtimeListener({
@@ -157,6 +160,42 @@ test("code changes after validation fail closed before submission", async () => 
   await app.pump();
   app.pre.yaml += "\n# different";
   await app.pre.button.handlers.click({ isTrusted: true });
+  assert.equal(app.messages.filter(x => x.type === "jobflick:submit").length, 0);
+});
+
+test("repeated intent never duplicates a pending validation for unchanged YAML", async () => {
+  let release;
+  const validationGate = new Promise(resolve => { release = resolve; });
+  const app = simulate(yaml, true, { validationGate });
+  app.focus();
+  await app.pump();
+  assert.equal(app.messages.filter(x => x.type === "jobflick:validate").length, 1);
+  for (let i = 0; i < 20; i++) app.pointer();
+  await app.pump();
+  assert.equal(app.messages.filter(x => x.type === "jobflick:validate").length, 1,
+    "multiple focus/pointer events must not send duplicate requests in flight");
+  assert.equal(app.pre.button, undefined, "validation is not yet accepted");
+  release();
+  await app.pump();
+  assert.match(app.pre.button.textContent, /Run Jobflick/);
+  assert.equal(app.messages.filter(x => x.type === "jobflick:submit").length, 0);
+});
+
+test("YAML mutation during async validation cannot create a stale Run button", async () => {
+  let release;
+  const validationGate = new Promise(resolve => { release = resolve; });
+  const app = simulate(yaml, true, { validationGate });
+  app.focus();
+  await app.pump();
+  assert.equal(app.messages.filter(x => x.type === "jobflick:validate").length, 1);
+  app.pre.yaml += "\\n# edited during validation";
+  release();
+  await app.pump();
+  assert.equal(app.pre.button, undefined, "late success must not authorize old bytes");
+  app.focus();
+  await app.pump();
+  assert.equal(app.messages.filter(x => x.type === "jobflick:validate").length, 2);
+  assert.match(app.pre.button.textContent, /Run Jobflick/);
   assert.equal(app.messages.filter(x => x.type === "jobflick:submit").length, 0);
 });
 
