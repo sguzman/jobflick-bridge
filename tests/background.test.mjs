@@ -714,6 +714,70 @@ test("per-job preflight is read-only and checks exact original tab + conversatio
   assert.equal(app.requests.filter(x => x.action === "show").length, 0);
 });
 
+test("preflight cannot verify a record forgotten while its composer probe is pending",async()=>{
+  const id="job_12345678";
+  const token="tab-existing";
+  let releaseProbe;
+  let entered=false;
+  const app=boot(null,{
+    storage:{jobflick_bridge_jobs_v1:{[id]:{
+      id,recordVersion:1,state:"succeeded",tabId:11,origin:token,
+      conversation:"https://chatgpt.com/c/testing-1234",
+      submittedAt:1,orphaned:false
+    }}},
+    session:{jobflick_origin_11:token},
+    beforeTabMessage:({message})=>{
+      if(message.type==="jobflick:probe-upload"){
+        entered=true;
+        return new Promise(resolve=>{releaseProbe=resolve;});
+      }
+    }
+  });
+  const pending=app.listeners.message({type:"jobflick:preflight",id},app.popupSender);
+  for(let i=0;i<12&&!entered;i++)await pause();
+  assert.equal(entered,true);
+  assert.equal((await app.listeners.message({
+    type:"jobflick:forget",id
+  },app.popupSender)).ok,true);
+  releaseProbe();
+  const result=await pending;
+  assert.equal(result.ok,false,"A removed job cannot retain preflight authorization");
+  assert.equal(result.originalConversationVerified,undefined);
+  assert.equal(app.requests.length,0);
+});
+
+test("preflight never verifies quarantined record even with a matching tab",async()=>{
+  const id="job_12345678";
+  const token="tab-existing";
+  let releaseProbe;
+  let entered=false;
+  const record={id,recordVersion:1,state:"succeeded",
+    tabId:11,origin:token,conversation:"https://chatgpt.com/c/testing-1234",
+    submittedAt:2,orphaned:false};
+  const app=boot(null,{
+    storage:{jobflick_bridge_jobs_v1:{[id]:record}},
+    session:{jobflick_origin_11:token},
+    beforeTabMessage:({message})=>{
+      if(message.type==="jobflick:probe-upload"){
+        entered=true;
+        return new Promise(resolve=>{releaseProbe=resolve;});
+      }
+    }
+  });
+  const pending=app.listeners.message({type:"jobflick:preflight",id},app.popupSender);
+  for(let i=0;i<12&&!entered;i++)await pause();
+  assert.equal(entered,true);
+  record.integrityIssue="native_origin_mismatch";
+  releaseProbe();
+  const result=await pending;
+  assert.equal(result.ok,false);
+  assert.equal(result.originalConversationVerified,undefined);
+  const retry=await app.listeners.message({type:"jobflick:preflight",id},app.popupSender);
+  assert.equal(retry.ok,false);
+  assert.equal(app.sentTabMessages.length,1,"Quarantine blocks the second DOM probe");
+  assert.equal(app.requests.length,0);
+});
+
 test("per-job preflight fails closed on navigation and never reroutes", async () => {
   const app = boot(request => {
     if (request.action === "submit_spec") return {
