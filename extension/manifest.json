@@ -31,6 +31,7 @@
         "https://chat.openai.com/*"
       ],
       "js": [
+        "attachment-adapter.js",
         "content.js"
       ],
       "run_at": "document_idle"
