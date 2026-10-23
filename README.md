@@ -101,3 +101,9 @@ A small bounded File constructor/DOM handoff helper is included in `extension/at
 ## ✅ Verified local File and manual export gates
 
 Real disposable Firefox Developer Edition accepted the inert report File constructor/DOM transfer, rejected oversized reports, and preserved existing file selections. Another browser test loaded the production popup JavaScript against a localhost mock and confirmed that **Save report** only prepared data while **Download prepared report** saved exactly that file on a second explicit click. [Acceptance evidence](https://github.com/sguzman/jobflick-bridge/actions/runs/40024074527). These tests do not establish a live ChatGPT upload, privileged popup acceptance or automatic Send.
+
+## 🔗 Verified native-report-to-File QA (not ChatGPT upload)
+
+Disposable Firefox Developer Edition now completes one real pinned Jobflick Fish job, explicitly retrieves its finished report through actual Firefox Native Messaging, then uses the same bounded production File helper to hand that report to a localhost synthetic file input. The receiving page verifies the report contents and **exact job ID-based filename**. After the original conversation route changes A→B→A, the same test confirms a second file handoff is rejected, preserving manual-only provenance. [Real backend/browser acceptance](https://github.com/sguzman/jobflick-bridge/actions/runs/40025229365).
+
+Only **QA-only** code exposes the report-read action or uses the synthetic page input; the production extension still has no automatic report fetch/attachment/Send. Authenticated ChatGPT attachment and message delivery are still untested.

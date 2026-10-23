@@ -60,3 +60,9 @@ The current production add-on remains manual-export-only. Activation of real att
 An inert helper, `extension/attachment-adapter.js`, can construct a bounded `text/plain` File with a stable `jobflick-{id}.txt` name and transfer it to an explicitly supplied, empty, connected file input using Firefox's `DataTransfer` API. The helper refuses existing file selections and explicitly returns `domHandoffOnly` rather than treating a synthetic `change` event as successful upload.
 
 The helper has no message listener, no ChatGPT selectors, no outbound API requests and **no Send path**. It is bundled with the extension but is not invoked by the production UI. The localhost test invokes it independently and is not acceptance of uploading into ChatGPT.
+
+## Verified synthetic full-local path, remaining real-site gate
+
+Real Firefox Developer Edition now exercises a complete **local** path from a real, fixed harmless Jobflick job to the user's page-side File API. A test-only background handler retrieves the finished native report on a real browser click; the production File helper creates a bounded `text/plain` File, and a synthetic localhost page reads it. Navigating away and back revokes further transfer. This tests local protocol, provenance and DOM handoff, not ChatGPT's actual file-upload acceptance, attachment chip, server persistence or message submission.
+
+Production does not register the QA-only report-read handler, and automatic attachment and Send remain disabled.
