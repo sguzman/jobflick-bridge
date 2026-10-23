@@ -423,6 +423,14 @@ async function main() {
         "return document.querySelector('#prompt-textarea').textContent"),
         "Existing human draft, preserve verbatim");
       if(i===0||i===15){
+        // Wait for the isolated add-on's QA content scripts to attach;
+        // a page's initial HTML load alone is not that readiness signal.
+        await driver.wait(async()=>{
+          await driver.executeScript(
+            "document.dispatchEvent(new Event('jobflick-qa-read-route'));");
+          return await driver.executeScript(
+            "return document.documentElement.dataset.jobflickQaRoute==='active'");
+        },7000);
         // A wrong-tab explicit request is still an unauthorized report
         // destination. The QA-only File helper enforces the same exact
         // original-tab-and-conversation policy as production preflight.
