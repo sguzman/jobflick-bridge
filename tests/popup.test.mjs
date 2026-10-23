@@ -8,7 +8,7 @@ const popupSource=readFileSync(new URL("../extension/popup/popup.js",import.meta
 class MockElement {
   constructor(tag) {
     this.tag=tag; this.children=[]; this.handlers={}; this.style={};
-    this.parent=null; this.textContent=""; this.disabled=false;
+    this.parent=null; this.textContent=""; this.value=""; this.disabled=false;
   }
   addEventListener(type, callback) { this.handlers[type]=callback; }
   append(...nodes) {
