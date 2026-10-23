@@ -539,7 +539,8 @@ async function onPopupMessage(message, sender) {
     case "jobflick:probe-upload": {
       const active = await browser.tabs.query({ active: true, currentWindow: true });
       const tab = active[0];
-      if (!tab || !Number.isInteger(tab.id) || !canonical(tab.url)) {
+      const expected = canonical(tab?.url);
+      if (!tab || !Number.isInteger(tab.id) || !expected) {
         return { ok: false, message: "Open an existing ChatGPT conversation to inspect its composer" };
       }
       const response = await browser.tabs.sendMessage(tab.id, { type: "jobflick:probe-upload" });
@@ -548,6 +549,14 @@ async function onPopupMessage(message, sender) {
           typeof response.fileInputPresent !== "boolean" ||
           typeof response.composerOccupied !== "boolean") {
         return { ok: false, message: "No supported ChatGPT composer inspection response" };
+      }
+      // A popup is not bound to a tab. If the user switches tabs or a SPA
+      // route changes while the read-only probe is pending, do not present
+      // stale composer flags as observations of the current conversation.
+      const current = await browser.tabs.get(tab.id).catch(() => null);
+      const stillActive = await browser.tabs.query({ active: true, currentWindow: true });
+      if (canonical(current?.url) !== expected || stillActive[0]?.id !== tab.id) {
+        return { ok: false, message: "Active conversation changed during inspection; retry read-only check" };
       }
       // Report presence flags only, never the draft or attached file names.
       return {
@@ -583,10 +592,19 @@ async function onPopupMessage(message, sender) {
     case "jobflick:scan": {
       const active = await browser.tabs.query({ active: true, currentWindow: true });
       const tab = active[0];
-      if (!tab || !Number.isInteger(tab.id) || !canonical(tab.url)) {
+      const expected = canonical(tab?.url);
+      if (!tab || !Number.isInteger(tab.id) || !expected) {
         return { ok: false, message: "Open a ChatGPT conversation to scan" };
       }
-      await browser.tabs.sendMessage(tab.id, { type: "jobflick:scan" });
+      const current = await browser.tabs.get(tab.id).catch(() => null);
+      if (canonical(current?.url) !== expected) {
+        return { ok: false, message: "Conversation changed before scan" };
+      }
+      const reply = await browser.tabs.sendMessage(tab.id, { type: "jobflick:scan" });
+      const after = await browser.tabs.get(tab.id).catch(() => null);
+      if (canonical(after?.url) !== expected || reply?.ok !== true) {
+        return { ok: false, message: "Conversation changed during scan" };
+      }
       return { ok: true };
     }
     case "jobflick:cancel": {
