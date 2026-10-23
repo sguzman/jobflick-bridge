@@ -56,8 +56,11 @@ function framed(request) {
         done=true;cleanup();resolve(reply);
       }catch(error){fail(error);}
     });
-    child.on("exit",code=>{
-      if(!done)fail(Error("Native host exited "+code+" before frame: "+errors));
+    // The process exit notification may arrive before pending stdout data
+    // events. 'close' waits for stdio streams to drain, avoiding a false
+    // missing-frame failure on a successful native-host invocation.
+    child.on("close",code=>{
+      if(!done)fail(Error("Native host closed "+code+" before frame: "+errors));
     });
     const msg=Buffer.from(JSON.stringify(request),"utf8");
     const header=Buffer.alloc(4);header.writeUInt32LE(msg.length);
