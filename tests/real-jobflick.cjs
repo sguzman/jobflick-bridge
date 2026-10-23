@@ -111,7 +111,35 @@ async function main(){
     const jobs=fs.readdirSync(path.join(dirs.XDG_DATA_HOME,"jobflick","jobs"))
       .filter(file=>file.endsWith(".json"));
     assert.deepEqual(jobs,[id+".json"],"One click should create one durable Jobflick job");
-    console.log("REAL Jobflick native host and daemon: schema 4 validation, exactly one Fish printf, persisted origin, terminal inspect and report passed");
+
+    // Exercise the optional popup's native cancel contract after the first
+    // job is fully finished. The fixed command cannot modify any user file
+    // and is stopped before it could print; an un-cancelled run times out.
+    const cancelYaml=yaml
+      .replace("name: Bridge real QA","name: Bridge cancel QA")
+      .replace("command: printf jobflick_bridge_real_smoke",
+        "command: sleep 15; printf should_never_complete");
+    const pending=await framed({
+      action:"submit_spec",spec_yaml:cancelYaml,origin_tab_id:token
+    });
+    assert.equal(pending.ok,true,pending.message);
+    const stopped=await framed({action:"cancel",id:pending.job.id});
+    assert.equal(stopped.ok,true,stopped.message);
+    let finalState=null;
+    for(let attempt=0;attempt<110;attempt++){
+      const result=await framed({action:"inspect",id:pending.job.id});
+      assert.equal(result.ok,true,result.message);
+      finalState=result.job?.state;
+      if(["cancelled","succeeded","timed_out","failed","interrupted"].includes(finalState)) break;
+      await delay(100);
+    }
+    assert.equal(finalState,"cancelled",
+      "Explicit stop must reach native Jobflick; a timed out fixture is not an accepted cancellation");
+    const files=fs.readdirSync(path.join(dirs.XDG_DATA_HOME,"jobflick","jobs"))
+      .filter(file=>file.endsWith(".json"));
+    assert.equal(files.length,2);
+    assert.equal(new Set(files).size,2);
+    console.log("REAL Jobflick native host: validated schema 4, one harmless finished Fish job, durable origin/report and explicit cancellation accepted");
   }finally{
     daemon.kill("SIGTERM");
     await Promise.race([
