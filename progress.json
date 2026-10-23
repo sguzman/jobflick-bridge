@@ -581,8 +581,8 @@
     "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40021007135",
     "commit": "b4ef85e029a1dd7325b54ebd15906d59b52f87af",
     "scope": "Fast Firefox Developer Edition and Node behavioral checks for local metadata search/pagination, native status timer discipline and safety; authenticated ChatGPT attachment and Send not tested.",
-    "native_run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40020588237",
-    "native_commit": "2e782f18d4398e5af0fe3d1ec58f3ccec9e626b1",
-    "native_scope": "Earlier native-facing revision separately passed pinned real Jobflick daemon + synthetic Firefox E2E. Popup-only changes since do not imply native re-acceptance."
+    "native_run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40021007123",
+    "native_commit": "b4ef85e029a1dd7325b54ebd15906d59b52f87af",
+    "native_scope": "Pinned real Jobflick daemon and synthetic Firefox Developer Edition integration passed on the parent UI-test-fix revision, including harmless Fish execution, origin, terminal status and real cancellation. Automatic ChatGPT attachment/Send not tested."
   }
 }
