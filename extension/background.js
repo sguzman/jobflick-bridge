@@ -156,7 +156,13 @@ async function reconcileOrigins() {
 async function checkJobs(onlyId = null) {
   // Multiple callers (alarms, tab updates and popup Refresh) share one
   // in-flight inspection. Refresh never claims completion prematurely.
-  if (checking) return checking;
+  // An existing full refresh might be inspecting other jobs. A targeted
+  // burst check must not be counted as consumed merely because it waited for
+  // that shared operation to finish.
+  if (checking) {
+    await checking;
+    return false;
+  }
   let release;
   checking = new Promise(resolve => { release = resolve; });
   try {
@@ -220,6 +226,7 @@ async function checkJobs(onlyId = null) {
         // submit (or resubmit) another job.
       }
     }
+    return true;
   } finally {
     release();
     checking = null;
@@ -247,14 +254,16 @@ async function drainFastRechecks() {
   for (const id of batch) {
     const remaining = fastRechecks.get(id);
     if (!remaining) continue;
-    fastRechecks.set(id, remaining - 1);
     try {
-      await checkJobs(id);
+      const inspected = await checkJobs(id);
       const record = (await saved())[id];
       if (!knownRecord(record) || FINISHED.has(record.state) ||
           record.state === "unknown") {
         fastRechecks.delete(id);
+      } else if (inspected) {
+        fastRechecks.set(id, remaining - 1);
       }
+      // A coalesced check does not use up this job's attempt budget.
     } catch {
       // The normal one-minute alarm remains authoritative. Never resubmit.
     }
