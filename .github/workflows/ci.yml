@@ -14,7 +14,7 @@ concurrency:
 jobs:
   static:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -22,14 +22,6 @@ jobs:
           node-version: '22'
       - name: Syntax and invariants
         run: npm run check
-      - name: Fish host installer syntax
-        run: |
-          sudo env DEBIAN_FRONTEND=noninteractive timeout 480s apt-get update -qq
-          sudo env DEBIAN_FRONTEND=noninteractive timeout 480s apt-get install -y fish jq
-          fish --no-execute scripts/install-native-host.fish
-          fish --no-execute scripts/qa-firefox-developer.fish
-      - name: Disposable Firefox native-host installer smoke
-        run: node tests/native-host-installer.test.cjs
       - name: Mozilla WebExtension lint
         run: npx --yes web-ext@10.8.0 lint --source-dir extension
       - name: Build unsigned Firefox QA archive
@@ -97,7 +89,12 @@ jobs:
           # Azure-backed Ubuntu mirrors occasionally pause during downloads;
           # the previous 150s limit expired mid-transfer (not at compilation).
           sudo env DEBIAN_FRONTEND=noninteractive timeout 480s apt-get update -qq
-          sudo env DEBIAN_FRONTEND=noninteractive timeout 480s apt-get install -y fish libwayland-dev libxkbcommon-dev libx11-dev libxcb-shape0-dev libxcb-xfixes0-dev libgl1-mesa-dev pkg-config
+          sudo env DEBIAN_FRONTEND=noninteractive timeout 480s apt-get install -y fish jq libwayland-dev libxkbcommon-dev libx11-dev libxcb-shape0-dev libxcb-xfixes0-dev libgl1-mesa-dev pkg-config
+      - name: Fish launcher syntax and disposable native-host registration
+        run: |
+          fish --no-execute scripts/install-native-host.fish
+          fish --no-execute scripts/qa-firefox-developer.fish
+          node tests/native-host-installer.test.cjs
       - name: Compile pinned Jobflick
         working-directory: .ci-jobflick
         run: cargo build --locked --bin jobflick
