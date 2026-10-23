@@ -40,7 +40,7 @@ function findText(root,text) {
 
 async function boot(jobs=[],handler=null) {
   const named={};
-  for(const name of ["jobs","notice","scan","refresh","diagnose","probe-upload","load-older"])
+  for(const name of ["jobs","notice","scan","refresh","diagnose","probe-upload","load-older","filter-form","filter-query"])
     named[name]=new MockElement("div");
   const body=new MockElement("body");
   const calls=[],files=[],downloads=[],objects=[],openedTabs=[];
@@ -68,9 +68,13 @@ async function boot(jobs=[],handler=null) {
         }
         if(message.type==="jobflick:inbox") {
           const offset=message.offset||0,limit=message.limit||40;
-          return {ok:true,jobs:jobs.slice(offset,offset+limit),
-            hasMore:offset+limit<jobs.length,
-            nextOffset:offset+Math.min(limit,Math.max(0,jobs.length-offset))};
+          const query=(message.query||"").toLowerCase();
+          const matching=jobs.filter(job=>!query||
+            [job.id,job.name,job.state].some(value=>
+              String(value||"").toLowerCase().includes(query)));
+          return {ok:true,jobs:matching.slice(offset,offset+limit),
+            hasMore:offset+limit<matching.length,
+            nextOffset:offset+Math.min(limit,Math.max(0,matching.length-offset))};
         }
         if(message.type==="jobflick:report") return {ok:true,report:"harmless report"};
         return {ok:true,message:"Acknowledged"};
@@ -235,4 +239,24 @@ test("an invalid inbox pagination response fails closed",async()=>{
   assert.match(app.named.notice.textContent,/Invalid inbox pagination response/);
   assert.equal(app.named.jobs.children.length,0);
   assert.equal(app.calls.filter(c=>c.type==="jobflick:report").length,0);
+});
+
+test("local job search filters before pagination without retrieving reports",async()=>{
+  const jobs=Array.from({length:130},(_,i)=>({
+    ...finished,
+    id:"job_"+String(i).padStart(8,"0"),
+    name:i%2 ? "Compile "+i : "Archive "+i
+  }));
+  const app=await boot(jobs);
+  assert.equal(app.named.jobs.children.length,40);
+  app.named["filter-query"].value="Archive";
+  await app.named["filter-form"].handlers.submit({preventDefault(){}});
+  assert.equal(app.named.jobs.children.length,40);
+  assert.equal(app.named["load-older"].hidden,false);
+  await app.named["load-older"].click();
+  assert.equal(app.named.jobs.children.length,65);
+  assert.equal(app.named["load-older"].hidden,true);
+  assert.equal(app.calls.at(-1).query,"Archive");
+  assert.equal(app.calls.filter(x=>x.type==="jobflick:report").length,0);
+  assert.equal(app.calls.filter(x=>x.type==="jobflick:submit").length,0);
 });

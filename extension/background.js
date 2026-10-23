@@ -349,8 +349,15 @@ async function onPopupMessage(message, sender) {
           !Number.isInteger(limit) || limit < 1 || limit > 50) {
         return { ok: false, message: "Invalid inbox page request" };
       }
+      const query = message.query === undefined ? "" : message.query;
+      if (typeof query !== "string" || query.length > 128) {
+        return { ok: false, message: "Invalid inbox search" };
+      }
+      const search = query.trim().toLocaleLowerCase();
       const items = Object.values(jobs).filter(item =>
-        knownRecord(item) && typeof item.id === "string")
+        knownRecord(item) && typeof item.id === "string" &&
+        (!search || [item.id, item.name, item.state]
+          .some(value => String(value || "").toLocaleLowerCase().includes(search))))
         .map(item => ({
           id: item.id,
           name: item.name || "",

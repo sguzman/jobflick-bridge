@@ -1088,3 +1088,21 @@ test("inbox rejects hostile pagination arguments and oversized page requests",as
   }
   assert.equal(app.requests.length,0);
 });
+
+test("search is bounded to local job metadata and never reads native reports",async()=>{
+  const records={
+    job_12345678:{id:"job_12345678",name:"Alpha compile",state:"succeeded",submittedAt:2},
+    job_87654321:{id:"job_87654321",name:"Beta archive",state:"running",submittedAt:1}
+  };
+  const app=boot(null,{storage:{jobflick_bridge_jobs_v1:records}});
+  const results=await app.listeners.message({
+    type:"jobflick:inbox",query:"ARCHIVE",offset:0,limit:40
+  },app.popupSender);
+  assert.deepEqual(results.jobs.map(x=>x.id),["job_87654321"]);
+  assert.equal(results.hasMore,false);
+  const bad=await app.listeners.message({
+    type:"jobflick:inbox",query:"A".repeat(129)
+  },app.popupSender);
+  assert.equal(bad.ok,false);
+  assert.equal(app.requests.length,0);
+});

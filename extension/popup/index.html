@@ -18,6 +18,10 @@
     <button id="diagnose" type="button">Check connection</button>
     <button id="probe-upload" type="button">Inspect composer</button>
   </nav>
+  <form id="filter-form" role="search" aria-label="Find local Jobflick jobs">
+    <input id="filter-query" type="search" aria-label="Find job by name, ID or state" placeholder="Find a saved job" maxlength="128">
+    <button type="submit">Find</button>
+  </form>
   <p id="notice" role="status" aria-live="polite"></p>
   <main id="jobs" aria-label="Jobs"></main>
   <button id="load-older" type="button" hidden>Load older jobs</button>

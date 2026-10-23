@@ -7,9 +7,12 @@ const refresh = document.getElementById("refresh");
 const diagnose = document.getElementById("diagnose");
 const probe = document.getElementById("probe-upload");
 const older = document.getElementById("load-older");
+const filterForm = document.getElementById("filter-form");
+const filterQuery = document.getElementById("filter-query");
 const PAGE_SIZE = 40;
 let nextOffset = 0;
 let inboxGeneration = 0;
+let activeQuery = "";
 const FINISHED = new Set(["succeeded", "failed", "cancelled", "timed_out", "interrupted"]);
 
 function say(message) {
@@ -199,7 +202,7 @@ async function loadOlder() {
   older.disabled = true;
   try {
     const response = await ask("jobflick:inbox", {
-      offset: nextOffset, limit: PAGE_SIZE
+      offset: nextOffset, limit: PAGE_SIZE, query: activeQuery
     });
     // A Refresh may supersede this request while native messaging is busy.
     if (generation !== inboxGeneration) return;
@@ -222,6 +225,7 @@ async function loadOlder() {
 
 async function load() {
   inboxGeneration++;
+  activeQuery = filterQuery.value.trim().slice(0, 128);
   jobsElement.replaceChildren();
   nextOffset = 0;
   older.hidden = true;
@@ -231,6 +235,15 @@ async function load() {
 older.addEventListener("click", async () => {
   try {
     await loadOlder();
+  } catch (error) {
+    say(error.message);
+  }
+});
+filterForm.addEventListener("submit", async event => {
+  event.preventDefault();
+  try {
+    await load();
+    say(activeQuery ? "Local job search updated." : "Showing saved jobs.");
   } catch (error) {
     say(error.message);
   }
