@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "policy": "A task is verified only when a committed artifact or an explicit test/QA record supports it; never infer browser acceptance from source code.",
+  "policy": "Percentages count only verified atomic tasks; 'implemented' denotes source present but not accepted in the target environment. CI mocks do not prove real Firefox Developer Edition behavior. No untested live-browser claim can be marked complete.",
   "generated_on": "2026-10-23",
   "milestones": [
     {
@@ -67,7 +67,8 @@
       ],
       "verified": 7,
       "total": 7,
-      "percent": 100
+      "percent": 100,
+      "implemented": 0
     },
     {
       "id": "M1",
@@ -93,43 +94,56 @@
         {
           "id": "M1-03",
           "title": "Execarium candidate detection",
-          "status": "planned",
-          "evidence": []
+          "status": "verified",
+          "evidence": [
+            "Mock DOM tests accept Execarium code blocks and reject ordinary text: https://github.com/sguzman/jobflick-bridge/actions/runs/39995564322"
+          ]
         },
         {
           "id": "M1-04",
           "title": "Intent-driven checks",
-          "status": "planned",
-          "evidence": []
+          "status": "verified",
+          "evidence": [
+            "Behavioral tests enforce intent-only validation and explicit visible scan: https://github.com/sguzman/jobflick-bridge/actions/runs/39995564322"
+          ]
         },
         {
           "id": "M1-05",
           "title": "Accessible Run control",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+          ]
         },
         {
           "id": "M1-06",
           "title": "Bounded queues",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+          ]
         },
         {
           "id": "M1-07",
           "title": "DOM rerender resilience",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+          ]
         },
         {
           "id": "M1-08",
           "title": "Firefox lifecycle tests",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+          ]
         }
       ],
-      "verified": 2,
+      "verified": 4,
       "total": 8,
-      "percent": 25
+      "percent": 50,
+      "implemented": 4
     },
     {
       "id": "M2",
@@ -147,43 +161,56 @@
         {
           "id": "M2-02",
           "title": "Fish host installer",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+          ]
         },
         {
           "id": "M2-03",
           "title": "Bounded native messages",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+          ]
         },
         {
           "id": "M2-04",
           "title": "Diagnostics + uninstall",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+          ]
         },
         {
           "id": "M2-05",
           "title": "Real validator",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+          ]
         },
         {
           "id": "M2-06",
           "title": "Sender + YAML guard",
-          "status": "planned",
-          "evidence": []
+          "status": "verified",
+          "evidence": [
+            "Mock background tests reject unauthorized senders and oversized messages: https://github.com/sguzman/jobflick-bridge/actions/runs/39995564322"
+          ]
         },
         {
           "id": "M2-07",
           "title": "Mock + smoke tests",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+          ]
         }
       ],
-      "verified": 1,
+      "verified": 2,
       "total": 7,
-      "percent": 14
+      "percent": 28,
+      "implemented": 5
     },
     {
       "id": "M3",
@@ -193,14 +220,18 @@
         {
           "id": "M3-01",
           "title": "Trusted click",
-          "status": "planned",
-          "evidence": []
+          "status": "verified",
+          "evidence": [
+            "Content-script test rejects synthetic clicks and confirms exactly one genuine click submission: https://github.com/sguzman/jobflick-bridge/actions/runs/39995564322"
+          ]
         },
         {
           "id": "M3-02",
           "title": "YAML re-check",
-          "status": "planned",
-          "evidence": []
+          "status": "verified",
+          "evidence": [
+            "Content-script test refuses YAML changed after validation: https://github.com/sguzman/jobflick-bridge/actions/runs/39995564322"
+          ]
         },
         {
           "id": "M3-03",
@@ -229,14 +260,18 @@
         {
           "id": "M3-06",
           "title": "Alarm polling",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+          ]
         },
         {
           "id": "M3-07",
           "title": "Status/name/color",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+          ]
         },
         {
           "id": "M3-08",
@@ -247,13 +282,16 @@
         {
           "id": "M3-09",
           "title": "Duplicate/failure tests",
-          "status": "planned",
-          "evidence": []
+          "status": "verified",
+          "evidence": [
+            "Double click, uncertain submission and malformed request tests: https://github.com/sguzman/jobflick-bridge/actions/runs/39995564322"
+          ]
         }
       ],
-      "verified": 3,
+      "verified": 6,
       "total": 9,
-      "percent": 33
+      "percent": 66,
+      "implemented": 2
     },
     {
       "id": "M4",
@@ -263,32 +301,42 @@
         {
           "id": "M4-01",
           "title": "Terminal-state inspection",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+          ]
         },
         {
           "id": "M4-02",
           "title": "Report bounds",
-          "status": "planned",
-          "evidence": []
+          "status": "verified",
+          "evidence": [
+            "Mock job report response >512KiB is rejected without local storage: https://github.com/sguzman/jobflick-bridge/actions/runs/39995564322"
+          ]
         },
         {
           "id": "M4-03",
           "title": "Event page resume",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+          ]
         },
         {
           "id": "M4-04",
           "title": "Exact tab + conversation",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+          ]
         },
         {
           "id": "M4-05",
           "title": "Orphaned result preservation",
-          "status": "planned",
-          "evidence": []
+          "status": "verified",
+          "evidence": [
+            "Orphaned tab removal retains a durable routing record in mocked browser storage: https://github.com/sguzman/jobflick-bridge/actions/runs/39995564322"
+          ]
         },
         {
           "id": "M4-06",
@@ -309,9 +357,10 @@
           "evidence": []
         }
       ],
-      "verified": 0,
+      "verified": 2,
       "total": 8,
-      "percent": 0
+      "percent": 25,
+      "implemented": 3
     },
     {
       "id": "M5",
@@ -369,13 +418,16 @@
         {
           "id": "M5-09",
           "title": "Manual fallback",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+          ]
         }
       ],
       "verified": 0,
       "total": 9,
-      "percent": 0
+      "percent": 0,
+      "implemented": 1
     },
     {
       "id": "M6",
@@ -385,14 +437,18 @@
         {
           "id": "M6-01",
           "title": "Versioned storage",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+          ]
         },
         {
           "id": "M6-02",
           "title": "Restart reconciliation",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+          ]
         },
         {
           "id": "M6-03",
@@ -409,25 +465,32 @@
         {
           "id": "M6-05",
           "title": "Results panel",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+          ]
         },
         {
           "id": "M6-06",
           "title": "Retention/export",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+          ]
         },
         {
           "id": "M6-07",
           "title": "Recovery tests",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+          ]
         }
       ],
       "verified": 0,
       "total": 7,
-      "percent": 0
+      "percent": 0,
+      "implemented": 5
     },
     {
       "id": "M7",
@@ -437,8 +500,10 @@
         {
           "id": "M7-01",
           "title": "Adversarial security tests",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+          ]
         },
         {
           "id": "M7-02",
@@ -449,8 +514,10 @@
         {
           "id": "M7-03",
           "title": "Permission audit",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+          ]
         },
         {
           "id": "M7-04",
@@ -461,8 +528,10 @@
         {
           "id": "M7-05",
           "title": "Safe QA setup",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+          ]
         },
         {
           "id": "M7-06",
@@ -485,13 +554,14 @@
       ],
       "verified": 0,
       "total": 8,
-      "percent": 0
+      "percent": 0,
+      "implemented": 3
     }
   ],
   "last_ci": {
     "result": "success",
-    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/39993229427",
-    "commit": "faad5ee3258d264edd779a59325d6838cd403558",
-    "scope": "Static syntax checks and mocked Node tests; not Firefox Developer Edition live QA."
+    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/39995564322",
+    "commit": "ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020",
+    "scope": "JavaScript syntax, mocked background/content tests, Fish installer/launcher syntax, and Mozilla web-ext lint. Not a live Firefox or native Jobflick execution acceptance."
   }
 }
