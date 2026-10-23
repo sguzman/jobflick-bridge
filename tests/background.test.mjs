@@ -1205,3 +1205,54 @@ test("matching native origin is accepted when real backend includes it",async()=
   assert.equal(app.storage.jobflick_bridge_jobs_v1.job_12345678.origin,token);
   assert.equal(app.storage.jobflick_bridge_jobs_v1.job_12345678.orphaned,false);
 });
+
+test("native inspect cannot substitute a different Jobflick job ID",async()=>{
+  const app=boot(request=>{
+    if(request.action==="submit_spec")return {
+      ok:true,job:{id:"job_12345678",state:"queued"}
+    };
+    if(request.action==="inspect")return {
+      ok:true,job:{id:"job_87654321",state:"succeeded",
+        name:"Unrelated native job",origin_tab_id:"tab-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"}
+    };
+    return {ok:true};
+  });
+  await app.listeners.message({type:"jobflick:submit",yaml:sample},app.sender);
+  await app.listeners.message({type:"jobflick:refresh"},app.popupSender);
+  const record=app.storage.jobflick_bridge_jobs_v1.job_12345678;
+  assert.equal(record.orphaned,true);
+  assert.equal(record.deliveryState,"manual_only");
+  assert.equal(record.integrityIssue,"native_job_id_mismatch");
+  assert.equal(record.state,"queued");
+  assert.notEqual(record.name,"Unrelated native job");
+  assert.equal(app.sentTabMessages.filter(x=>x.message.type==="jobflick:status").length,0);
+  assert.equal(app.requests.filter(x=>x.action==="inspect").length,1);
+  for(let i=0;i<4;i++)await app.listeners.message({
+    type:"jobflick:refresh"
+  },app.popupSender);
+  assert.equal(app.requests.filter(x=>x.action==="inspect").length,1,
+    "Quarantined native identity must not be repeatedly inspected");
+  const inbox=await app.listeners.message({type:"jobflick:inbox"},app.popupSender);
+  assert.equal(inbox.jobs[0].integrityIssue,"native_job_id_mismatch");
+  assert.equal(app.alarmActions.at(-1).type,"clear");
+});
+
+test("conflicting native origin is quarantined once without background polling",async()=>{
+  const app=boot(request=>{
+    if(request.action==="submit_spec")return {
+      ok:true,job:{id:"job_12345678",state:"queued"}
+    };
+    if(request.action==="inspect")return {
+      ok:true,job:{id:"job_12345678",state:"running",
+        origin_tab_id:"tab-wrong-token"}
+    };
+    return {ok:true};
+  });
+  await app.listeners.message({type:"jobflick:submit",yaml:sample},app.sender);
+  await app.listeners.message({type:"jobflick:refresh"},app.popupSender);
+  assert.equal(app.storage.jobflick_bridge_jobs_v1.job_12345678.integrityIssue,
+    "native_origin_mismatch");
+  await app.listeners.message({type:"jobflick:refresh"},app.popupSender);
+  assert.equal(app.requests.filter(x=>x.action==="inspect").length,1);
+  assert.equal(app.requests.filter(x=>x.action==="show").length,0);
+});
