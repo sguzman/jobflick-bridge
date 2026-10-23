@@ -46,7 +46,7 @@ async function main() {
   manifest.browser_specific_settings.gecko.id = originId;
   manifest.host_permissions = ["http://127.0.0.1/*"];
   manifest.content_scripts = [{ matches: ["http://127.0.0.1/*"],
-    js: ["attachment-adapter.js","content.js","qa-route.js"], run_at: "document_idle" }];
+    js: ["attachment-adapter.js","content.js","qa-route.js","qa-delivery.js"], run_at: "document_idle" }];
   manifest.action = { default_title: "Firefox Native QA" };
   fs.writeFileSync(path.join(ext, "manifest.json"), JSON.stringify(manifest));
   // Use the complete unmodified production content script.
@@ -62,6 +62,23 @@ async function main() {
     '    }).catch(()=>{});',
     '});'
   ].join("\n"));
+  // Test-only click adapter. The live extension never exposes this action.
+  fs.writeFileSync(path.join(ext,"qa-delivery.js"),[
+    '"use strict";',
+    'document.addEventListener("click",async event=>{',
+    '  if(event.target?.id!=="qa-export" || !event.isTrusted)return;',
+    '  try {',
+    '    const reply=await browser.runtime.sendMessage({type:"jobflick:qa-report"});',
+    '    if(!reply?.ok)throw Error("Native report unavailable");',
+    '    const file=globalThis.__jobflickAttachmentAdapter.prepare(reply.id,reply.report);',
+    '    const receipt=globalThis.__jobflickAttachmentAdapter.handoff(',
+    '      document.getElementById("qa-file-input"),file);',
+    '    document.documentElement.dataset.qaHandoff=receipt.domHandoffOnly?"done":"invalid";',
+    '  }catch(error){',
+    '    document.documentElement.dataset.qaHandoff="error";',
+    '  }',
+    '});'
+  ].join("\\n"));
   // Only URL identity is adapted to synthetic localhost. All native protocol,
   // job tracking and other production background logic stays unchanged.
   const originalBackground = fs.readFileSync(path.join(production, "background.js"), "utf8");
@@ -78,6 +95,18 @@ async function main() {
   const listenerAnchor='browser.runtime.onMessage.addListener((message, sender) => {';
   assert(background.includes(listenerAnchor),"Background listener moved");
   background=background.replace(listenerAnchor,listenerAnchor+`
+  if(message?.type==="jobflick:qa-report"){
+    if(!sender?.tab?.url?.startsWith("http://127.0.0.1:"))
+      return Promise.resolve({ok:false});
+    return saved().then(async records=>{
+      const ready=Object.values(records).filter(item=>
+        knownRecord(item) && FINISHED.has(item.state) && !item.orphaned);
+      if(ready.length!==1)return {ok:false};
+      const response=await native({action:"show",id:ready[0].id});
+      return response.ok && typeof response.report==="string"
+        ? {ok:true,id:ready[0].id,report:response.report} : {ok:false};
+    });
+  }
   if(message?.type==="jobflick:qa-route"){
     return saved().then(records=>{
       const items=Object.values(records).filter(record=>knownRecord(record));
@@ -121,7 +150,16 @@ async function main() {
     "command: printf bridge_real_fde_smoke"
   ].join("\n");
   const html = "<!doctype html><html><head><meta charset='utf-8'></head><body>" +
-    "<main><pre><code>" + yaml + "</code></pre></main></body></html>";
+    "<main><pre><code>" + yaml + "</code></pre></main>" +
+    "<input type='file' id='qa-file-input' accept='text/plain,.txt'>" +
+    "<button type='button' id='qa-export'>Read native report locally</button>" +
+    "<output id='qa-result'></output>" +
+    "<script>document.querySelector('#qa-file-input').addEventListener('change',async e=>{" +
+    "const file=e.target.files?.[0];if(!file)return;" +
+    "const data=await file.text();" +
+    "document.querySelector('#qa-result').textContent=JSON.stringify({" +
+    "name:file.name,valid:data.includes('bridge_real_fde_smoke'),size:file.size});" +
+    "});</script></body></html>";
   const server = http.createServer((_req, res) => {
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     res.end(html);
@@ -225,6 +263,21 @@ async function main() {
       assert.equal(inspected.some(x=>x.action==="cancel"),false);
     }
     assert.equal(await button.isEnabled(),false);
+    if(realHost){
+      phase="real Jobflick report into synthetic page File";
+      // Only a WebDriver-delivered real click enables this QA-only transfer.
+      await (await driver.findElement(By.id("qa-export"))).click();
+      await driver.wait(async()=>(
+        await driver.findElement(By.id("qa-result")).getText()
+      ).length>0,10000);
+      const raw=await driver.findElement(By.id("qa-result")).getText();
+      const handoff=JSON.parse(raw);
+      assert.equal(handoff.valid,true,"Page could not read real Jobflick report");
+      assert.match(handoff.name,/^jobflick-job_[a-zA-Z0-9_-]{8,128}\.txt$/);
+      assert(handoff.size>0&&handoff.size<=524288);
+      assert.equal(await driver.executeScript(
+        "return document.documentElement.dataset.qaHandoff"),"done");
+    }
     // Real Firefox History API navigation, not merely a mocked event.
     // Its URL must revoke this finished job's origin even after returning.
     phase="SPA navigation origin revocation";
