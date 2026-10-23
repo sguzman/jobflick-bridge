@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync, writeFileSync, mkdtempSync, mkdirSync,
   rmSync, symlinkSync, lstatSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
@@ -48,10 +48,10 @@ function isolatedLauncherFixture(action) {
   mkdirSync(native,{recursive:true});
   const personalFile=join(personal,"profiles.ini");
   const nativeFile=join(native,"io.github.sguzman.jobflick.json");
-  writeFileSync(personalFile,"PERSONAL FIREFOX PROFILE MUST REMAIN UNCHANGED\\n");
-  writeFileSync(nativeFile,"PERSONAL NATIVE MESSAGING HOST MUST REMAIN UNCHANGED\\n");
+  writeFileSync(personalFile,"PERSONAL FIREFOX PROFILE MUST REMAIN UNCHANGED\n");
+  writeFileSync(nativeFile,"PERSONAL NATIVE MESSAGING HOST MUST REMAIN UNCHANGED\n");
   writeFileSync(join(bin,"firefox-developer-edition"),
-    '#!/bin/sh\\nprintf "%s\\\\n" "$@" > "$JOBFLICK_QA_CAPTURE"\\n',{mode:0o700});
+    '#!/bin/sh\nprintf "%s\\n" "$@" > "$JOBFLICK_QA_CAPTURE"\n',{mode:0o700});
   const env={...process.env,HOME:home,XDG_DATA_HOME:data,
     PATH:bin+":"+process.env.PATH,JOBFLICK_QA_CAPTURE:capture};
   const run=(extra={})=>spawnSync("fish",[launcher],{
@@ -66,16 +66,16 @@ test("isolated FDE launcher invokes only dedicated profile and never edits perso
     const launch=run();
     assert.equal(launch.status,0,launch.stderr);
     const profile=join(data,"jobflick-bridge-fde-qa","profile");
-    assert.deepEqual(readFileSync(capture,"utf8").trim().split("\\n"),[
+    assert.deepEqual(readFileSync(capture,"utf8").trim().split("\n"),[
       "--no-remote","--profile",profile,"about:debugging#/runtime/this-firefox"
     ]);
     assert.equal(statSync(profile).mode&0o777,0o700);
     assert.equal(statSync(join(data,"jobflick-bridge-fde-qa")).mode&0o777,0o700);
     assert.match(launch.stdout,/No native host will be installed/);
     assert.equal(readFileSync(personalFile,"utf8"),
-      "PERSONAL FIREFOX PROFILE MUST REMAIN UNCHANGED\\n");
+      "PERSONAL FIREFOX PROFILE MUST REMAIN UNCHANGED\n");
     assert.equal(readFileSync(nativeFile,"utf8"),
-      "PERSONAL NATIVE MESSAGING HOST MUST REMAIN UNCHANGED\\n");
+      "PERSONAL NATIVE MESSAGING HOST MUST REMAIN UNCHANGED\n");
     assert.equal(home.includes("personal-home"),true);
   });
 });
@@ -95,9 +95,9 @@ test("isolated FDE launcher refuses symlinked QA root and profile without follow
       assert.match(result.stderr,/symbolic link/);
       assert.equal(lstatSync(kind==="root"?root:join(root,"profile")).isSymbolicLink(),true);
       assert.equal(readFileSync(personalFile,"utf8"),
-        "PERSONAL FIREFOX PROFILE MUST REMAIN UNCHANGED\\n");
+        "PERSONAL FIREFOX PROFILE MUST REMAIN UNCHANGED\n");
       assert.equal(readFileSync(nativeFile,"utf8"),
-        "PERSONAL NATIVE MESSAGING HOST MUST REMAIN UNCHANGED\\n");
+        "PERSONAL NATIVE MESSAGING HOST MUST REMAIN UNCHANGED\n");
       assert.equal(requireCaptureAbsent(capture),true);
     });
   }
