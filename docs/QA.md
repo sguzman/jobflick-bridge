@@ -52,3 +52,7 @@ To avoid attempting a popup download from the asynchronous continuation of a nat
 ## Automated Firefox Developer Edition smoke
 
 CI also runs `tests/fde-smoke.cjs` in a disposable headless Firefox **Developer Edition** instance using Selenium/geckodriver. It temporarily installs the actual `extension/` add-on and uninstalls it, confirming the manifest is accepted by the target Firefox runtime. The driver creates an anonymous profile and does not register the Jobflick native host or authenticate to ChatGPT. This verifies **add-on loading only**, not the Run → Fish execution → report attachment flow. See the separate `fde-smoke` workflow job.
+
+## Native host registration test
+
+CI runs a **disposable Fish installer integration test** with a fake, never-executed `jobflick` binary and temporary `HOME`/`XDG_DATA_HOME`. It checks the Firefox manifest, `allowed_extensions`, file permissions, refusal to overwrite an existing host, and uninstall semantics. It cannot prove the actual installed Jobflick daemon/native protocol works; that requires real Linux/FDE integration.

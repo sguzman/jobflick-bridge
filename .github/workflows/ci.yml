@@ -17,8 +17,11 @@ jobs:
       - name: Fish host installer syntax
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y fish
+          sudo apt-get install -y fish jq
           fish --no-execute scripts/install-native-host.fish
+          fish --no-execute scripts/qa-firefox-developer.fish
+      - name: Disposable Firefox native-host installer smoke
+        run: node tests/native-host-installer.test.cjs
       - name: Mozilla WebExtension lint
         run: npx --yes web-ext@10.8.0 lint --source-dir extension
       - name: Manifest parse
