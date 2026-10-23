@@ -200,3 +200,27 @@ Adversarial mocked host replies include `origin_tab_id: null`, numeric IDs, arra
 ## Two-tier CI Linux package installation
 
 The isolated real Jobflick workflow attempts its pinned Linux dependency installation from the GitHub runner's existing apt indexes first. If those are stale or missing, it refreshes indexes and retries, with bounded HTTP timeouts and package retries. This avoids redundant slow Ubuntu mirror refreshes while retaining a real Fish + Rust/Firefox acceptance path. Successful CI installation is not evidence of local EndeavourOS/Hyprland acceptance.
+
+## Pending native validation and stale YAML replies
+
+A repeated pointer/focus event for the same unchanged code block must not
+issue another `validate_spec` request while the previous check is pending.
+If the YAML changes before the asynchronous validation response arrives, that
+response must not insert a Run control for obsolete source text. A new,
+explicit pointer/focus event can validate the edited block separately.
+Behavioral tests use an intentionally unresolved native validation promise to
+exercise both races; no `submit_spec` occurs. These are Node acceptance
+checks, not a claim that the current authenticated ChatGPT React DOM has been
+tested. [Passing Firefox checks](https://github.com/sguzman/jobflick-bridge/actions/runs/40030357579).
+
+## Synchronous application rejection of file handoff
+
+The inert attachment adapter validates the assigned Firefox `FileList`
+before notifying the page and checks it again afterward. If a page-side
+`change` listener immediately clears or replaces the selection, disables
+the input or detaches it from the document, the adapter refuses to claim
+even DOM-level success. Disposable Firefox Developer Edition tests include
+both synchronous clearing and detachment on `change`. A successful return
+still means only that the file remained assigned in the DOM at that instant;
+it is **not** evidence of ChatGPT upload acknowledgment or server persistence.
+[Passing Firefox file-handoff checks](https://github.com/sguzman/jobflick-bridge/actions/runs/40030357579).
