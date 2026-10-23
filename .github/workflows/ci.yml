@@ -20,8 +20,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Install Fish for isolated launcher safety checks
-        run: sudo apt-get install -y -qq fish || (sudo apt-get update -qq && sudo apt-get install -y -qq fish)
       - name: Syntax and invariants
         run: npm run check
       - name: Mozilla WebExtension lint
