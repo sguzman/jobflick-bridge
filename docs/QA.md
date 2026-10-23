@@ -358,3 +358,22 @@ guarantee when optional native name and color are missing.
 
 These tests do not establish authenticated ChatGPT upload, attachment
 acknowledgment, guarded Send or production-profile idle power measurements.
+
+## Verified M5-04: no giant report text injection
+
+The full Jobflick report is not pasted into any ChatGPT composer.
+The production inert File builder imposes the 512 KiB upper bound, stable
+text/plain report identity and explicit file-input-only handoff. The
+production bridge leaves attachment and Send disabled pending authenticated
+site acceptance.
+
+An isolated Firefox Developer Edition run exercised a real pinned Jobflick
+daemon with a fixed harmless Fish job and then retrieved the real native
+terminal report. A synthetic page intentionally contained a nonempty,
+contenteditable draft and existing user-attachment indicator. After native
+completion and an explicit QA-only local File handoff, both remained byte-for-
+byte unchanged, with no controls injected into the composer. The exact
+job-specific filename was checked independently. This is **not** confirmation
+that ChatGPT accepted any upload, and does not complete M5-03/M5-05/M5-06
+or guarded Send. [Real pinned daemon acceptance](https://github.com/sguzman/jobflick-bridge/actions/runs/40039054521) ·
+[Firefox/static tests](https://github.com/sguzman/jobflick-bridge/actions/runs/40039054482).

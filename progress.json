@@ -409,9 +409,10 @@
         {
           "id": "M5-04",
           "title": "Avoid giant text",
-          "status": "implemented",
+          "status": "verified",
           "evidence": [
-            "Real native report transported as bounded text/plain File through FDE QA to synthetic page, with no composer text injection or automatic Send. No actual ChatGPT attachment yet: https://github.com/sguzman/jobflick-bridge/actions/runs/40025229365"
+            "Real native report transported as bounded text/plain File through FDE QA to synthetic page, with no composer text injection or automatic Send. No actual ChatGPT attachment yet: https://github.com/sguzman/jobflick-bridge/actions/runs/40025229365",
+            "End-to-end disposable Firefox Developer Edition to PINNED REAL Jobflick daemon executes fixed harmless Fish fixture, obtains terminal native report and constructs a bounded text/plain File through the production inert helper. Explicit QA-only file handoff leaves occupied composer text, contenteditable state and existing attachment chip exactly unchanged; no report pasted, no DOM composer control inserted, and automatic Send remains disabled. Passed real integration: https://github.com/sguzman/jobflick-bridge/actions/runs/40039054521 ; fast static/browser checks: https://github.com/sguzman/jobflick-bridge/actions/runs/40039054482 . This verifies 'avoid giant text injection', NOT actual ChatGPT attachment confirmation."
           ]
         },
         {
@@ -449,10 +450,11 @@
           ]
         }
       ],
-      "verified": 1,
+      "verified": 2,
       "total": 9,
-      "percent": 11,
-      "implemented": 5
+      "percent": 22,
+      "implemented": 4,
+      "planned": 3
     },
     {
       "id": "M6",
@@ -616,10 +618,10 @@
   },
   "overall": {
     "total": 63,
-    "verified": 36,
-    "implemented": 20,
+    "verified": 37,
+    "implemented": 19,
     "planned": 7,
-    "percent": 57,
+    "percent": 58,
     "basis": "Only verified atomic tasks count toward percentage"
   }
 }

@@ -127,6 +127,11 @@ Unrelated site navigation and tab completion do not cause Jobflick native inspec
 
 ## 🧪 Current verified CI and memory bounds
 
-[Firefox Developer Edition checks](https://github.com/sguzman/jobflick-bridge/actions/runs/40036931931) · [real pinned Jobflick/Firefox integration](https://github.com/sguzman/jobflick-bridge/actions/runs/40036931862).
+[Firefox Developer Edition checks](https://github.com/sguzman/jobflick-bridge/actions/runs/40039054482) · [real pinned Jobflick/Firefox integration](https://github.com/sguzman/jobflick-bridge/actions/runs/40039054521).
 
 The latest checks cover stale asynchronous response authorization, exact original-chat routing, Firefox keyboard and synthetic file acceptance, native cancellation/report recovery, bounded fast retries during storage errors, and conflicting native metadata quarantine. Run status stays monotonic, completed controls release their JavaScript status references, and each long-lived ChatGPT content script keeps at most 128 live status mappings; older jobs remain accessible through the authoritative Jobflick inbox. Firefox host registration now refuses clobbering a foreign native wrapper or manifest while allowing safe reinstall. Stored job names and colors are bounded, and malformed legacy inbox URLs are never used as Open chat destinations. These are verified synthetic and native-transport checks, **not** authenticated ChatGPT file upload, automatic Send, or long-duration desktop profiling.
+
+
+## 📄 M5-04 verified: no composer log injection
+
+Real isolated Firefox Developer Edition now verifies that a fixed harmless job's native report is passed as a bounded local text/plain File without altering a preoccupied composer or an existing user attachment indicator. [Real Jobflick acceptance](https://github.com/sguzman/jobflick-bridge/actions/runs/40039054521). This independently completes the atomic *avoid giant text injection* task, not authenticated ChatGPT upload or Send.
