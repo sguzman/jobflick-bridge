@@ -54,3 +54,9 @@ If a future site change prevents reliable confirmation, disable that route and r
 ## 🛟 Rollout boundary
 
 The current production add-on remains manual-export-only. Activation of real attachment and Send requires new, evidence-backed roadmap tasks, verified real-site FDE QA, and a versioned user-facing opt-in. Synthetic browser fixtures and Node mocks provide useful negative tests but cannot independently unlock production Send.
+
+## 🦊 Verified local handoff building block
+
+An inert helper, `extension/attachment-adapter.js`, can construct a bounded `text/plain` File with a stable `jobflick-{id}.txt` name and transfer it to an explicitly supplied, empty, connected file input using Firefox's `DataTransfer` API. The helper refuses existing file selections and explicitly returns `domHandoffOnly` rather than treating a synthetic `change` event as successful upload.
+
+The helper has no message listener, no ChatGPT selectors, no outbound API requests and **no Send path**. It is bundled with the extension but is not invoked by the production UI. The localhost test invokes it independently and is not acceptance of uploading into ChatGPT.

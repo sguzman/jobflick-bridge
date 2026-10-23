@@ -93,3 +93,7 @@ The popup's keyboard-accessible search form filters saved Jobflick records by jo
 Automatic report attachment and Send are deliberately disabled until their real authenticated Firefox acceptance gates pass. The safety and idempotency requirements are documented in [Report attachment and Send acceptance contract](docs/DELIVERY-CONTRACT.md). The current supported workflow is explicit local Save report → Download prepared report, with Jobflick retaining the durable original.
 
 Current verified CI: [Firefox/static checks](https://github.com/sguzman/jobflick-bridge/actions/runs/40021961943) · [real Jobflick Native Messaging acceptance](https://github.com/sguzman/jobflick-bridge/actions/runs/40021742503). These runs do not establish authenticated ChatGPT file upload or automatic Send.
+
+## 📄 Inert report File adapter
+
+A small bounded File constructor/DOM handoff helper is included in `extension/attachment-adapter.js`. It is deliberately **not activated** by the current extension UI. Synthetic Firefox Developer Edition QA checks that the page can read the file and that an already-selected file is never replaced. This is a preparatory file-transfer primitive, not a verified ChatGPT upload or Send.

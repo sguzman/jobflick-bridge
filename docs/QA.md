@@ -144,3 +144,9 @@ Synthetic tests cover three outcomes: (1) real-backend-style matching submission
 ## Native identity quarantine acceptance
 
 Adversarial Node tests return an inspected native job with a different ID or origin token. The bridge must never paint the unrelated status, change the original job's name, or call `show`. The record becomes manual-only with an explicit integrity issue; subsequent Refresh and alarms cannot automatically re-inspect it. The native report stays in Jobflick for manual recovery. Authentic Firefox Developer Edition acceptance of mismatched responses remains distinct.
+
+## Firefox File handoff (synthetic page; not authenticated ChatGPT)
+
+CI runs `tests/fde-attachment.cjs` with a disposable Firefox Developer Edition extension and a localhost HTML file input. The probe imports the **same inert** `extension/attachment-adapter.js` that is bundled before the production content script, and checks that a plain-text Jobflick-named `File` is readable from a page-realm `change` listener. It additionally verifies that selecting a report **cannot overwrite an already-selected user file**, and that a report larger than 512 KiB is rejected before any handoff. No network upload is made; no native host, account session, or ChatGPT Send is involved.
+
+Passing this probe validates Firefox cross-realm FileList transfer but does not establish that ChatGPT's current attachment UI will ingest, display, upload, or send the file. Only real authenticated Firefox Developer Edition QA can verify that later stage.
