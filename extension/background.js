@@ -636,17 +636,28 @@ async function onPopupMessage(message, sender) {
       // An explicit popup confirmation is required. A successful native
       // acknowledgement means the request was accepted, NOT that a running
       // process definitely stopped before completion. Never auto-retry.
+      const identity = recordIdentity(current);
       cancelFlights.add(id);
       try {
         const response = await native({ action: "cancel", id });
         if (!response.ok) {
           return { ok: false, message: response.message || "Jobflick did not accept the stop request" };
         }
+        let recorded = false;
         await mutate(jobs => {
-          if (knownRecord(jobs[id]) && !FINISHED.has(jobs[id].state)) {
+          if (sameIdentity(id, jobs[id], identity) &&
+              !jobs[id].integrityIssue &&
+              ["queued", "running"].includes(jobs[id].state) &&
+              !jobs[id].cancelRequestedAt) {
             jobs[id].cancelRequestedAt = Date.now();
+            recorded = true;
           }
         });
+        if (!recorded) {
+          // The native host already accepted the request. Do not retry it,
+          // and do not mark an unrelated replacement record as cancelled.
+          return { ok: false, message: "Stop accepted by Jobflick, but the browser record changed; inspect Jobflick for final status" };
+        }
         return { ok: true, message: "Stop request accepted; final state is not yet confirmed" };
       } finally {
         cancelFlights.delete(id);
