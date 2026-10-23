@@ -450,16 +450,17 @@
         {
           "id": "M5-09",
           "title": "Manual fallback",
-          "status": "implemented",
+          "status": "verified",
           "evidence": [
-            "Manual Save report → Download prepared report requires two user clicks; real FDE localhost test of production popup JS saves exact bounded text file with a mock native response, but privileged moz-extension popup acceptance remains pending: https://github.com/sguzman/jobflick-bridge/actions/runs/40024074527"
+            "Manual Save report → Download prepared report requires two user clicks; real FDE localhost test of production popup JS saves exact bounded text file with a mock native response, but privileged moz-extension popup acceptance remains pending: https://github.com/sguzman/jobflick-bridge/actions/runs/40024074527",
+            "When actual ChatGPT upload acknowledgement cannot be established, production stays manual-only: two distinct user gestures prepare the native report and save the bounded File locally, with no composer injection or automatic Send. Real Firefox tests use the original popup JS and verify complete output bytes, while isolated pinned real Jobflick-to-File transport is separately tested. 325-job popup workflow acceptance: https://github.com/sguzman/jobflick-bridge/actions/runs/40041874551; prior real pinned native integration https://github.com/sguzman/jobflick-bridge/actions/runs/40040708421. This verifies the explicit fallback, not production live-site file attachment or the privileged browser popup."
           ]
         }
       ],
-      "verified": 2,
+      "verified": 3,
       "total": 9,
-      "percent": 22,
-      "implemented": 4,
+      "percent": 33,
+      "implemented": 3,
       "planned": 3
     },
     {
@@ -494,27 +495,30 @@
         {
           "id": "M6-04",
           "title": "Manual destination mapping",
-          "status": "implemented",
+          "status": "verified",
           "evidence": [
-            "Explicit Open chat button validates stored ChatGPT route, strips query/fragment, refuses untrusted URL and never automatically rebinds report or submits a message. Behavioral tests pass; authenticated FDE destination UX still pending: https://github.com/sguzman/jobflick-bridge/actions/runs/40012206702"
+            "Explicit Open chat button validates stored ChatGPT route, strips query/fragment, refuses untrusted URL and never automatically rebinds report or submits a message. Behavioral tests pass; authenticated FDE destination UX still pending: https://github.com/sguzman/jobflick-bridge/actions/runs/40012206702",
+            "Real Firefox production popup JavaScript renders Open chat only for validated ChatGPT canonical URLs. The explicit click invokes browser.tabs.create with the original safe chat path, strips query/fragment, does not switch the existing browser tab or retrieve/send a report. Invalid foreign destinations are rejected in Node behavioral tests. 325-record Firefox browser acceptance: https://github.com/sguzman/jobflick-bridge/actions/runs/40041874551. Runtime tab creation was simulated on localhost; live authenticated destination UX is separately gated."
           ]
         },
         {
           "id": "M6-05",
           "title": "Results panel",
-          "status": "implemented",
+          "status": "verified",
           "evidence": [
             "Firefox popup now has 40-record pagination, keyboard-accessible local job search, no-match feedback, read-only per-job preflight and bounded manual report retrieval. Node tests cover >300 archived jobs and name/ID/state filtering; authenticated Firefox popup UX not yet accepted: https://github.com/sguzman/jobflick-bridge/actions/runs/40021007135",
             "Local inbox now excludes malformed v1/current records whose storage map key and claimed record ID disagree; no forged actionable ID is displayed. Node and Firefox checks passed: https://github.com/sguzman/jobflick-bridge/actions/runs/40030699492. Authenticated popup QA remains outstanding.",
-            "Both newly submitted and legacy popup metadata are bounded to 160-character names, valid six-digit hex colors and canonical ChatGPT conversation URLs, without silently rewriting legacy records. Existing missing-name metadata does not trigger redundant native poll storage writes. https://github.com/sguzman/jobflick-bridge/actions/runs/40036931931."
+            "Both newly submitted and legacy popup metadata are bounded to 160-character names, valid six-digit hex colors and canonical ChatGPT conversation URLs, without silently rewriting legacy records. Existing missing-name metadata does not trigger redundant native poll storage writes. https://github.com/sguzman/jobflick-bridge/actions/runs/40036931931.",
+            "Real disposable Firefox Developer Edition renders 325 saved jobs through the unmodified production popup HTML, JS and CSS. Every 40-record page including the final partial page is loaded only by explicit gesture; search by saved job name isolates one record, and clearing restores full browsing. Report content is not retrieved by initial loading, pagination, searching or manual Open chat. Per-job manual Save/Download and Forget controls are exercised with zero native submit/cancel/send actions. https://github.com/sguzman/jobflick-bridge/actions/runs/40041874551. Production privileged moz-extension popup and authenticated site integration remain under M7-06."
           ]
         },
         {
           "id": "M6-06",
           "title": "Retention/export",
-          "status": "implemented",
+          "status": "verified",
           "evidence": [
-            "Local record paging/retention in Node mocks, explicit two-click native report retrieval and real FDE localhost File download. Durable Jobflick report retained, real privileged popup QA outstanding: https://github.com/sguzman/jobflick-bridge/actions/runs/40024074527"
+            "Local record paging/retention in Node mocks, explicit two-click native report retrieval and real FDE localhost File download. Durable Jobflick report retained, real privileged popup QA outstanding: https://github.com/sguzman/jobflick-bridge/actions/runs/40024074527",
+            "Firefox Developer Edition validates manual two-click Save report / Download prepared report and complete exact text/plain download; a separate first Forget click only arms confirmation and the second deletes browser-side tracking metadata with zero native submit/cancel actions. Underlying real Jobflick jobs and report logs stay outside extension retention and are not deleted by its Forget handler (covered in Node background tests). 325-record UI and export acceptance: https://github.com/sguzman/jobflick-bridge/actions/runs/40041874551. Privileged popup end-to-end acceptance is covered separately under M7-06."
           ]
         },
         {
@@ -528,10 +532,10 @@
           ]
         }
       ],
-      "verified": 2,
+      "verified": 5,
       "total": 7,
-      "percent": 28,
-      "implemented": 5
+      "percent": 71,
+      "implemented": 2
     },
     {
       "id": "M7",
@@ -628,10 +632,10 @@
   },
   "overall": {
     "total": 63,
-    "verified": 45,
-    "implemented": 11,
+    "verified": 49,
+    "implemented": 7,
     "planned": 7,
-    "percent": 71,
+    "percent": 77,
     "basis": "Only verified atomic tasks count toward percentage"
   }
 }

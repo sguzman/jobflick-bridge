@@ -525,3 +525,30 @@ actual disposable Firefox Developer Edition A→B→A browser test passed
 The related production-source [real Jobflick native acceptance](https://github.com/sguzman/jobflick-bridge/actions/runs/40041196148)
 also passed. M1-07 is verified for the isolated Firefox integration; live
 authenticated ChatGPT composer/upload acceptance remains separately gated.
+
+## Verified manual-workflow acceptance: 325-job Firefox results panel
+
+Disposable Firefox Developer Edition loaded the actual production popup
+HTML/JS/CSS on localhost with a bounded, synthetic browser runtime providing
+325 durable job records. The browser displayed 40 entries per explicit page,
+loaded the final partial page, filtered by job name, and restored the full
+inbox after clearing the search. No native report was fetched merely by
+loading, paging, searching or explicitly opening a saved chat.
+
+A direct Open chat gesture invoked the browser-tab API with the original
+canonical ChatGPT conversation path, excluding the stored query/fragment.
+Two distinct Save/Download gestures saved the full expected text/plain
+report. A first Forget click armed confirmation but did not mutate storage;
+a second click removed only the browser's record, without submitting or
+cancelling a native job. The production background's explicit Forget path
+never deletes the durable Jobflick job or log.
+
+[All Firefox UI and static checks passing](https://github.com/sguzman/jobflick-bridge/actions/runs/40041874551). This closes the
+independent manual destination, results panel, explicit retention/export and
+fallback task criteria (M6-04, M6-05, M6-06, M5-09). **The test runs the
+unchanged production popup code with a synthetic localhost runtime, not a
+privileged moz-extension toolbar popup, and does not authenticate to
+ChatGPT.** Privileged integration, live attachment acknowledgement, draft
+preservation and Send remain blocked on separate acceptance gates (M7-06,
+M5-01/03/05/06/07/08, M4-06/07). No delivery success is inferred from a
+local file download.
