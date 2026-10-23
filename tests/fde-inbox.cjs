@@ -76,7 +76,7 @@ async function main(){
     assert.equal(await driver.executeScript(
       "return document.getElementById('load-older').hidden"),false);
     assert.deepEqual((await actions()).map(x=>x.type),["jobflick:inbox"]);
-    for(let expected=80;expected<=325;expected+=40){
+    for(let expected=80;expected<=360;expected+=40){
       await (await driver.findElement(By.id("load-older"))).click();
       await count(Math.min(expected,325));
     }
