@@ -245,6 +245,25 @@ async function main() {
       return items[0] || false;
     }, 12000);
     assert.match(await button.getText(), /Run Jobflick/);
+    phase = "rejecting untrusted page-generated Run clicks";
+    // A hostile site script can call click() or dispatch a synthetic event,
+    // but these must not inherit the extension's trusted user authorization.
+    // This uses the unmodified production content script in real Firefox,
+    // before any native submit has occurred in this disposable profile.
+    await driver.executeScript(
+      "const run=document.querySelector('.jobflick-bridge-run');"+
+      "run.click();"+
+      "run.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));"
+    );
+    assert.match(await button.getText(),/Run Jobflick/,
+      "Scriptable page events must not trigger a native submission");
+    if (!realHost) {
+      const untrustedActions=fs.existsSync(path.join(state,"native-requests.jsonl")) ?
+        fs.readFileSync(path.join(state,"native-requests.jsonl"),"utf8")
+          .split("\\n").filter(Boolean).map(JSON.parse) : [];
+      assert.equal(untrustedActions.filter(x=>x.action==="submit_spec").length,0,
+        "Synthetic DOM clicks must never reach the native submit action");
+    }
     phase = "trusted Run submission";
     await button.click();
     // Real Rust daemon startup and browser Native Messaging are separate
