@@ -78,7 +78,7 @@ async function main() {
     '    document.documentElement.dataset.qaHandoff="error";',
     '  }',
     '});'
-  ].join("\\n"));
+  ].join("\n"));
   // Only URL identity is adapted to synthetic localhost. All native protocol,
   // job tracking and other production background logic stays unchanged.
   const originalBackground = fs.readFileSync(path.join(production, "background.js"), "utf8");
@@ -118,6 +118,13 @@ async function main() {
   }
 `);
   fs.writeFileSync(path.join(ext, "background.js"), background);
+  // Fail with a specific syntax error BEFORE starting Firefox; a malformed
+  // disposable content script can otherwise look like native host failure.
+  const checkNode = require("node:child_process").execFileSync;
+  for (const script of ["qa-delivery.js","qa-route.js","background.js"]) {
+    checkNode(process.execPath,["--check",path.join(ext,script)],
+      {stdio:"pipe",timeout:10000});
+  }
 
   const fixture = path.resolve(__dirname, "./fixtures/fake-native-host.cjs");
   const fakeHost = path.join(root, "fake-native-host");
