@@ -36,3 +36,7 @@ The extension intentionally does **not** request the broad `tabs` permission. Fi
 ## Submission navigation race
 
 The background worker validates sender and conversation URL when the user-triggered message first arrives **and again after asynchronously obtaining the tab-origin token**, immediately before Native Messaging submission. If the tab closed or navigated away during origin creation, the job is not queued. Once Native Messaging starts, a subsequent navigation cannot undo a legitimately authorized command; the delivered result still requires an exact surviving origin check. Mocked tests cover navigation and close during token creation; real FDE execution remains separately gated.
+
+## Native-host installation hardening
+
+The Fish registration script refuses existing native-host manifests (including dangling symlinks), symlinked host directories, and symlinked manifests during uninstall. CI tests verify refusal without touching an outside target, plus an actual executable-wrapper round trip with little-endian native-messaging JSON framing using an ephemeral, non-executing fake host. Real Jobflick daemon integration still requires separate acceptance.

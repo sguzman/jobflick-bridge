@@ -23,9 +23,15 @@ switch $argv[1]
             echo "jobflick is not on PATH; no changes made" >&2
             exit 2
         end
-        if test -e "$manifest"
+        # A dangling symlink is not -e but must never be overwritten.
+        # A symlinked host directory could redirect installed executables.
+        if test -e "$manifest"; or test -L "$manifest"
             echo "Existing native host manifest: $manifest" >&2
             echo "Refusing to overwrite; inspect/remove it explicitly first" >&2
+            exit 2
+        end
+        if test -L "$manifest_dir"; or test -L "$host_dir"
+            echo "Native host directory is a symlink; refusing to install" >&2
             exit 2
         end
         if not command -sq jq
@@ -46,6 +52,10 @@ switch $argv[1]
         echo "Registered native host for Firefox profiles: $manifest"
         echo "Note: this registration is per-user, not QA-profile isolated."
     case --uninstall
+        if test -L "$manifest"
+            echo "Refusing to follow/remove symlinked native host manifest" >&2
+            exit 2
+        end
         if test -f "$manifest"
             if not grep -q '"jobflick-bridge@sguzman.github.io"' "$manifest"
                 echo "Manifest does not match this extension; refusing deletion" >&2

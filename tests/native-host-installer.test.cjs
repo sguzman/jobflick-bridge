@@ -45,3 +45,81 @@ test("Firefox native host installer writes and safely removes only its own manif
     fs.rmSync(fixture, { recursive: true, force: true });
   }
 });
+
+test("installer rejects symlinked host manifest, including a dangling link", () => {
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "jobflick-bridge-symlink-"));
+  try {
+    const home = path.join(fixture, "home");
+    const data = path.join(fixture, "data");
+    const bin = path.join(fixture, "bin");
+    const hostDir = path.join(home, ".mozilla/native-messaging-hosts");
+    fs.mkdirSync(home);
+    fs.mkdirSync(bin);
+    fs.mkdirSync(hostDir, { recursive: true });
+    fs.writeFileSync(path.join(bin, "jobflick"), "#!/bin/sh\nexit 19\n", { mode: 0o700 });
+    const manifest = path.join(hostDir, "io.github.sguzman.jobflick.json");
+    fs.symlinkSync(path.join(fixture, "nonexistent-target"), manifest);
+    const env = { ...process.env, HOME: home, XDG_DATA_HOME: data, PATH: bin + path.delimiter + process.env.PATH };
+    const installer = path.join(__dirname, "../scripts/install-native-host.fish");
+    const result = spawnSync("fish", [installer, "--install"], { encoding: "utf8", env });
+    assert.notEqual(result.status, 0);
+    assert.equal(fs.lstatSync(manifest).isSymbolicLink(), true);
+    assert.equal(fs.existsSync(path.join(data, "jobflick-bridge", "native-host")), false);
+    const removed = spawnSync("fish", [installer, "--uninstall"], { encoding: "utf8", env });
+    assert.notEqual(removed.status, 0);
+    assert.equal(fs.lstatSync(manifest).isSymbolicLink(), true);
+  } finally {
+    fs.rmSync(fixture, { recursive: true, force: true });
+  }
+});
+
+test("installed Fish wrapper passes binary Native Messaging frames to child executable", () => {
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "jobflick-bridge-frame-"));
+  try {
+    const home = path.join(fixture, "home");
+    const data = path.join(fixture, "data");
+    const bin = path.join(fixture, "bin");
+    fs.mkdirSync(home);
+    fs.mkdirSync(bin);
+    const fake = path.join(bin, "jobflick");
+    fs.writeFileSync(fake, [
+      "#!/usr/bin/env node",
+      "'use strict';",
+      "if (process.argv[2] !== 'native-host') process.exit(15);",
+      "const chunks=[];",
+      "process.stdin.on('data',chunk=>chunks.push(chunk));",
+      "process.stdin.on('end',()=>{",
+      "  const buf=Buffer.concat(chunks);",
+      "  if (buf.length<4) process.exit(16);",
+      "  const n=buf.readUInt32LE(0);",
+      "  if(n!==buf.length-4) process.exit(17);",
+      "  const msg=JSON.parse(buf.subarray(4).toString('utf8'));",
+      "  if(msg.action!=='validate_spec') process.exit(18);",
+      "  const reply=Buffer.from(JSON.stringify({ok:false,message:'schema invalid, no execution'}));",
+      "  const h=Buffer.alloc(4);h.writeUInt32LE(reply.length,0);",
+      "  process.stdout.write(Buffer.concat([h,reply]));",
+      "});"
+    ].join("\n") + "\n", { mode: 0o700 });
+    const env = { ...process.env, HOME: home, XDG_DATA_HOME: data,
+      PATH: bin + path.delimiter + process.env.PATH };
+    const installer = path.join(__dirname, "../scripts/install-native-host.fish");
+    const installed = spawnSync("fish", [installer, "--install"], { encoding:"utf8", env });
+    assert.equal(installed.status, 0, installed.stderr);
+    const wrapper = path.join(data,"jobflick-bridge","native-host");
+    const payload = Buffer.from(JSON.stringify({
+      action: "validate_spec", spec_yaml: "invalid: intentionally non-executable"
+    }),"utf8");
+    const head=Buffer.alloc(4);
+    head.writeUInt32LE(payload.length,0);
+    const child=spawnSync(wrapper, { input: Buffer.concat([head,payload]), env });
+    assert.equal(child.status,0,child.stderr.toString());
+    assert(child.stdout.length>=4);
+    const reportedLength=child.stdout.readUInt32LE(0);
+    assert.equal(reportedLength,child.stdout.length-4,"Host wrapper did not corrupt framing");
+    const reply=JSON.parse(child.stdout.subarray(4).toString("utf8"));
+    assert.deepEqual(reply,{ok:false,message:"schema invalid, no execution"});
+    assert.equal(child.stderr.length,0);
+  } finally {
+    fs.rmSync(fixture, { recursive: true, force: true });
+  }
+});
