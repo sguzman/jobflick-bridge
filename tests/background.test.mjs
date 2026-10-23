@@ -1404,3 +1404,91 @@ test("orphaned pending jobs remain inspected but avoid repetitive orphan writes"
   assert.equal(app.storage.jobflick_bridge_jobs_v1[id].deliveryState,"manual_only");
   assert.equal(app.requests.filter(x=>x.action==="inspect").length,4);
 });
+
+test("idle inbox and unrelated Firefox tabs perform zero local-storage writes",async()=>{
+  const app=boot();
+  await app.listeners.message({type:"jobflick:refresh"},app.popupSender);
+  assert.equal(app.storageWrites.length,0);
+  app.listeners.updated(22,{status:"complete"},
+    {id:22,url:"https://example.org/article"});
+  app.listeners.updated(22,{url:"https://example.org/elsewhere"},
+    {id:22,url:"https://example.org/elsewhere"});
+  app.listeners.removed(22);
+  for(let i=0;i<12;i++)await pause();
+  assert.equal(app.storageWrites.length,0);
+  assert.equal(app.requests.length,0);
+});
+
+test("unrelated tab completions do not inspect active Jobflick jobs",async()=>{
+  const id="job_12345678";
+  const app=boot(request=>{
+    if(request.action==="inspect")return {ok:true,job:{id,state:"running"}};
+    throw Error("No native work expected");
+  },{storage:{jobflick_bridge_jobs_v1:{[id]:{
+    id,recordVersion:1,state:"running",tabId:11,
+    conversation:"https://chatgpt.com/c/testing-1234",
+    origin:"tab-test",orphaned:false
+  }}}});
+  app.listeners.updated(22,{status:"complete"},
+    {id:22,url:"https://example.org/"});
+  app.listeners.updated(23,{url:"https://example.org/new"},
+    {id:23,url:"https://example.org/new"});
+  for(let i=0;i<10;i++)await pause();
+  assert.equal(app.requests.filter(x=>x.action==="inspect").length,0);
+  assert.equal(app.storageWrites.length,0);
+  // Existing durable alarm and explicit Refresh remain authoritative.
+  await app.listeners.message({type:"jobflick:refresh"},app.popupSender);
+  assert.equal(app.requests.filter(x=>x.action==="inspect").length,1);
+});
+
+test("duplicate same-chat navigation does not rewrite terminal records",async()=>{
+  const id="job_12345678", token="tab-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+  const app=boot(null,{storage:{jobflick_bridge_jobs_v1:{[id]:{
+    id,recordVersion:1,state:"succeeded",tabId:11,
+    conversation:"https://chatgpt.com/c/testing-1234",
+    origin:token,orphaned:false
+  }}},session:{jobflick_origin_11:token}});
+  app.listeners.updated(11,{
+    url:"https://chatgpt.com/c/testing-1234?new=1"
+  });
+  app.listeners.historyState({
+    tabId:11,frameId:0,
+    url:"https://chatgpt.com/c/testing-1234?route=unchanged"
+  });
+  for(let i=0;i<12;i++)await pause();
+  assert.equal(app.storageWrites.length,0);
+  assert.equal(app.session.jobflick_origin_11,token);
+  assert.equal(app.storage.jobflick_bridge_jobs_v1[id].orphaned,false);
+  app.listeners.historyState({
+    tabId:11,frameId:0,url:"https://chatgpt.com/c/another-conversation"
+  });
+  for(let i=0;i<12;i++)await pause();
+  assert.equal(app.storageWrites.length,1,
+    "Irreversible original-chat revocation requires exactly one write");
+  assert.equal(app.storage.jobflick_bridge_jobs_v1[id].orphaned,true);
+  app.listeners.historyState({
+    tabId:11,frameId:0,url:"https://chatgpt.com/c/testing-1234"
+  });
+  for(let i=0;i<12;i++)await pause();
+  assert.equal(app.storageWrites.length,1,"Returning cannot rebind old metadata");
+});
+
+test("closing tab during pending session token write cannot leave recycled ID token",async()=>{
+  let allowSessionWrite=null;
+  const app=boot(null,{
+    beforeSessionWrite:()=>new Promise(resolve=>{allowSessionWrite=resolve;})
+  });
+  const submit=app.listeners.message({type:"jobflick:submit",yaml:sample},app.sender);
+  for(let i=0;i<10&&!allowSessionWrite;i++)await pause();
+  assert.equal(typeof allowSessionWrite,"function");
+  app.tabs.delete(11);
+  app.listeners.removed(11);
+  allowSessionWrite();
+  const result=await submit;
+  assert.equal(result.ok,false);
+  for(let i=0;i<12;i++)await pause();
+  assert.equal(app.session.jobflick_origin_11,undefined,
+    "Delayed token mint must not outlive closed Firefox tab");
+  assert.equal(app.requests.filter(x=>x.action==="submit_spec").length,0);
+  assert.equal(app.storageWrites.length,0);
+});
