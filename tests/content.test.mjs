@@ -6,7 +6,7 @@ import vm from "node:vm";
 const content = readFileSync(new URL("../extension/content.js", import.meta.url), "utf8");
 const yaml = "schema: 4\nname: Browser-only QA\nshell: fish\ncwd: /tmp\nprivilege: none\ntimeout_seconds: 5\ncommand: pwd\n";
 
-function simulate(initialYaml = yaml, validateOK = true) {
+function simulate(initialYaml = yaml, validateOK = true, probeOptions = {}) {
   const documentListeners = {};
   const runtimeMessages = [];
   const timerJobs = new Map();
@@ -41,6 +41,16 @@ function simulate(initialYaml = yaml, validateOK = true) {
   const pre = new Element("pre");
   pre.yaml = initialYaml;
   const document = {
+    querySelector(selector) {
+      if (selector.includes("#prompt-textarea") &&
+          probeOptions.composerPresent) {
+        return { textContent: probeOptions.composerText || "" };
+      }
+      if (selector === 'input[type="file"]' && probeOptions.fileInputPresent) {
+        return { type: "file" };
+      }
+      return null;
+    },
     addEventListener(type, callback) { documentListeners[type] = callback; },
     createElement(tag) { return new Element(tag); },
     querySelectorAll(selector) { return selector === "main pre" ? [pre] : []; }
@@ -136,4 +146,28 @@ test("toolbar scan requires explicit popup action and only considers visible blo
   assert.equal(result.ok, true);
   await app.pump();
   assert.equal(app.messages.filter(x => x.type === "jobflick:validate").length, 1);
+});
+
+test("read-only attachment capability probe returns only booleans", async () => {
+  const app = simulate(yaml, true, {
+    composerPresent: true, composerText: "private draft must never escape",
+    fileInputPresent: true
+  });
+  const result = await app.runtimeListener({ type: "jobflick:probe-upload" });
+  assert.deepEqual(Object.keys(result).sort(), [
+    "composerOccupied", "composerPresent", "fileInputPresent", "ok"
+  ].sort());
+  assert.equal(result.composerPresent, true);
+  assert.equal(result.composerOccupied, true);
+  assert.equal(result.fileInputPresent, true);
+  assert.equal(app.messages.length, 0);
+});
+
+test("no known file input yields an inconclusive read-only result", async () => {
+  const app = simulate(yaml, true, { composerPresent: true });
+  const result = await app.runtimeListener({ type: "jobflick:probe-upload" });
+  assert.equal(result.ok, true);
+  assert.equal(result.fileInputPresent, false);
+  assert.equal(result.composerOccupied, false);
+  assert.equal(app.messages.length, 0);
 });

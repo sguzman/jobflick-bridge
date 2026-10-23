@@ -79,3 +79,14 @@ test("extension popup is packaged locally and requires no new browser domains", 
   assert(popup.includes('parts[2] === "c"'));
   assert(popup.includes('destination.username'));
 });
+
+test("read-only attachment probe is not an upload or automatic send", () => {
+  const content = read("extension/content.js");
+  const bg = read("extension/background.js");
+  assert(content.includes("jobflick:probe-upload"));
+  assert(bg.includes("jobflick:probe-upload"));
+  assert(!content.includes("DataTransfer("));
+  assert(!content.includes("dispatchEvent(new Event"));
+  assert(!content.includes("new File("));
+  assert(!content.includes("send-button"));
+});

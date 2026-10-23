@@ -57,6 +57,9 @@ function boot(nativeOverride = null, options = {}) {
       },
       sendMessage: async (tabId, message) => {
         sentTabMessages.push({ tabId, message });
+        if (message?.type === "jobflick:probe-upload") {
+          return { ok: true, composerPresent: true, composerOccupied: false, fileInputPresent: false };
+        }
         return { ok: true };
       },
       onUpdated: { addListener: callback => { listeners.updated = callback; } },
@@ -368,4 +371,28 @@ test("conversation routing accepts ordinary/project chats and denies share/setti
     assert.equal(answer.ok, expected, url);
   }
   assert.equal(app.requests.filter(r => r.action === "submit_spec").length, 0);
+});
+
+test("composer capability check is popup-only and transfers flags, not user draft contents", async () => {
+  const app = boot();
+  const denied = await app.listeners.message({ type: "jobflick:probe-upload" }, app.sender);
+  assert.equal(denied.ok, false);
+  const response = await app.listeners.message({ type: "jobflick:probe-upload" }, app.popupSender);
+  assert.equal(response.ok, true);
+  assert.equal(response.composerPresent, true);
+  assert.equal(response.composerOccupied, false);
+  assert.equal(response.fileInputPresent, false);
+  assert.equal("draft" in response, false);
+  assert.equal(app.requests.length, 0);
+  assert.equal(app.sentTabMessages.length, 1);
+  assert.equal(app.sentTabMessages[0].message.type, "jobflick:probe-upload");
+});
+
+test("composer capability check fails closed away from conversation routes", async () => {
+  const app = boot();
+  app.tabs.set(11, { id: 11, url: "https://chatgpt.com/settings" });
+  const result = await app.listeners.message({ type: "jobflick:probe-upload" }, app.popupSender);
+  assert.equal(result.ok, false);
+  assert.equal(app.sentTabMessages.length, 0);
+  assert.equal(app.requests.length, 0);
 });
