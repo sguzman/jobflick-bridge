@@ -24,11 +24,14 @@ function element(tag, className, text) {
 }
 
 function exportReport(id, report) {
-  const blob = new Blob([report], { type: "text/plain;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
+  const filename = "jobflick-" + id.replace(/[^a-zA-Z0-9_-]/g, "") + ".txt";
+  // A real File object is also useful for the later ChatGPT attachment adapter.
+  // It stays local here; constructing it does NOT attach or send anything.
+  const file = new File([report], filename, { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(file);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "jobflick-" + id.replace(/[^a-zA-Z0-9_-]/g, "") + ".txt";
+  a.download = filename;
   document.body.append(a);
   a.click();
   a.remove();
@@ -49,13 +52,24 @@ function renderItem(job) {
   if (FINISHED.has(job.state)) {
     const button = element("button", "", "Save report");
     button.type = "button";
+    let preparedReport = null;
     button.addEventListener("click", async () => {
+      // The actual download is initiated during a NEW direct user gesture,
+      // not from a continuation after an asynchronous native-host response.
+      if (preparedReport !== null) {
+        exportReport(job.id, preparedReport);
+        preparedReport = null;
+        button.textContent = "Save report";
+        say("Download requested. Check Firefox's downloads.");
+        return;
+      }
       button.disabled = true;
       say("Retrieving report from Jobflick…");
       try {
         const result = await ask("jobflick:report", { id: job.id });
-        exportReport(job.id, result.report);
-        say("Report export requested.");
+        preparedReport = result.report;
+        button.textContent = "Download prepared report";
+        say("Report ready. Click Download prepared report to save it.");
       } catch (error) {
         say(error.message);
       } finally {

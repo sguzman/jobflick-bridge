@@ -57,6 +57,8 @@ test("file attachments and automated Send are not falsely claimed to be implemen
   assert(!content.includes('button[data-testid="send-button"]'));
   const popup = read("extension/popup/popup.js");
   assert(popup.includes("URL.createObjectURL"));
+  assert(popup.includes("new File("));
+  assert(popup.includes("Download prepared report"));
   assert(popup.includes("report"));
   assert(!popup.includes("innerHTML"));
   assert(!popup.includes("eval("));

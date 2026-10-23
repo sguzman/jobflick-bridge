@@ -44,3 +44,7 @@ For the first browser-only smoke test, do **not** run the native-host installer:
 ## Bridge-only retention
 
 Finished records may be forgotten from the toolbar inbox through two explicit clicks: **Forget bridge record** and **Confirm forget**. This removes only Firefox-extension routing metadata. It neither cancels, consumes, nor deletes jobs or logs inside Jobflick. Running jobs cannot be forgotten via this control. This is a local data-management action, not an execution action.
+
+### Local report download behavior
+
+To avoid attempting a popup download from the asynchronous continuation of a native-host request, **Save report** first retrieves the report into popup memory. A second explicit click on **Download prepared report** constructs a bounded `File` and requests the local download synchronously from that new user gesture. Closing the popup discards the prepared copy without altering the durable Jobflick report. The extension still does not upload or send files to ChatGPT. Actual download behavior must be verified in Firefox Developer Edition.
