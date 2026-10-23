@@ -211,32 +211,48 @@ async function checkJobs(onlyId = null) {
           });
           continue;
         }
-        await mutate(jobs => {
-          if (!jobs[id]) return;
-          jobs[id].state = state;
-          if (FINISHED.has(state) && !jobs[id].orphaned) {
-            jobs[id].deliveryState = "report_pending_manual_delivery";
-          }
-          jobs[id].name = typeof status.job.name === "string" ? status.job.name : jobs[id].name;
-          jobs[id].color = typeof status.job.color === "string" ? status.job.color : jobs[id].color;
-        });
+        // A long-running job often reports the same state for hours. The
+        // poll's batched lastCheckedAt write is sufficient in that case:
+        // avoid rewriting the entire stored inbox and notifying the tab on
+        // every identical native result.
+        const name = typeof status.job.name === "string" ?
+          status.job.name : record.name;
+        const color = typeof status.job.color === "string" ?
+          status.job.color : record.color;
+        const changed = state !== record.state ||
+          name !== record.name || color !== record.color;
+        if (changed) {
+          await mutate(jobs => {
+            if (!knownRecord(jobs[id]) || jobs[id].integrityIssue) return;
+            jobs[id].state = state;
+            if (FINISHED.has(state) && !jobs[id].orphaned) {
+              jobs[id].deliveryState = "report_pending_manual_delivery";
+            }
+            jobs[id].name = name;
+            jobs[id].color = color;
+          });
+        }
         // Once an origin is lost, do not silently reattach this record
         // even when the user later navigates to a matching conversation.
         const tab = record.orphaned ? null
           : await trustedTab(record.tabId, record.conversation, record.origin);
         if (!tab) {
-          await mutate(jobs => {
-            if (knownRecord(jobs[id])) {
-              jobs[id].orphaned = true;
-              jobs[id].deliveryState = "manual_only";
-            }
-          });
+          if (!record.orphaned) {
+            await mutate(jobs => {
+              if (knownRecord(jobs[id]) && !jobs[id].orphaned) {
+                jobs[id].orphaned = true;
+                jobs[id].deliveryState = "manual_only";
+              }
+            });
+          }
           continue;
         }
-        await browser.tabs.sendMessage(record.tabId, {
-          type: "jobflick:status", jobId: id, state, name: status.job.name || "",
-          color: status.job.color || ""
-        }).catch(() => {});
+        if (changed) {
+          await browser.tabs.sendMessage(record.tabId, {
+            type: "jobflick:status", jobId: id, state,
+            name: name || "", color: color || ""
+          }).catch(() => {});
+        }
         // No automatic delivery. A finished report stays durable in Jobflick until an
         // authorized user retrieves it; never store potentially large logs here.
         // Intentionally NO automated ChatGPT composer injection in this stage.
