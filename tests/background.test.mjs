@@ -10,6 +10,7 @@ function boot(nativeOverride = null, options = {}) {
   const storage = options.storage || {};
   const session = options.session || {};
   const requests = [];
+  const storageWrites = [];
   const sentTabMessages = [];
   const alarmActions = [];
   const activeAlarms = new Map();
@@ -38,7 +39,7 @@ function boot(nativeOverride = null, options = {}) {
     storage: {
       local: {
         get: async key => ({ [key]: storage[key] }),
-        set: async data => Object.assign(storage, data)
+        set: async data => { storageWrites.push(1); Object.assign(storage, data); }
       },
       session: {
         get: async key => ({ [key]: session[key] }),
@@ -96,6 +97,7 @@ function boot(nativeOverride = null, options = {}) {
   }, { filename: "background.js" });
   return {
     listeners, storage, session, requests, tabs, sentTabMessages, alarmActions,
+    storageWrites,
     popupSender: {
       id: "jobflick-bridge@sguzman.github.io",
       url: "moz-extension://unit/popup/index.html"
@@ -1335,4 +1337,70 @@ test("report response conflicting origin is quarantined without export",async()=
   assert.equal(reply.report,undefined);
   assert.equal(app.storage.jobflick_bridge_jobs_v1[id].integrityIssue,
     "native_origin_mismatch");
+});
+
+test("unchanged long-running native status avoids local inbox rewrites and tab spam",async()=>{
+  const id="job_12345678";
+  const token="tab-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+  let state="running";
+  const app=boot(request=>{
+    if(request.action==="inspect")return {
+      ok:true,job:{id,state,name:"Stable",color:"#224466",
+        origin_tab_id:token}
+    };
+    throw Error("Unexpected native request");
+  },{
+    storage:{jobflick_bridge_jobs_v1:{[id]:{
+      id,recordVersion:1,tabId:11,origin:token,
+      conversation:"https://chatgpt.com/c/testing-1234",
+      state:"running",name:"Stable",color:"#224466",
+      orphaned:false,deliveryState:"awaiting_completion",submittedAt:1
+    }}},
+    session:{jobflick_origin_11:token}
+  });
+  for(let i=0;i<5;i++){
+    const before=app.storageWrites.length;
+    const reply=await app.listeners.message({type:"jobflick:refresh"},app.popupSender);
+    assert.equal(reply.ok,true);
+    assert.equal(app.storageWrites.length-before,1,
+      "Only the bounded lastCheckedAt write should be needed");
+  }
+  assert.equal(app.sentTabMessages.length,0,
+    "Unchanged running state should not spam Firefox content-script messages");
+  assert.equal(app.requests.filter(x=>x.action==="inspect").length,5);
+  state="succeeded";
+  const before=app.storageWrites.length;
+  await app.listeners.message({type:"jobflick:refresh"},app.popupSender);
+  assert.equal(app.storageWrites.length-before,2,
+    "A real terminal transition persists status in addition to lastCheckedAt");
+  assert.equal(app.storage.jobflick_bridge_jobs_v1[id].state,"succeeded");
+  assert.equal(app.storage.jobflick_bridge_jobs_v1[id].deliveryState,
+    "report_pending_manual_delivery");
+  assert.equal(app.sentTabMessages.length,1);
+  await app.listeners.message({type:"jobflick:refresh"},app.popupSender);
+  assert.equal(app.requests.filter(x=>x.action==="inspect").length,6,
+    "A terminal job is no longer inspected");
+});
+
+test("orphaned pending jobs remain inspected but avoid repetitive orphan writes",async()=>{
+  const id="job_12345678";
+  const app=boot(request=>{
+    if(request.action==="inspect")return {
+      ok:true,job:{id,state:"running"}
+    };
+    throw Error("Unexpected native action");
+  },{
+    storage:{jobflick_bridge_jobs_v1:{[id]:{
+      id,recordVersion:1,tabId:11,origin:"tab-gone",
+      conversation:"https://chatgpt.com/c/testing-1234",
+      state:"running",orphaned:true,deliveryState:"manual_only"
+    }}}
+  });
+  for(let i=0;i<4;i++){
+    const prior=app.storageWrites.length;
+    await app.listeners.message({type:"jobflick:refresh"},app.popupSender);
+    assert.equal(app.storageWrites.length-prior,1);
+  }
+  assert.equal(app.storage.jobflick_bridge_jobs_v1[id].deliveryState,"manual_only");
+  assert.equal(app.requests.filter(x=>x.action==="inspect").length,4);
 });
