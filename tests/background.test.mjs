@@ -1039,3 +1039,52 @@ test("overlapping alarm inspection does not consume a target's fast check budget
   assert.equal(timers.length,0);
   assert.equal(app.requests.filter(x=>x.action==="submit_spec").length,1);
 });
+
+test("trusted inbox exposes older records in capped pages without reading native reports",async()=>{
+  const jobs={};
+  for(let i=0;i<325;i++){
+    const id="job_"+String(i).padStart(8,"0");
+    jobs[id]={
+      id,recordVersion:1,state:"succeeded",name:"Saved "+i,
+      submittedAt:325-i,orphaned:true,deliveryState:"manual_only"
+    };
+  }
+  const app=boot(null,{storage:{jobflick_bridge_jobs_v1:jobs}});
+  let offset=0;
+  const visited=[];
+  while(true){
+    const response=await app.listeners.message({
+      type:"jobflick:inbox",offset,limit:40
+    },app.popupSender);
+    assert.equal(response.ok,true);
+    assert(response.jobs.length<=40);
+    visited.push(...response.jobs.map(job=>job.id));
+    if(!response.hasMore)break;
+    assert.equal(response.nextOffset,offset+response.jobs.length);
+    offset=response.nextOffset;
+  }
+  assert.equal(visited.length,325);
+  assert.equal(new Set(visited).size,325);
+  assert.equal(visited[0],"job_00000000");
+  assert.equal(visited[324],"job_00000324");
+  assert.equal(app.requests.length,0,"Browsing local metadata never invokes the native host");
+});
+
+test("inbox rejects hostile pagination arguments and oversized page requests",async()=>{
+  const app=boot();
+  for(const fields of [
+    {offset:-1,limit:40},
+    {offset:"0",limit:40},
+    {offset:0,limit:0},
+    {offset:0,limit:51},
+    {offset:Infinity,limit:40},
+    {offset:100001,limit:40},
+    {offset:0,limit:1.5}
+  ]){
+    const response=await app.listeners.message({
+      type:"jobflick:inbox",...fields
+    },app.popupSender);
+    assert.equal(response.ok,false,JSON.stringify(fields));
+  }
+  assert.equal(app.requests.length,0);
+});
