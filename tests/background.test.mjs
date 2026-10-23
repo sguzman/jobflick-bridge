@@ -83,7 +83,8 @@ function boot(nativeOverride = null, options = {}) {
   vm.runInNewContext(source, {
     browser, URL, TextEncoder, crypto: { randomUUID: options.randomUUID ||
       (() => "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee") },
-    console, Date, Set, Promise, Object
+    console, Date, Set, Promise, Object,
+    setTimeout: options.setTimeout
   }, { filename: "background.js" });
   return {
     listeners, storage, session, requests, tabs, sentTabMessages, alarmActions,
@@ -859,4 +860,63 @@ test("iframe History API changes do not affect the parent ChatGPT delivery token
   for(let i=0;i<5;i++)await pause();
   assert.equal(app.session.jobflick_origin_11,token);
   assert.equal(app.storage.jobflick_bridge_jobs_v1.job_12345678.orphaned,false);
+});
+
+test("post-submit fast checks finish a short job without waiting for minute alarm",async()=>{
+  const timers=[];
+  let inspectCalls=0;
+  const app=boot(request=>{
+    if(request.action==="submit_spec")return {
+      ok:true,job:{id:"job_12345678",state:"queued"}
+    };
+    if(request.action==="inspect")return {
+      ok:true,job:{id:request.id,state:++inspectCalls===1?"running":"succeeded"}
+    };
+    return {ok:true};
+  },{
+    setTimeout:(fn,delay)=>{
+      timers.push({fn,delay});
+      return timers.length;
+    }
+  });
+  await app.listeners.message({type:"jobflick:submit",yaml:sample},app.sender);
+  for(let i=0;i<8;i++)await pause();
+  assert.equal(inspectCalls,1);
+  assert.equal(timers.length,1);
+  assert.equal(timers[0].delay,1200);
+  await timers.shift().fn();
+  assert.equal(inspectCalls,2);
+  assert.equal(app.storage.jobflick_bridge_jobs_v1.job_12345678.state,"succeeded");
+  assert.equal(timers.length,0);
+  assert.equal(app.requests.filter(x=>x.action==="submit_spec").length,1);
+  assert.equal(app.requests.filter(x=>x.action==="show").length,0);
+});
+
+test("fast native status polling stops after six bounded checks of a slow job",async()=>{
+  const timers=[];
+  const app=boot(request=>{
+    if(request.action==="submit_spec")return {
+      ok:true,job:{id:"job_12345678",state:"queued"}
+    };
+    if(request.action==="inspect")return {
+      ok:true,job:{id:request.id,state:"running"}
+    };
+    return {ok:true};
+  },{
+    setTimeout:(fn,delay)=>{
+      timers.push({fn,delay});
+      return timers.length;
+    }
+  });
+  await app.listeners.message({type:"jobflick:submit",yaml:sample},app.sender);
+  for(let i=0;i<8;i++)await pause();
+  let ticks=0;
+  while(timers.length&&ticks<20){
+    await timers.shift().fn();
+    ticks++;
+  }
+  assert.equal(ticks,6);
+  assert.equal(timers.length,0);
+  assert.equal(app.requests.filter(x=>x.action==="inspect").length,7);
+  assert.equal(app.requests.filter(x=>x.action==="submit_spec").length,1);
 });
