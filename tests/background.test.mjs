@@ -145,6 +145,45 @@ test("invalid, oversized and unsupported browser messages fail closed", async ()
   assert.equal(app.requests.length, 0);
 });
 
+test("native name and color metadata are bounded before durable storage",async()=>{
+  const id="job_12345678";
+  const app=boot(request=>{
+    if(request.action==="submit_spec")return {
+      ok:true,job:{id,state:"succeeded",
+        name:"N".repeat(16000),color:"#123456".repeat(2000)}
+    };
+    throw Error("Terminal submission must not inspect or invoke native again");
+  });
+  const response=await app.listeners.message({
+    type:"jobflick:submit",yaml:sample
+  },app.sender);
+  assert.equal(response.ok,true);
+  const stored=app.storage.jobflick_bridge_jobs_v1[id];
+  assert.equal(stored.name,"N".repeat(160));
+  assert.equal(stored.color,"");
+  const inbox=await app.listeners.message({type:"jobflick:inbox"},app.popupSender);
+  assert.equal(inbox.jobs[0].name,"N".repeat(160));
+  assert.equal(inbox.jobs[0].color,"");
+  assert.equal(app.requests.filter(x=>x.action==="submit_spec").length,1);
+});
+
+test("legacy oversized inbox metadata is bounded without mutating persisted records",async()=>{
+  const id="job_12345678";
+  const item={id,recordVersion:1,state:"succeeded",name:"L".repeat(9000),
+    color:"#bad".repeat(400),conversation:"https://evil.example/c/testing-1234",
+    submittedAt:1};
+  const app=boot(null,{storage:{jobflick_bridge_jobs_v1:{[id]:item}}});
+  const inbox=await app.listeners.message({type:"jobflick:inbox"},app.popupSender);
+  assert.equal(inbox.ok,true);
+  assert.equal(inbox.jobs.length,1);
+  assert.equal(inbox.jobs[0].name,"L".repeat(160));
+  assert.equal(inbox.jobs[0].color,"");
+  assert.equal(inbox.jobs[0].conversation,"");
+  assert.equal(item.name.length,9000,"Old metadata must be preserved, not rewritten");
+  assert.equal(app.storageWrites.length,0);
+  assert.equal(app.requests.length,0);
+});
+
 test("one confirmed submit records independent origin and durable routing", async () => {
   const app = boot();
   const response = await app.listeners.message({ type: "jobflick:submit", yaml: sample }, app.sender);

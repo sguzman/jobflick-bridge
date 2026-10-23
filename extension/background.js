@@ -21,6 +21,11 @@ const originFlights = new Map();
 const cancelFlights = new Set();
 const RECORD_VERSION = 1;
 const JOB_ID_PATTERN = /^[a-zA-Z0-9_-]{8,128}$/;
+const MAX_NAME_CHARS = 160;
+const boundedName = value => typeof value === "string" ?
+  value.slice(0, MAX_NAME_CHARS) : "";
+const boundedColor = value => typeof value === "string" &&
+  /^#[0-9a-f]{6}$/i.test(value) ? value : "";
 
 // Native IDs are dynamic keys in a plain storage object. In addition to the
 // wire format, reject reserved/inherited keys such as "__proto__" and
@@ -268,9 +273,9 @@ async function checkJobs(onlyId = null) {
         // avoid rewriting the entire stored inbox and notifying the tab on
         // every identical native result.
         const name = typeof status.job.name === "string" ?
-          status.job.name : record.name;
+          boundedName(status.job.name) : boundedName(record.name);
         const color = typeof status.job.color === "string" ?
-          status.job.color : record.color;
+          boundedColor(status.job.color) : boundedColor(record.color);
         const changed = state !== record.state ||
           name !== record.name || color !== record.color;
         if (changed) {
@@ -426,8 +431,8 @@ async function onBridgeMessage(message, sender) {
     jobs[id] = {
       id, recordVersion: RECORD_VERSION,
       tabId: sender.tab.id, origin, conversation: url,
-      state: result.job.state || "queued", name: result.job.name || "",
-      color: result.job.color || "", orphaned,
+      state: result.job.state || "queued", name: boundedName(result.job.name),
+      color: boundedColor(result.job.color), orphaned,
       deliveryState: orphaned ? "manual_only" : FINISHED.has(result.job.state)
         ? "report_pending_manual_delivery" : "awaiting_completion",
       submittedAt: Date.now()
@@ -468,14 +473,16 @@ async function onPopupMessage(message, sender) {
       const search = query.trim().toLocaleLowerCase();
       const items = Object.entries(jobs).filter(([id, item]) =>
         matchedRecord(id, item) &&
-        (!search || [item.id, item.name, item.state]
+        (!search || [item.id, boundedName(item.name), item.state]
           .some(value => String(value || "").toLocaleLowerCase().includes(search))))
         .map(([, item]) => ({
           id: item.id,
-          name: item.name || "",
-          state: item.state || "unknown",
-          color: item.color || "",
-          conversation: item.conversation || "",
+          name: boundedName(item.name),
+          state: typeof item.state === "string" &&
+            ["queued", "running", ...FINISHED].includes(item.state)
+            ? item.state : "unknown",
+          color: boundedColor(item.color),
+          conversation: canonical(item.conversation) || "",
           orphaned: !!item.orphaned,
           submittedAt: item.submittedAt || 0,
           cancelRequested: !!item.cancelRequestedAt,
