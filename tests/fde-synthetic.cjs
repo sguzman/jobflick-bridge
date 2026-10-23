@@ -162,6 +162,30 @@ async function main(){
     await spaceButton.sendKeys(Key.SPACE);
     await driver.wait(async()=>/Submission uncertain/.test(await spaceButton.getText()),10000);
 
+    // Keep the same connected code node while the SPA changes the route.
+    // A control validated on the previous conversation must remove itself,
+    // and a new trusted focus must issue a fresh nonexecuting validation.
+    await driver.navigate().refresh();
+    const priorRouteButton=await driver.wait(async()=>{
+      await driver.executeScript(
+        "document.querySelector('main pre').dispatchEvent(new Event('focusin',{bubbles:true}));"
+      );
+      const found=await driver.findElements(By.css(".jobflick-bridge-run"));
+      return found[0] || false;
+    },10000);
+    await driver.executeScript("history.pushState({},'', '/other-qa-conversation');");
+    await priorRouteButton.click();
+    assert.equal((await driver.findElements(By.css(".jobflick-bridge-run"))).length,0,
+      "A prior-route button must not remain actionable after SPA navigation");
+    const newRouteButton=await driver.wait(async()=>{
+      await driver.executeScript(
+        "document.querySelector('main pre').dispatchEvent(new Event('focusin',{bubbles:true}));"
+      );
+      const found=await driver.findElements(By.css(".jobflick-bridge-run"));
+      return found.length===1 ? found[0] : false;
+    },10000);
+    assert.match(await newRouteButton.getText(),/Run Jobflick/);
+
     // Read-only composer and FileList preflight in actual Firefox.
     await driver.executeScript(
       "const original=document.querySelector('#qa-original');"+
@@ -207,7 +231,7 @@ async function main(){
     assert.equal(flags.fileInputAmbiguous,false);
     assert.equal(flags.selectedFilePresent,false);
     await driver.uninstallAddon(id);
-    console.log("Synthetic FDE: inert YAML controls, Enter/Space keyboard activation, draft and selected-file read-only probes passed; no native commands executed");
+    console.log("Synthetic FDE: inert YAML controls, Enter/Space keyboard activation, stale SPA route Run rejection and draft/file probes passed; no native commands executed");
   }finally{
     if(driver)await driver.quit();
     await new Promise(resolve=>server.close(resolve));
