@@ -69,7 +69,8 @@ async function saved() {
 
 async function refreshAlarm(jobs) {
   const hasPending = Object.values(jobs).some(record =>
-    knownRecord(record) && !FINISHED.has(record.state) && record.state !== "unknown");
+    knownRecord(record) && !record.integrityIssue &&
+    !FINISHED.has(record.state) && record.state !== "unknown");
   if (hasPending) {
     // Recreating an existing alarm on every metadata write moves its next
     // deadline. A busy or rapidly changing inbox must not indefinitely
@@ -172,8 +173,8 @@ async function checkJobs(onlyId = null) {
     // Oldest-checked-first ordering rotates fairly through pending jobs.
     const pending = Object.entries(await saved())
       .filter(([id, record]) => (onlyId === null || id === onlyId) &&
-        knownRecord(record) && !FINISHED.has(record.state) &&
-        record.state !== "unknown")
+        knownRecord(record) && !record.integrityIssue &&
+        !FINISHED.has(record.state) && record.state !== "unknown")
       .sort((a, b) => (a[1].lastCheckedAt || 0) - (b[1].lastCheckedAt || 0))
       .slice(0, MAX_STATUS_PER_POLL);
     // Record attempts even if the native host is temporarily unavailable;
@@ -191,15 +192,21 @@ async function checkJobs(onlyId = null) {
         if (!status.ok || !status.job || typeof status.job.state !== "string") continue;
         const state = status.job.state;
         if (!["queued", "running", ...FINISHED].includes(state)) continue;
-        // The native backend may return an explicit origin token. A
-        // contradictory token must never be routed to this Firefox tab.
-        // Older backends without this optional field remain supported.
-        if (typeof status.job.origin_tab_id === "string" &&
-            status.job.origin_tab_id !== record.origin) {
+        // A native response for a different Jobflick job must never mutate
+        // this record. Conflicting origin tokens have the same severity.
+        // Quarantine once to avoid repeatedly polling corrupted identity.
+        // Older hosts omitting these optional fields remain supported.
+        const wrongId = typeof status.job.id === "string" &&
+          status.job.id !== id;
+        const wrongOrigin = typeof status.job.origin_tab_id === "string" &&
+          status.job.origin_tab_id !== record.origin;
+        if (wrongId || wrongOrigin) {
           await mutate(jobs => {
             if (knownRecord(jobs[id])) {
               jobs[id].orphaned = true;
               jobs[id].deliveryState = "manual_only";
+              jobs[id].integrityIssue = wrongId
+                ? "native_job_id_mismatch" : "native_origin_mismatch";
             }
           });
           continue;
@@ -392,6 +399,8 @@ async function onPopupMessage(message, sender) {
           orphaned: !!item.orphaned,
           submittedAt: item.submittedAt || 0,
           cancelRequested: !!item.cancelRequestedAt,
+          integrityIssue: typeof item.integrityIssue === "string" ?
+            item.integrityIssue : "",
           deliveryState: item.deliveryState ||
             (item.orphaned ? "manual_only" :
               FINISHED.has(item.state) ? "report_pending_manual_delivery" :
