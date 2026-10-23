@@ -178,7 +178,10 @@ function renderItem(job) {
       const open = element("button", "", "Open chat");
       open.type = "button";
       open.addEventListener("click", () => {
-        void browser.tabs.create({ url: destination.href }).catch(error => say(error.message));
+        // A stored conversation route may contain obsolete query/fragment
+        // parameters. Reopen only its exact canonical origin and path.
+        const cleanUrl = destination.origin + destination.pathname.replace(/\/+$/, "");
+        void browser.tabs.create({ url: cleanUrl }).catch(error => say(error.message));
       });
       controls.append(open);
     }

@@ -43,7 +43,7 @@ async function boot(jobs=[],handler=null) {
   for(const name of ["jobs","notice","scan","refresh","diagnose","probe-upload"])
     named[name]=new MockElement("div");
   const body=new MockElement("body");
-  const calls=[],files=[],downloads=[],objects=[];
+  const calls=[],files=[],downloads=[],objects=[],openedTabs=[];
   const document={
     getElementById:name=>named[name],
     createElement:tag=>{
@@ -63,7 +63,7 @@ async function boot(jobs=[],handler=null) {
         return {ok:true,message:"Acknowledged"};
       }
     },
-    tabs:{create:async details=>({id:99,...details})}
+    tabs:{create:async details=>{openedTabs.push(details);return {id:99,...details};}}
   };
   class TestFile {
     constructor(parts,name,opts) {this.parts=parts;this.name=name;this.type=opts.type;files.push(this);}
@@ -77,7 +77,7 @@ async function boot(jobs=[],handler=null) {
     setTimeout:()=>{},
   },{filename:"popup.js"});
   for(let i=0;i<12;i++)await Promise.resolve();
-  return {named,body,calls,files,downloads,objects,find:text=>findText(named.jobs,text)};
+  return {named,body,calls,files,downloads,objects,openedTabs,find:text=>findText(named.jobs,text)};
 }
 
 const running={
@@ -159,4 +159,37 @@ test("orphaned finished job has no original-chat preflight control",async()=>{
   const app=await boot([{...finished,orphaned:true,deliveryState:"manual_only"}]);
   assert.equal(app.find("Check original chat"),null);
   assert(app.find("Save report"));
+});
+
+test("manual Open chat requires a click and never uploads or sends",async()=>{
+  const app=await boot([finished]);
+  assert.equal(app.openedTabs.length,0);
+  const open=app.find("Open chat");
+  assert(open);
+  await open.click();
+  assert.equal(app.openedTabs.length,1);
+  assert.equal(app.openedTabs[0].url,"https://chatgpt.com/c/testing-1234");
+  assert.equal(app.calls.filter(x=>x.type==="jobflick:report").length,0);
+  assert.equal(app.calls.filter(x=>x.type==="jobflick:submit").length,0);
+});
+
+test("manual Open chat strips unrelated query/fragment from a stored route",async()=>{
+  const app=await boot([{
+    ...finished,conversation:"https://chatgpt.com/c/testing-1234?debug=true#injected"
+  }]);
+  await app.find("Open chat").click();
+  assert.equal(app.openedTabs[0].url,"https://chatgpt.com/c/testing-1234");
+});
+
+test("manual Open chat refuses foreign, authenticated and non-conversation URLs",async()=>{
+  for(const bad of [
+    "https://chatgpt.com.evil.invalid/c/testing-1234",
+    "https://chatgpt.com/share/testing-1234",
+    "javascript:alert(1)",
+    "https://username@chatgpt.com/c/testing-1234"
+  ]){
+    const app=await boot([{...finished,conversation:bad}]);
+    assert.equal(app.find("Open chat"),null,bad);
+    assert.equal(app.openedTabs.length,0);
+  }
 });

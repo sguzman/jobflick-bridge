@@ -44,3 +44,7 @@ The Fish registration script refuses existing native-host manifests (including d
 ## Same-tab navigation during status or destination inspection
 
 When status inspection discovers that the original tab identity has disappeared, the bridge now sets both `orphaned` and `deliveryState: manual_only`; it does not imply a finished job can return automatically. A read-only per-job composer probe checks the exact session token and conversation **again after** receiving the probe response. If the tab navigates in between, the popup receives a failure and the record becomes manual-only. Neither action retrieves report contents, changes a draft, or initiates Send.
+
+## Manual destination reopening
+
+The trusted Firefox popup offers `Open chat` only for exact, syntactically validated ChatGPT conversation routes. It requires a separate human click, creates a normal browser tab, and discards stale query and fragment parameters. It never attaches a report, edits a draft, rebinds an orphan's provenance token, or triggers Send. Tests reject foreign domains, URL userinfo, non-conversation routes and script URLs.
