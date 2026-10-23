@@ -832,6 +832,12 @@ browser.tabs.onUpdated.addListener((id, change, tab) => {
 // Observe only top-level route changes on the already-authorized hosts.
 browser.webNavigation.onHistoryStateUpdated.addListener(details => {
   if (details.frameId !== 0 || !Number.isInteger(details.tabId)) return;
+  // URL equality alone misses rapid A->B->A visits with a retained DOM
+  // node. A background-owned route event invalidates page Run controls and
+  // late validation replies even if the original path is already restored.
+  // A missing/unloaded content script is not an authorization.
+  void browser.tabs.sendMessage(details.tabId,
+    { type: "jobflick:route-revoked" }).catch(() => {});
   void reconcileTabRoute(details.tabId, details.url)
     .then(() => checkJobs()).catch(() => {});
 }, { url: [{ hostEquals: "chatgpt.com" }, { hostEquals: "chat.openai.com" }] });

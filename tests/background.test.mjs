@@ -2034,6 +2034,33 @@ test("malformed stored ID stays untouched when its Firefox tab closes",async()=>
   assert.equal(app.requests.length,0);
 });
 
+test("History API route changes notify content to revoke stale Run UI",async()=>{
+  const app=boot();
+  app.tabs.set(11,{id:11,url:"https://chatgpt.com/c/other-1234"});
+  app.listeners.historyState({
+    tabId:11,frameId:0,url:"https://chatgpt.com/c/other-1234"
+  });
+  await pause();
+  assert.equal(app.sentTabMessages.filter(x=>
+    x.tabId===11 && x.message.type==="jobflick:route-revoked").length,1);
+  app.listeners.historyState({
+    tabId:11,frameId:2,url:"https://chatgpt.com/c/ignored-subframe"
+  });
+  await pause();
+  assert.equal(app.sentTabMessages.filter(x=>
+    x.message.type==="jobflick:route-revoked").length,1,
+    "Subframe history changes must not revoke top-level Run controls");
+  app.tabs.set(11,{id:11,url:"https://chatgpt.com/c/testing-1234"});
+  app.listeners.historyState({
+    tabId:11,frameId:0,url:"https://chatgpt.com/c/testing-1234"
+  });
+  await pause();
+  assert.equal(app.sentTabMessages.filter(x=>
+    x.message.type==="jobflick:route-revoked").length,2,
+    "Return to original chat must revoke prior validation");
+  assert.equal(app.requests.filter(x=>x.action==="submit_spec").length,0);
+});
+
 test("SPA navigation during pending origin mint clears the late session token",async()=>{
   let releaseToken;
   let called=false;
