@@ -46,7 +46,11 @@ async function boot(jobs=[],handler=null) {
   const calls=[],files=[],downloads=[],objects=[];
   const document={
     getElementById:name=>named[name],
-    createElement:tag=>new MockElement(tag),
+    createElement:tag=>{
+      const node=new MockElement(tag);
+      if(tag==="a")node.click=()=>{downloads.push({href:node.href,name:node.download});};
+      return node;
+    },
     body
   };
   const browser={
@@ -67,22 +71,13 @@ async function boot(jobs=[],handler=null) {
   const TestURL=class extends URL {};
   TestURL.createObjectURL=(file)=>{objects.push(file);return "blob:unit";};
   TestURL.revokeObjectURL=()=>{};
-  // An anchor is a user-controlled download request, never a network upload.
-  const originalClick=MockElement.prototype.click;
-  MockElement.prototype.click=async function(){
-    if(this.tag==="a"){ downloads.push({href:this.href,name:this.download});return; }
-    return originalClick.call(this);
-  };
-  try {
-    vm.runInNewContext(popupSource,{
-      browser,document,URL:TestURL,File:TestFile,Set,console,
-      setTimeout:()=>{},
-    },{filename:"popup.js"});
-    for(let i=0;i<12;i++)await Promise.resolve();
-    return {named,body,calls,files,downloads,objects,find:text=>findText(named.jobs,text)};
-  }finally{
-    MockElement.prototype.click=originalClick;
-  }
+  // An anchor remains a local download request, never an upload.
+  vm.runInNewContext(popupSource,{
+    browser,document,URL:TestURL,File:TestFile,Set,console,
+    setTimeout:()=>{},
+  },{filename:"popup.js"});
+  for(let i=0;i<12;i++)await Promise.resolve();
+  return {named,body,calls,files,downloads,objects,find:text=>findText(named.jobs,text)};
 }
 
 const running={
