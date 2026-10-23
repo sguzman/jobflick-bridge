@@ -213,7 +213,9 @@ async function loadOlder() {
       throw new Error("Invalid inbox pagination response");
     }
     if (!nextOffset && !response.jobs.length) {
-      jobsElement.append(element("p", "", "No jobs submitted from this Firefox extension yet."));
+      jobsElement.append(element("p", "", activeQuery ?
+        "No saved jobs match this search." :
+        "No jobs submitted from this Firefox extension yet."));
     }
     for (const job of response.jobs) jobsElement.append(renderItem(job));
     nextOffset = response.nextOffset;
