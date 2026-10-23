@@ -4,6 +4,13 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: jobflick-bridge-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   static:
     runs-on: ubuntu-latest
