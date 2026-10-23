@@ -48,7 +48,7 @@ This is a recovery and inspection surface, **not** a claim that the future ChatG
 
 ## Verified CI gates
 
-The automated suite runs Node behavioral tests, Fish native-host installer tests in a disposable HOME, Mozilla `web-ext lint`, and a separate **real Firefox Developer Edition** WebDriver job that installs/uninstalls the production add-on in an anonymous profile. A further disposable QA-only manifest runs the unmodified content script on synthetic ChatGPT-style HTML, confirming intent-driven Run button insertion, mouse-click handling, and rejection of YAML changed after validation. It uses disposable CI directories; a separate real-daemon gate executes only a fixed harmless `printf` fixture and never accesses the user's machine. [Latest passing Firefox CI run](https://github.com/sguzman/jobflick-bridge/actions/runs/40021961943).
+The automated suite runs Node behavioral tests, Fish native-host installer tests in a disposable HOME, Mozilla `web-ext lint`, and a separate **real Firefox Developer Edition** WebDriver job that installs/uninstalls the production add-on in an anonymous profile. A further disposable QA-only manifest runs the unmodified content script on synthetic ChatGPT-style HTML, confirming intent-driven Run button insertion, mouse-click handling, and rejection of YAML changed after validation. It uses disposable CI directories; a separate real-daemon gate executes only a fixed harmless `printf` fixture and never accesses the user's machine. [Latest passing Firefox CI run](https://github.com/sguzman/jobflick-bridge/actions/runs/40024074527).
 
 An unsigned Firefox QA ZIP is also produced by CI (artifact `jobflick-bridge-fde-qa-unsigned`). It is intended only for **temporary installation** in the dedicated QA profile via `about:debugging`, not for a release or an automatic native-host setup.
 
@@ -97,3 +97,7 @@ Current verified CI: [Firefox/static checks](https://github.com/sguzman/jobflick
 ## 📄 Inert report File adapter
 
 A small bounded File constructor/DOM handoff helper is included in `extension/attachment-adapter.js`. It is deliberately **not activated** by the current extension UI. Synthetic Firefox Developer Edition QA checks that the page can read the file and that an already-selected file is never replaced. This is a preparatory file-transfer primitive, not a verified ChatGPT upload or Send.
+
+## ✅ Verified local File and manual export gates
+
+Real disposable Firefox Developer Edition accepted the inert report File constructor/DOM transfer, rejected oversized reports, and preserved existing file selections. Another browser test loaded the production popup JavaScript against a localhost mock and confirmed that **Save report** only prepared data while **Download prepared report** saved exactly that file on a second explicit click. [Acceptance evidence](https://github.com/sguzman/jobflick-bridge/actions/runs/40024074527). These tests do not establish a live ChatGPT upload, privileged popup acceptance or automatic Send.

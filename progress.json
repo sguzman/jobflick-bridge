@@ -376,15 +376,15 @@
           "title": "Live upload discovery",
           "status": "implemented",
           "evidence": [
-            "Read-only generic and per-job attachment capability flags; authenticated ChatGPT upload DOM still unverified. https://github.com/sguzman/jobflick-bridge/actions/runs/40002154617"
+            "Read-only per-job/composer probe now flags multiple candidate composers, multiple file inputs and selected file input without exposing drafts or filenames; Node and headless FDE synthetic tests, not authenticated site DOM acceptance: https://github.com/sguzman/jobflick-bridge/actions/runs/40024074527"
           ]
         },
         {
           "id": "M5-02",
           "title": "Bounded report file",
-          "status": "implemented",
+          "status": "verified",
           "evidence": [
-            "Bounded 512 KiB text File prepared locally, Firefox real download acceptance pending: https://github.com/sguzman/jobflick-bridge/actions/runs/39996306288"
+            "Real headless Firefox Developer Edition creates a bounded text/plain File with stable job ID filename in the same inert production helper used by the extension, passes it to a synthetic page realm, and tests 512 KiB rejection, existing-file preservation. Local File production popup manual-export download also accepted with two separate real browser clicks: https://github.com/sguzman/jobflick-bridge/actions/runs/40024074527. This is NOT authenticated ChatGPT attachment."
           ]
         },
         {
@@ -396,8 +396,10 @@
         {
           "id": "M5-04",
           "title": "Avoid giant text",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "Report handoff uses a bounded File and DataTransfer rather than injecting huge text into a composer; helper has no execution path or Send, and ChatGPT site attachment remains untested: https://github.com/sguzman/jobflick-bridge/actions/runs/40024074527"
+          ]
         },
         {
           "id": "M5-05",
@@ -428,13 +430,13 @@
           "title": "Manual fallback",
           "status": "implemented",
           "evidence": [
-            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+            "Manual Save report → Download prepared report requires two user clicks; real FDE localhost test of production popup JS saves exact bounded text file with a mock native response, but privileged moz-extension popup acceptance remains pending: https://github.com/sguzman/jobflick-bridge/actions/runs/40024074527"
           ]
         }
       ],
-      "verified": 0,
+      "verified": 1,
       "total": 9,
-      "percent": 0,
+      "percent": 11,
       "implemented": 3
     },
     {
@@ -487,7 +489,7 @@
           "title": "Retention/export",
           "status": "implemented",
           "evidence": [
-            "Older saved records remain retrievable beyond former 300-row UI cap; only an explicit two-step local File export retrieves report text (512 KiB bound), with no auto-upload or deletion of native reports. CI mock acceptance: https://github.com/sguzman/jobflick-bridge/actions/runs/40021007135"
+            "Local record paging/retention in Node mocks, explicit two-click native report retrieval and real FDE localhost File download. Durable Jobflick report retained, real privileged popup QA outstanding: https://github.com/sguzman/jobflick-bridge/actions/runs/40024074527"
           ]
         },
         {
@@ -578,11 +580,11 @@
   ],
   "last_ci": {
     "result": "success",
-    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40021961943",
-    "commit": "b9edb237d824b330e046074d6a09a38a3054f70d",
-    "scope": "Node static/behavioral tests, signed-off headless Firefox Developer Edition synthetic add-on, native fixture and UI checks. Includes new delivery acceptance contract docs; no authenticated site attachment or Send.",
-    "native_run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40021742503",
-    "native_commit": "eec71767d885cdb1ac2aa89c34791164b5e11bb5",
-    "native_scope": "Real pinned Jobflick daemon through headless synthetic Firefox, harmless Fish execution, terminal status, cancellation and native origin provenance/ID collision hardening. Separate from authenticated ChatGPT QA."
+    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40024074527",
+    "commit": "12654ec90729918ba0f7c0e5cf37a73cf9619ad5",
+    "scope": "Static and disposable FDE checks: inert report File adapter size/name/MIME, FileList page handoff, existing selection preservation, 2-gesture local report download using production popup JS and localhost runtime stub, more conservative boolean-only composer inspection. NO authenticated ChatGPT attachment/Send.",
+    "native_run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40023366418",
+    "native_commit": "de771c5b14c7fd90c0dd197376e0b28ebdfa42e8",
+    "native_scope": "Prior unchanged native-facing backend passed real pinned Jobflick daemon/Firefox integration with harmless Fish fixture; separate from popup-only and document acceptance."
   }
 }
