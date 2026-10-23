@@ -479,7 +479,7 @@
           "title": "Results panel",
           "status": "implemented",
           "evidence": [
-            "Popup inbox confirmed by Node behavioral tests; Gecko WebDriver disallows privileged moz-extension popup browsing context, requires dedicated target QA. https://github.com/sguzman/jobflick-bridge/actions/runs/40008094593"
+            "Firefox popup now has 40-record pagination, keyboard-accessible local job search, no-match feedback, read-only per-job preflight and bounded manual report retrieval. Node tests cover >300 archived jobs and name/ID/state filtering; authenticated Firefox popup UX not yet accepted: https://github.com/sguzman/jobflick-bridge/actions/runs/40021007135"
           ]
         },
         {
@@ -487,7 +487,7 @@
           "title": "Retention/export",
           "status": "implemented",
           "evidence": [
-            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+            "Older saved records remain retrievable beyond former 300-row UI cap; only an explicit two-step local File export retrieves report text (512 KiB bound), with no auto-upload or deletion of native reports. CI mock acceptance: https://github.com/sguzman/jobflick-bridge/actions/runs/40021007135"
           ]
         },
         {
@@ -522,7 +522,7 @@
           "title": "Scale/idle QA",
           "status": "implemented",
           "evidence": [
-            "Bounded Node stress: 8,000 blocks, 16 tabs, 40 jobs, and real headless FDE route/status checks. Long-duration authenticated idle profiling remains pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40015025541"
+            "8,000-block/16-tab mock load, 40-job fast poll cap, alarm deadline preserved across repeated status metadata writes, and 325-job paginated inbox tests; real long-duration idle resource profiling pending: https://github.com/sguzman/jobflick-bridge/actions/runs/40021007135"
           ]
         },
         {
@@ -578,8 +578,11 @@
   ],
   "last_ci": {
     "result": "success",
-    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40015713008",
-    "commit": "dc5ab4a1917f07013c896c28c446897117d5b0d7",
-    "scope": "Full static and FDE suites; real Firefox Developer Edition to pinned native Jobflick daemon with harmless Fish execution; synthetic history.pushState A→B→A revocation; six bounded short status rechecks; 40-job burst/32-ID cap; explicit real native cancellation; safe manual chat opener. No authenticated ChatGPT, file attachment or Send acceptance."
+    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40021007135",
+    "commit": "b4ef85e029a1dd7325b54ebd15906d59b52f87af",
+    "scope": "Fast Firefox Developer Edition and Node behavioral checks for local metadata search/pagination, native status timer discipline and safety; authenticated ChatGPT attachment and Send not tested.",
+    "native_run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40020588237",
+    "native_commit": "2e782f18d4398e5af0fe3d1ec58f3ccec9e626b1",
+    "native_scope": "Earlier native-facing revision separately passed pinned real Jobflick daemon + synthetic Firefox E2E. Popup-only changes since do not imply native re-acceptance."
   }
 }
