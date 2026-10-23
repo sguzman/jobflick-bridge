@@ -46,7 +46,7 @@ async function main() {
   manifest.browser_specific_settings.gecko.id = originId;
   manifest.host_permissions = ["http://127.0.0.1/*"];
   manifest.content_scripts = [{ matches: ["http://127.0.0.1/*"],
-    js: ["attachment-adapter.js","content.js","qa-route.js","qa-delivery.js"], run_at: "document_idle" }];
+    js: ["attachment-adapter.js","content.js","qa-route.js","qa-delivery.js","qa-reload.js"], run_at: "document_idle" }];
   manifest.action = { default_title: "Firefox Native QA" };
   fs.writeFileSync(path.join(ext, "manifest.json"), JSON.stringify(manifest));
   // Use the complete unmodified production content script.
@@ -60,6 +60,14 @@ async function main() {
     '    .then(reply=>{document.documentElement.dataset.jobflickQaRoute=',
     '      reply?.count===1 ? (reply.manualOnly?"manual_only":"active") : "missing";',
     '    }).catch(()=>{});',
+    '});'
+  ].join("\n"));
+  // Disposable CI-only request to restart the same production event script.
+  // No restart control ships in the actual extension.
+  fs.writeFileSync(path.join(ext,"qa-reload.js"),[
+    '"use strict";',
+    'document.addEventListener("jobflick-qa-reload-extension",()=>{',
+    ' void browser.runtime.sendMessage({type:"jobflick:qa-reload"}).catch(()=>{});',
     '});'
   ].join("\n"));
   // Test-only click adapter. The live extension never exposes this action.
@@ -95,6 +103,12 @@ async function main() {
   const listenerAnchor='browser.runtime.onMessage.addListener((message, sender) => {';
   assert(background.includes(listenerAnchor),"Background listener moved");
   background=background.replace(listenerAnchor,listenerAnchor+`
+  if(message?.type==="jobflick:qa-reload"){
+    if(!sender?.tab?.url?.startsWith("http://127.0.0.1:"))
+      return Promise.resolve({ok:false});
+    browser.runtime.reload();
+    return Promise.resolve({ok:true});
+  }
   if(message?.type==="jobflick:qa-report"){
     if(!sender?.tab?.url?.startsWith("http://127.0.0.1:"))
       return Promise.resolve({ok:false});
@@ -126,7 +140,7 @@ async function main() {
   // Fail with a specific syntax error BEFORE starting Firefox; a malformed
   // disposable content script can otherwise look like native host failure.
   const checkNode = require("node:child_process").execFileSync;
-  for (const script of ["qa-delivery.js","qa-route.js","background.js"]) {
+  for (const script of ["qa-delivery.js","qa-route.js","qa-reload.js","background.js"]) {
     checkNode(process.execPath,["--check",path.join(ext,script)],
       {stdio:"pipe",timeout:10000});
   }
@@ -323,6 +337,18 @@ async function main() {
       );
     };
     await driver.wait(async()=>await readState()==="active",8000);
+    // A second Firefox conversation with identical YAML must not inherit the
+    // original tab's Run grant. Loading it without user intent is read-only.
+    phase="second conversation remains inert";
+    const originalHandle=await driver.getWindowHandle();
+    await driver.switchTo().newWindow("tab");
+    await driver.get("http://127.0.0.1:"+server.address().port+"/c/another-qa-tab");
+    await driver.wait(until.elementLocated(By.css("main pre code")),10000);
+    assert.equal((await driver.findElements(By.css(".jobflick-bridge-run"))).length,0,
+      "Another chat must not gain a Run control without its own intent");
+    await driver.switchTo().window(originalHandle);
+    assert.equal(await readState(),"active",
+      "Opening a different Firefox tab must not orphan the original job");
     await driver.executeScript(
       "history.pushState({},'', '/c/different-qa-conversation');"
     );
@@ -344,6 +370,29 @@ async function main() {
         "return document.documentElement.dataset.qaHandoff==='error'"
       ),7000);
       assert.equal(await driver.findElement(By.id("qa-result")).getText(),"");
+    }
+
+    // Firefox reloads its MV3 background event script. Durable local records
+    // remain, and a revoked origin must not silently regain permission or
+    // trigger another submit after the page is refreshed.
+    phase="Firefox extension event-script reload";
+    await driver.executeScript(
+      "document.dispatchEvent(new Event('jobflick-qa-reload-extension'));");
+    await new Promise(resolve=>setTimeout(resolve,800));
+    await driver.navigate().refresh();
+    const reloadState=async()=>{
+      await driver.executeScript(
+        "document.dispatchEvent(new Event('jobflick-qa-read-route'));");
+      return driver.executeScript(
+        "return document.documentElement.dataset.jobflickQaRoute || ''");
+    };
+    await driver.wait(async()=>await reloadState()==="manual_only",10000);
+    assert.equal((await driver.findElements(By.css(".jobflick-bridge-run"))).length,0,
+      "Reload must not resubmit or inject actionable Run controls without focus");
+    if(!realHost){
+      const actions=fs.readFileSync(logFile,"utf8").split("\n").filter(Boolean).map(JSON.parse);
+      assert.equal(actions.filter(x=>x.action==="submit_spec").length,1,
+        "Reloading the extension must not enqueue a second Jobflick job");
     }
 
     await driver.uninstallAddon(id);
