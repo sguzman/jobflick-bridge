@@ -52,3 +52,7 @@ On startup/install, Firefox compares **all** retained bridge job records, includ
 ## Versioned browser records and delivery status
 
 New Firefox job records carry `recordVersion: 1`. Historical pilot records without that field remain supported, but unsupported future-version records are preserved without inspection, deletion, or export. The bridge records `awaiting_completion`, `report_pending_manual_delivery`, or `manual_only` (lost origin). **No state ever implies that ChatGPT received the report**: attachment and Send are not implemented yet. This also prevents a stale Firefox popup from accidentally representing manual download preparation as confirmed upload. Concurrent cancellation requests are coalesced to a single native attempt.
+
+## Bounded local inbox pagination
+
+The native Jobflick daemon remains authoritative. Firefox's local storage retains only submission/routing metadata and does not automatically discard old completed jobs. The popup obtains paginated metadata from the trusted background worker via `jobflick:inbox` with validated `offset` and `limit`; no extension-wide transcript scan or log retrieval occurs to load a page. Users must still click **Save report**, then **Download prepared report** for a bounded text export. No action rebinds an orphaned origin or automates ChatGPT Send.

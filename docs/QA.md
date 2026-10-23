@@ -116,3 +116,11 @@ When React removes the original code block but its adjacent Run button survives,
 CI now opens a synthetic ChatGPT-like conversation in **headless Firefox Developer Edition**, runs a Jobflick job using the genuine native host, and performs two real History API transitions: from conversation A to B and back to A. A QA-only read-only probe checks that the old saved result stays `manual_only` and cannot become automatically deliverable again. The QA URL adapter and probe never enter the production extension. A separate mock proves iframe history events do not revoke a top-level conversation token.
 
 A short post-submission status burst catches quickly finished native jobs without waiting for the once-per-minute recovery alarm. There are no idle timers; at most 32 pending job IDs are tracked, four per tick, with six checks per ID and 1.2-second spacing. Excess submissions use the normal durable Jobflick inbox/alarm flow. Synthetic 40-job stress and quick/slow-job timer tests pass. Actual authenticated ChatGPT upload and Send remain unaccepted.
+
+## Durable alarms and bounded results pagination
+
+Job status metadata writes no longer replace an existing Firefox alarm. This preserves its next scheduled check during heavy submission/status activity rather than repeatedly deferring recovery. Fast checks are counted only when the targeted job actually enters a native inspection; a concurrent full refresh does not burn the limited attempt budget. Mocked tests cover both races, terminal alarm cleanup and a continuous 20-refresh update burst.
+
+The Firefox popup now loads 40 job records at a time with a keyboard-accessible **Load older jobs** control. Records beyond the former 300-item display cap remain discoverable and can still be manually exported. The background validates page bounds (maximum 50 entries); popup tests page through 325 saved jobs without calling `show`, attaching a file or submitting a command. Refresh restarts pagination, ignoring late responses from earlier generations. This changes only the browser's bounded view of local metadata; all durable reports remain in Jobflick.
+
+These behaviors are covered by CI mocks; authenticated Firefox Developer Edition popup UX remains a separate acceptance gate.

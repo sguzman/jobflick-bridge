@@ -75,3 +75,7 @@ The **Firefox popup itself** remains covered by behavioral tests because ordinar
 Jobflick Bridge uses a narrowly filtered, read-only Firefox `webNavigation` listener for ChatGPT's History API transitions, in addition to normal tab URL updates. If the tab visits a different conversation, the old job becomes permanently `manual_only` for automatic delivery, even if the URL is later revisited. This was exercised with actual `history.pushState()` in disposable Firefox Developer Edition; nothing is read from another website or saved as browser history.
 
 After a confirmed submission, short-lived status rechecks run every 1.2 seconds for at most six attempts, with at most four jobs checked per tick and 32 jobs in the fast queue. The existing one-minute Firefox alarm remains responsible for long-running jobs and event-page restarts. There is no continuous idle poll. This behavior is verified with Node burst tests and actual Firefox-to-Jobflick completion checks.
+
+## ♻️ Browsing older jobs
+
+The Firefox popup paginates local job records in batches of 40. **Load older jobs** makes saved history beyond the previous 300-row display limit accessible without bulk-rendering the full inbox. Firefox status checks reuse an existing durable alarm rather than postponing its next run whenever metadata changes. Short post-submit checks remain bounded and do not consume attempts while another full native inspection is in progress.
