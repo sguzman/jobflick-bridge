@@ -14,5 +14,10 @@ jobs:
           node-version: '22'
       - name: Syntax and invariants
         run: npm run check
+      - name: Fish host installer syntax
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y fish
+          fish --no-execute scripts/install-native-host.fish
       - name: Manifest parse
         run: node -e 'const m=require("./extension/manifest.json"); if (!m.browser_specific_settings?.gecko?.id) process.exit(1)'
