@@ -77,3 +77,7 @@ jobs:
         env:
           FDE_BINARY: ${{ steps.fde.outputs.firefox-path }}
         run: node tests/fde-report-download.cjs
+      - name: Headless Firefox Developer Edition 325-job results panel and manual recovery
+        env:
+          FDE_BINARY: ${{ steps.fde.outputs.firefox-path }}
+        run: node tests/fde-inbox.cjs
