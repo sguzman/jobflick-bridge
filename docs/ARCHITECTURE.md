@@ -40,3 +40,7 @@ Firefox alarms are used only while there are unfinished tracked jobs. A poll ins
 ## Conversation-route allowlist
 
 Origin routing accepts only exact HTTPS `chatgpt.com` / `chat.openai.com` conversation routes: `/c/{id}`, `/uc/{id}`, and `/g/{gpt-or-project-id}/c/{id}`, with bounded opaque segments. Settings, shares, project landing pages, homepage and unrelated routes are not valid job origins or result destinations. Query strings and hash fragments do not participate in identity. These patterns are evidence-guided but must remain a tested browser compatibility boundary as ChatGPT evolves; fail closed on new route types instead of posting to an assumed destination.
+
+## Concurrent submissions from one chat tab
+
+The background script serializes initial origin-token creation per numeric tab ID through an in-flight Promise map. Concurrent *distinct explicit* Run clicks reuse the same opaque browser-instance origin, while Jobflick still receives a separate authorized submission for each click. The in-flight map is cleared after resolution. This is different from ambiguous-transport retries, which remain prohibited. Mock tests prove exactly one token generation for two concurrent accepted submissions.

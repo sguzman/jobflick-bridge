@@ -68,7 +68,8 @@ function boot(nativeOverride = null, options = {}) {
     action: { onClicked: { addListener: callback => { listeners.action = callback; } } }
   };
   vm.runInNewContext(source, {
-    browser, URL, TextEncoder, crypto: { randomUUID: () => "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" },
+    browser, URL, TextEncoder, crypto: { randomUUID: options.randomUUID ||
+      (() => "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee") },
     console, Date, Set, Promise, Object
   }, { filename: "background.js" });
   return {
@@ -395,4 +396,39 @@ test("composer capability check fails closed away from conversation routes", asy
   assert.equal(result.ok, false);
   assert.equal(app.sentTabMessages.length, 0);
   assert.equal(app.requests.length, 0);
+});
+
+test("simultaneous explicit submissions in one tab reuse a single origin token", async () => {
+  let uuidCalls = 0;
+  let submissions = 0;
+  const app = boot(request => {
+    if (request.action === "submit_spec") {
+      submissions++;
+      return {
+        ok: true,
+        job: { id: "job_" + String(submissions).padStart(8, "0"), state: "queued" }
+      };
+    }
+    if (request.action === "inspect") {
+      return { ok: true, job: { id: request.id, state: "running" } };
+    }
+    return { ok: false, message: "Unsupported" };
+  }, { randomUUID: () => {
+    uuidCalls++;
+    return "token-sequence-" + uuidCalls;
+  } });
+  const [first, second] = await Promise.all([
+    app.listeners.message({ type: "jobflick:submit", yaml: sample }, app.sender),
+    app.listeners.message({ type: "jobflick:submit", yaml: sample }, app.sender)
+  ]);
+  assert.equal(first.ok, true);
+  assert.equal(second.ok, true);
+  assert.equal(uuidCalls, 1);
+  assert.equal(app.requests.filter(x => x.action === "submit_spec").length, 2);
+  const origins = app.requests.filter(x => x.action === "submit_spec")
+    .map(x => x.origin_tab_id);
+  assert.deepEqual(origins, ["tab-token-sequence-1", "tab-token-sequence-1"]);
+  const jobs = app.storage.jobflick_bridge_jobs_v1;
+  assert.equal(jobs.job_00000001.origin, jobs.job_00000002.origin);
+  assert.equal(jobs.job_00000001.conversation, jobs.job_00000002.conversation);
 });

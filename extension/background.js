@@ -11,6 +11,7 @@ const SITES = new Set(["chatgpt.com", "chat.openai.com"]);
 
 let serializedWrite = Promise.resolve();
 let checking = null;
+const originFlights = new Map();
 
 function canonical(value) {
   try {
@@ -74,12 +75,23 @@ async function mutate(change) {
 }
 
 async function originFor(tabId) {
-  const key = "jobflick_origin_" + tabId;
-  const result = await browser.storage.session.get(key);
-  if (typeof result[key] === "string") return result[key];
-  const token = "tab-" + crypto.randomUUID();
-  await browser.storage.session.set({ [key]: token });
-  return token;
+  // Two different visible YAML blocks can be submitted concurrently within
+  // one tab. They must reuse ONE tab identity, not race to overwrite it.
+  if (originFlights.has(tabId)) return originFlights.get(tabId);
+  const flight = (async () => {
+    const key = "jobflick_origin_" + tabId;
+    const result = await browser.storage.session.get(key);
+    if (typeof result[key] === "string") return result[key];
+    const token = "tab-" + crypto.randomUUID();
+    await browser.storage.session.set({ [key]: token });
+    return token;
+  })();
+  originFlights.set(tabId, flight);
+  try {
+    return await flight;
+  } finally {
+    if (originFlights.get(tabId) === flight) originFlights.delete(tabId);
+  }
 }
 
 async function trustedTab(tabId, expectedUrl, token) {
