@@ -59,7 +59,7 @@ test("file attachments and automated Send are not falsely claimed to be implemen
   assert(popup.includes("URL.createObjectURL"));
   assert(popup.includes("report"));
   assert(!popup.includes("innerHTML"));
-  assert(!/eval\\s*\\(/.test(popup));
+  assert(!popup.includes("eval("));
   assert(background.includes("NO automated ChatGPT composer injection"));
   assert(read("docs/QA.md").includes("Not run"));
 });

@@ -9,7 +9,7 @@ const FINISHED = new Set(["succeeded", "failed", "cancelled", "timed_out", "inte
 const SITES = new Set(["chatgpt.com", "chat.openai.com"]);
 
 let serializedWrite = Promise.resolve();
-let checking = false;
+let checking = null;
 
 function canonical(value) {
   try {
@@ -86,8 +86,11 @@ async function trustedTab(tabId, expectedUrl, token) {
 }
 
 async function checkJobs() {
-  if (checking) return;
-  checking = true;
+  // Multiple callers (alarms, tab updates and popup Refresh) share one
+  // in-flight inspection. Refresh never claims completion prematurely.
+  if (checking) return checking;
+  let release;
+  checking = new Promise(resolve => { release = resolve; });
   try {
     await serializedWrite;
     for (const [id, record] of Object.entries(await saved())) {
@@ -122,7 +125,8 @@ async function checkJobs() {
       }
     }
   } finally {
-    checking = false;
+    release();
+    checking = null;
   }
 }
 
