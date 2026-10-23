@@ -144,16 +144,25 @@
     if (message?.type === "jobflick:probe-upload") {
       // Bounded, read-only inspection. We never read/return draft text or
       // file names, click attachment controls, create File objects, or send.
-      const composer = document.querySelector(
+      const composers = [...document.querySelectorAll(
         '#prompt-textarea[contenteditable="true"], ' +
-        '[data-testid="composer-rich-text-input"][contenteditable="true"]'
-      );
-      const fileInput = document.querySelector('input[type="file"]');
+        '[data-testid="composer-rich-text-input"][contenteditable="true"], ' +
+        'textarea#prompt-textarea, textarea[data-testid="composer-textarea"]'
+      )];
+      const fileInputs = [...document.querySelectorAll('input[type="file"]')];
+      // No draft text, file names, or input references leave this content
+      // script. A selected FileList is not proof of existing ChatGPT chips,
+      // so future uploads must separately confirm the application's state.
       return Promise.resolve({
         ok: true,
-        composerPresent: !!composer,
-        composerOccupied: !!(composer?.textContent || "").trim(),
-        fileInputPresent: !!fileInput
+        composerPresent: composers.length > 0,
+        composerAmbiguous: composers.length > 1,
+        composerOccupied: composers.some(node =>
+          !!String(node.value ?? node.textContent ?? "").trim()),
+        fileInputPresent: fileInputs.length > 0,
+        fileInputAmbiguous: fileInputs.length > 1,
+        selectedFilePresent: fileInputs.some(input =>
+          Number.isInteger(input.files?.length) && input.files.length > 0)
       });
     }
     if (message?.type === "jobflick:scan") {
