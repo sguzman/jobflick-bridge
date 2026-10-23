@@ -1,0 +1,11 @@
+{
+  "name": "jobflick-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Firefox Developer Edition Jobflick bridge",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "check": "node --check extension/background.js && node --check extension/content.js && npm test"
+  }
+}

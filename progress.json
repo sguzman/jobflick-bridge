@@ -1,0 +1,475 @@
+{
+  "schema": 1,
+  "policy": "A task is verified only when a committed artifact or an explicit test/QA record supports it; never infer browser acceptance from source code.",
+  "generated_on": "2026-10-23",
+  "milestones": [
+    {
+      "id": "M0",
+      "name": "🧭 Independent foundation",
+      "phase_count": 2,
+      "tasks": [
+        {
+          "id": "M0-01",
+          "title": "Confirm standalone main",
+          "status": "verified",
+          "evidence": [
+            "Repository confirmed: https://github.com/sguzman/jobflick-bridge on main"
+          ]
+        },
+        {
+          "id": "M0-02",
+          "title": "Audit legacy source",
+          "status": "verified",
+          "evidence": [
+            "Source inventory: docs/LEGACY.md"
+          ]
+        },
+        {
+          "id": "M0-03",
+          "title": "Document architecture",
+          "status": "verified",
+          "evidence": [
+            "Design recorded: docs/ARCHITECTURE.md"
+          ]
+        },
+        {
+          "id": "M0-04",
+          "title": "Publish roadmap + ledger",
+          "status": "verified",
+          "evidence": [
+            "Planning contract: ROADMAP.md and progress.json"
+          ]
+        },
+        {
+          "id": "M0-05",
+          "title": "Publish security model",
+          "status": "verified",
+          "evidence": [
+            "Threat model: docs/SECURITY.md"
+          ]
+        },
+        {
+          "id": "M0-06",
+          "title": "Firefox manifest + scaffold",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M0-07",
+          "title": "Baseline CI tests",
+          "status": "planned",
+          "evidence": []
+        }
+      ],
+      "verified": 5,
+      "total": 7,
+      "percent": 71
+    },
+    {
+      "id": "M1",
+      "name": "🦊 Firefox platform + UX",
+      "phase_count": 2,
+      "tasks": [
+        {
+          "id": "M1-01",
+          "title": "Firefox event script",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M1-02",
+          "title": "Scoped permissions",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M1-03",
+          "title": "Execarium candidate detection",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M1-04",
+          "title": "Intent-driven checks",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M1-05",
+          "title": "Accessible Run control",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M1-06",
+          "title": "Bounded queues",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M1-07",
+          "title": "DOM rerender resilience",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M1-08",
+          "title": "Firefox lifecycle tests",
+          "status": "planned",
+          "evidence": []
+        }
+      ],
+      "verified": 0,
+      "total": 8,
+      "percent": 0
+    },
+    {
+      "id": "M2",
+      "name": "🔌 Native host + validation",
+      "phase_count": 2,
+      "tasks": [
+        {
+          "id": "M2-01",
+          "title": "Firefox allowed_extensions",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M2-02",
+          "title": "Fish host installer",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M2-03",
+          "title": "Bounded native messages",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M2-04",
+          "title": "Diagnostics + uninstall",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M2-05",
+          "title": "Real validator",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M2-06",
+          "title": "Sender + YAML guard",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M2-07",
+          "title": "Mock + smoke tests",
+          "status": "planned",
+          "evidence": []
+        }
+      ],
+      "verified": 0,
+      "total": 7,
+      "percent": 0
+    },
+    {
+      "id": "M3",
+      "name": "▶️ Submission + status",
+      "phase_count": 2,
+      "tasks": [
+        {
+          "id": "M3-01",
+          "title": "Trusted click",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M3-02",
+          "title": "YAML re-check",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M3-03",
+          "title": "Opaque origin",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M3-04",
+          "title": "Single submit / uncertainty",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M3-05",
+          "title": "Persist routing",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M3-06",
+          "title": "Alarm polling",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M3-07",
+          "title": "Status/name/color",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M3-08",
+          "title": "Cancel option",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M3-09",
+          "title": "Duplicate/failure tests",
+          "status": "planned",
+          "evidence": []
+        }
+      ],
+      "verified": 0,
+      "total": 9,
+      "percent": 0
+    },
+    {
+      "id": "M4",
+      "name": "📬 Result routing",
+      "phase_count": 2,
+      "tasks": [
+        {
+          "id": "M4-01",
+          "title": "Terminal-state inspection",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M4-02",
+          "title": "Report bounds",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M4-03",
+          "title": "Event page resume",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M4-04",
+          "title": "Exact tab + conversation",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M4-05",
+          "title": "Orphaned result preservation",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M4-06",
+          "title": "Draft-safe composer",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M4-07",
+          "title": "Guarded send",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M4-08",
+          "title": "Multi-tab tests",
+          "status": "planned",
+          "evidence": []
+        }
+      ],
+      "verified": 0,
+      "total": 8,
+      "percent": 0
+    },
+    {
+      "id": "M5",
+      "name": "📎 Attachment delivery",
+      "phase_count": 2,
+      "tasks": [
+        {
+          "id": "M5-01",
+          "title": "Live upload discovery",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M5-02",
+          "title": "Bounded report file",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M5-03",
+          "title": "True attachment",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M5-04",
+          "title": "Avoid giant text",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M5-05",
+          "title": "Verify attach",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M5-06",
+          "title": "Preserve draft/attachments",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M5-07",
+          "title": "Guarded send",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M5-08",
+          "title": "Live QA",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M5-09",
+          "title": "Manual fallback",
+          "status": "planned",
+          "evidence": []
+        }
+      ],
+      "verified": 0,
+      "total": 9,
+      "percent": 0
+    },
+    {
+      "id": "M6",
+      "name": "♻️ Recovery + inbox",
+      "phase_count": 2,
+      "tasks": [
+        {
+          "id": "M6-01",
+          "title": "Versioned storage",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M6-02",
+          "title": "Restart reconciliation",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M6-03",
+          "title": "Delivery states",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M6-04",
+          "title": "Manual destination mapping",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M6-05",
+          "title": "Results panel",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M6-06",
+          "title": "Retention/export",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M6-07",
+          "title": "Recovery tests",
+          "status": "planned",
+          "evidence": []
+        }
+      ],
+      "verified": 0,
+      "total": 7,
+      "percent": 0
+    },
+    {
+      "id": "M7",
+      "name": "🛡️ Hardening + release",
+      "phase_count": 2,
+      "tasks": [
+        {
+          "id": "M7-01",
+          "title": "Adversarial security tests",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M7-02",
+          "title": "Scale/idle QA",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M7-03",
+          "title": "Permission audit",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M7-04",
+          "title": "Accessibility",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M7-05",
+          "title": "Safe QA setup",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M7-06",
+          "title": "Authenticated FDE acceptance",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M7-07",
+          "title": "Packaging/signing",
+          "status": "planned",
+          "evidence": []
+        },
+        {
+          "id": "M7-08",
+          "title": "Release evidence",
+          "status": "planned",
+          "evidence": []
+        }
+      ],
+      "verified": 0,
+      "total": 8,
+      "percent": 0
+    }
+  ]
+}

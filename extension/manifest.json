@@ -1,0 +1,42 @@
+{
+  "manifest_version": 3,
+  "name": "Jobflick Bridge",
+  "version": "0.1.0",
+  "description": "Firefox Developer Edition bridge between ChatGPT Execarium YAML and local Jobflick",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "jobflick-bridge@sguzman.github.io",
+      "strict_min_version": "140.0"
+    }
+  },
+  "permissions": [
+    "nativeMessaging",
+    "storage",
+    "alarms",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://chatgpt.com/*",
+    "https://chat.openai.com/*"
+  ],
+  "background": {
+    "scripts": [
+      "background.js"
+    ]
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "Scan visible Execarium jobs"
+  }
+}
