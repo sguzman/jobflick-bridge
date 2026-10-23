@@ -32,3 +32,11 @@ Do not mark tests passed based on code review alone. Automated QA should drive F
 ## Local inbox pilot
 
 The extension action opens a Firefox popup rather than immediately triggering a scan. Use the popup's **Scan visible YAML** control with an active ChatGPT conversation; validation still requires the native host, and execution still requires clicking **Run Jobflick** in the page. The popup lists saved jobs and supports read-only status refresh. **Save report** retrieves a finished report on explicit click; files are downloaded locally and not uploaded. This is tested with automated mocks but must still be accepted in real FDE.
+
+## Launching the dedicated Firefox Developer Edition QA profile
+
+Run `fish scripts/qa-firefox-developer.fish`. This script exclusively launches the Arch `firefox-developer-edition` executable with `--no-remote --profile` pointed at `$XDG_DATA_HOME/jobflick-bridge-fde-qa/profile` (normally under `~/.local/share`). It refuses symlinks at its owned profile boundaries and does not touch existing Firefox profiles, browser preferences, tabs, or running processes. The persistent QA profile is independent of Firefox's default profile selection. <https://firefox-source-docs.mozilla.org/browser/CommandLineParameters.html>
+
+In the QA window, open `about:debugging` → **This Firefox** → **Load Temporary Add-on**, and select `extension/manifest.json`. Temporary add-ons ordinarily need loading again after browser restart; avoid recommending insecure signature preferences as the normal development workflow. <https://firefox-source-docs.mozilla.org/devtools-user/about_colon_debugging/index.html>
+
+For the first browser-only smoke test, do **not** run the native-host installer: verify the extension popup opens, Scan Visible responds on ChatGPT, no browser instability occurs, and absence of the host does not queue work. Explicit native-host installation comes only after the browser-only gate; **Firefox's native host registration is per OS user, not isolated to this profile**.

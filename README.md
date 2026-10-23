@@ -41,3 +41,7 @@ Execarium defines the format. Jobflick owns validation enforcement, Fish executi
 The Firefox toolbar popup lists jobs previously submitted by this extension, including jobs whose originating tabs closed. `Scan visible YAML` replaces the old no-popup toolbar action. `Refresh jobs` checks pending statuses; `Save report` requests a finished report from Jobflick **only after a user click** and saves a local text file. Reports are not stored inside browser extension storage or automatically uploaded. The file export is bounded at 512 KiB; the authoritative complete report/log remains with Jobflick. `Open chat` is manual navigation, not automatic delivery.
 
 This is a recovery and inspection surface, **not** a claim that the future ChatGPT attachment/auto-send milestone has passed.
+
+## Isolated Firefox Developer Edition QA launcher
+
+`fish scripts/qa-firefox-developer.fish` starts a **separate, persistent QA profile** under `$XDG_DATA_HOME/jobflick-bridge-fde-qa/profile`. It does not load the add-on, register the native host, or modify the user's regular Firefox profile. In the QA browser use `about:debugging` → **This Firefox** → **Load Temporary Add-on** → `extension/manifest.json`. Consult [QA instructions](docs/QA.md) before enabling real local execution.
