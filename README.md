@@ -107,3 +107,7 @@ Real disposable Firefox Developer Edition accepted the inert report File constru
 Disposable Firefox Developer Edition now completes one real pinned Jobflick Fish job, explicitly retrieves its finished report through actual Firefox Native Messaging, then uses the same bounded production File helper to hand that report to a localhost synthetic file input. The receiving page verifies the report contents and **exact job ID-based filename**. After the original conversation route changes A→B→A, the same test confirms a second file handoff is rejected, preserving manual-only provenance. [Real backend/browser acceptance](https://github.com/sguzman/jobflick-bridge/actions/runs/40025229365).
 
 Only **QA-only** code exposes the report-read action or uses the synthetic page input; the production extension still has no automatic report fetch/attachment/Send. Authenticated ChatGPT attachment and message delivery are still untested.
+
+## Native identity quarantine
+
+If Jobflick's inspection or optional report metadata ever disagrees with the saved job ID or browser-origin token, Firefox permanently marks that record as requiring manual recovery. Its popup hides **Request stop** and **Save report** to avoid acting on the wrong native job; the authoritative Jobflick inbox still retains the original job/report, and an explicit finished-record Forget only removes Firefox metadata.

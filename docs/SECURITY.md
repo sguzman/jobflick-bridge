@@ -72,3 +72,9 @@ When Jobflick supplies an `inspect` response with a different `job.id` or a conf
 ## Attachment preflight flags are not upload authorization
 
 The content script's composer probe reports only presence, occupation, ambiguous multiple controls, and whether a discovered native HTML file input currently has files selected. It never returns draft text, file names, file bytes, or attachment chips. A missing advanced flag is represented as unknown rather than a false "safe" finding. Neither a single exposed file input nor an empty FileList is proof that ChatGPT has no preexisting attachments. Real attachment needs separate site acknowledgment and guarded user authorization.
+
+## Quarantine applies to every native side-effect and report route
+
+A bridge record with an `integrityIssue` is not merely exempted from automated polling. Its identity cannot be trusted for **Cancel**, extension-provided **Save report**, or original-conversation checks. These native operations are refused before contacting Jobflick; the Firefox popup does not offer them. If a manually requested `show` response includes an ID or an origin token conflicting with the saved record, the extension discards the response, persists the mismatch and refuses subsequent extension report requests for that record. Optional metadata omitted by older Jobflick versions remains compatible.
+
+Users can still explicitly forget a *finished* corrupted browser record, which deletes only local Firefox routing metadata, or use Jobflick's separate authoritative inbox and report recovery. This prevents an inconsistent native response from supplying a different job's report to the user's browser.
