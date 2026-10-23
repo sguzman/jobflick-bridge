@@ -163,6 +163,9 @@ async function main() {
         knownRecord(item) && FINISHED.has(item.state) && !item.orphaned);
       if(ready.length!==1)return {ok:false};
       const record=ready[0];
+      if(sender?.tab?.id!==record.tabId ||
+         canonical(sender?.tab?.url)!==record.conversation)
+        return {ok:false};
       if(!await trustedTab(record.tabId,record.conversation,record.origin))
         return {ok:false};
       const response=await native({action:"show",id:record.id});
@@ -402,18 +405,45 @@ async function main() {
       );
     };
     await driver.wait(async()=>await readState()==="active",8000);
-    // A second Firefox conversation with identical YAML must not inherit the
-    // original tab's Run grant. Loading it without user intent is read-only.
-    phase="second conversation remains inert";
+    // Sixteen simultaneous Firefox chats reuse the exact YAML, but none
+    // inherits this tab's trusted Run permission or report entitlement.
+    // Only the original explicit gesture may have queued the native job.
+    phase="sixteen simultaneous conversations remain isolated";
     const originalHandle=await driver.getWindowHandle();
-    await driver.switchTo().newWindow("tab");
-    await driver.get("http://127.0.0.1:"+server.address().port+"/c/another-qa-tab");
-    await driver.wait(until.elementLocated(By.css("main pre code")),10000);
-    assert.equal((await driver.findElements(By.css(".jobflick-bridge-run"))).length,0,
-      "Another chat must not gain a Run control without its own intent");
+    const otherHandles=[];
+    for(let i=0;i<16;i++){
+      await driver.switchTo().newWindow("tab");
+      otherHandles.push(await driver.getWindowHandle());
+      await driver.get("http://127.0.0.1:"+server.address().port+
+        "/c/other-qa-conversation-"+String(i).padStart(4,"0"));
+      await driver.wait(until.elementLocated(By.css("main pre code")),10000);
+      assert.equal((await driver.findElements(By.css(".jobflick-bridge-run"))).length,0,
+        "Another chat must not gain Run authorization from an existing job");
+      assert.equal(await driver.executeScript(
+        "return document.querySelector('#prompt-textarea').textContent"),
+        "Existing human draft, preserve verbatim");
+      if(i===0||i===15){
+        // A wrong-tab explicit request is still an unauthorized report
+        // destination. The QA-only File helper enforces the same exact
+        // original-tab-and-conversation policy as production preflight.
+        await (await driver.findElement(By.id("qa-export"))).click();
+        await driver.wait(async()=>await driver.executeScript(
+          "return document.documentElement.dataset.qaHandoff==='error'"),7000);
+        assert.equal(await driver.executeScript(
+          "return document.querySelector('#qa-file-input').files.length"),0);
+        assert.equal(await driver.findElement(By.id("qa-result")).getText(),"");
+      }
+    }
     await driver.switchTo().window(originalHandle);
     assert.equal(await readState(),"active",
-      "Opening a different Firefox tab must not orphan the original job");
+      "Opening other Firefox chats must not orphan the original job");
+    for(const handle of otherHandles){
+      await driver.switchTo().window(handle);
+      await driver.close();
+    }
+    await driver.switchTo().window(originalHandle);
+    assert.equal(await readState(),"active",
+      "Closing unrelated tabs must not revoke the original job");
     await driver.executeScript(
       "history.pushState({},'', '/c/different-qa-conversation');"
     );
