@@ -172,3 +172,9 @@ The test then uses the real Firefox History API to navigate A→B→A. An attemp
 ## Quarantined identity operations
 
 Adversarial Node tests cover an unfinished quarantined job (no popup stop and no native cancel), a finished quarantined job (no extension report export or per-chat preflight, but manual metadata Forget remains available), and native `show` responses that report a mismatched job ID or origin. A mismatch permanently records the reason and forbids repeat extension `show` calls. This is a trust-boundary test only: it does not establish authenticated ChatGPT file upload or Send.
+
+## Actual FDE synthetic draft and file-selection preservation
+
+The disposable Firefox Developer Edition synthetic test additionally uses the **production** read-only composer probe, routed through a test-only background messenger. It creates a nonempty contenteditable draft and two file inputs, preselects a harmless test File, and confirms the returned message contains **only seven boolean flags**: no draft text, file names or bytes. The test compares the actual DOM draft and File selection after inspection and confirms they are unchanged. It then clears those synthetic elements and confirms the empty/single-input flags.
+
+This is a no-side-effect read-only test on localhost. It does not establish recognition of the real ChatGPT attachment chip UI or consent to upload/Send.

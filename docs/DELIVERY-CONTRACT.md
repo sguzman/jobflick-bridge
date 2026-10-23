@@ -66,3 +66,7 @@ The helper has no message listener, no ChatGPT selectors, no outbound API reques
 Real Firefox Developer Edition now exercises a complete **local** path from a real, fixed harmless Jobflick job to the user's page-side File API. A test-only background handler retrieves the finished native report on a real browser click; the production File helper creates a bounded `text/plain` File, and a synthetic localhost page reads it. Navigating away and back revokes further transfer. This tests local protocol, provenance and DOM handoff, not ChatGPT's actual file-upload acceptance, attachment chip, server persistence or message submission.
 
 Production does not register the QA-only report-read handler, and automatic attachment and Send remain disabled.
+
+## Synthetic draft-preservation acceptance
+
+Disposable real Firefox now tests the production read-only probe against an occupied synthetic contenteditable draft and a preselected `File`. Both remain unchanged; the background receives only booleans, and the probe also recognizes an empty composer after a deliberate QA reset. Because no production upload is enabled, this is a negative-test building block rather than completion of the authenticated preserve-draft and Send gates.
