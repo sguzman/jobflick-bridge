@@ -47,7 +47,8 @@
     validating++;
     try {
       const reply = await browser.runtime.sendMessage({ type: "jobflick:validate", yaml: state.yaml });
-      if (!reply?.ok || !pre.isConnected || states.get(pre) !== state) return;
+      if (!reply?.ok || !pre.isConnected || states.get(pre) !== state ||
+          candidate(pre) !== state.yaml) return;
       const button = document.createElement("button");
       button.type = "button";
       button.className = "jobflick-bridge-run";
@@ -124,6 +125,7 @@
     } catch {
       // Absent native host / unloaded event page; no automatic retry or scan.
     } finally {
+      state.validating = false;
       validating--;
       if (dirty.size && timer === null) timer = setTimeout(drain, 150);
     }
@@ -138,10 +140,12 @@
       const yaml = candidate(pre);
       if (!yaml) continue;
       const old = states.get(pre);
-      if (old?.yaml === yaml && old.button?.isConnected) continue;
+      // Avoid issuing duplicate native validation while one for this
+      // unchanged code block is still in flight.
+      if (old?.yaml === yaml && (old.button?.isConnected || old.validating)) continue;
       if (old?.jobId) byJob.delete(old.jobId);
       old?.button?.remove();
-      const state = { yaml, submitted: false, button: null, jobId: null };
+      const state = { yaml, submitted: false, button: null, jobId: null, validating: true };
       states.set(pre, state);
       void validate(pre, state);
     }
