@@ -11,11 +11,17 @@ if (!root || !path.isAbsolute(root)) process.exit(41);
 const inbox = path.join(root, "native-requests.jsonl");
 const id = "job_qa000001";
 
-const input = [];
-process.stdin.on("data", chunk => input.push(chunk));
-process.stdin.on("end", () => {
+let data = Buffer.alloc(0);
+let completed = false;
+process.stdin.on("data", chunk => {
+  if (completed) return;
+  data = Buffer.concat([data, chunk]);
+  if (data.length < 4) return;
+  const expected = data.readUInt32LE(0);
+  if (!expected || expected > 262144 + 8192) process.exit(42);
+  if (data.length < expected + 4) return;
+  completed = true;
   try {
-    const data = Buffer.concat(input);
     if (data.length < 4) throw Error("Missing length prefix");
     const size = data.readUInt32LE(0);
     if (!size || size > 262144 + 8192 || data.length !== size + 4) {
@@ -62,8 +68,10 @@ process.stdin.on("end", () => {
     const payload = Buffer.from(JSON.stringify(response), "utf8");
     const header = Buffer.alloc(4);
     header.writeUInt32LE(payload.byteLength, 0);
-    process.stdout.write(Buffer.concat([header, payload]));
+    // Native Messaging keeps stdin open until it gets a reply. Do not wait
+    // for 'end', or Firefox and the host will deadlock.
+    process.stdout.write(Buffer.concat([header, payload]), () => process.exit(0));
   } catch {
-    process.exitCode = 42;
+    process.exit(42);
   }
 });
