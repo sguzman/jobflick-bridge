@@ -10,6 +10,7 @@ function boot(nativeOverride = null, options = {}) {
   const storage = options.storage || {};
   const session = options.session || {};
   const requests = [];
+  const sentTabMessages = [];
   const tabs = new Map([[11, { id: 11, url: "https://chatgpt.com/c/testing-1234" }]]);
   const browser = {
     runtime: {
@@ -54,7 +55,10 @@ function boot(nativeOverride = null, options = {}) {
         if (!tabs.has(id)) throw new Error("Unknown tab");
         return tabs.get(id);
       },
-      sendMessage: async () => ({ ok: true }),
+      sendMessage: async (tabId, message) => {
+        sentTabMessages.push({ tabId, message });
+        return { ok: true };
+      },
       onUpdated: { addListener: callback => { listeners.updated = callback; } },
       onRemoved: { addListener: callback => { listeners.removed = callback; } }
     },
@@ -65,7 +69,7 @@ function boot(nativeOverride = null, options = {}) {
     console, Date, Set, Promise, Object
   }, { filename: "background.js" });
   return {
-    listeners, storage, session, requests, tabs,
+    listeners, storage, session, requests, tabs, sentTabMessages,
     popupSender: {
       id: "jobflick-bridge@sguzman.github.io",
       url: "moz-extension://unit/popup/index.html"
@@ -246,4 +250,45 @@ test("forgetting requires a finished job and cannot cancel or delete its native 
   assert.equal(forgotten.ok, true);
   assert.equal(app.storage.jobflick_bridge_jobs_v1.job_12345678, undefined);
   assert.equal(app.requests.some(v => ["cancel", "consume", "delete"].includes(v.action)), false);
+});
+
+test("Firefox restart cannot deliver an old completed job into a reused numeric tab ID", async () => {
+  const previous = boot(request => {
+    if (request.action === "submit_spec") return {
+      ok: true, job: { id: "job_12345678", state: "queued" }
+    };
+    return { ok: true, job: { id: request.id, state: "running" } };
+  });
+  await previous.listeners.message({ type: "jobflick:submit", yaml: sample }, previous.sender);
+  await previous.listeners.message({ type: "jobflick:refresh" }, previous.popupSender);
+  const current = boot(request => {
+    if (request.action === "inspect") return {
+      ok: true, job: { id: request.id, state: "succeeded" }
+    };
+    throw new Error("Only inspect is expected during restart recovery");
+  }, { storage: previous.storage, session: {} });
+  // Tab 11 looks numerically identical after the restart but has no old session origin.
+  await current.listeners.message({ type: "jobflick:refresh" }, current.popupSender);
+  assert.equal(current.storage.jobflick_bridge_jobs_v1.job_12345678.state, "succeeded");
+  assert.equal(current.storage.jobflick_bridge_jobs_v1.job_12345678.orphaned, true);
+  assert.equal(current.sentTabMessages.length, 0);
+  assert.equal(current.requests.some(request => request.action === "submit_spec"), false);
+});
+
+test("navigation to a different chat blocks even a same-tab status message", async () => {
+  const app = boot(request => {
+    if (request.action === "submit_spec") return {
+      ok: true, job: { id: "job_12345678", state: "queued" }
+    };
+    if (request.action === "inspect") return {
+      ok: true, job: { id: request.id, state: "succeeded" }
+    };
+    return { ok: true };
+  });
+  await app.listeners.message({ type: "jobflick:submit", yaml: sample }, app.sender);
+  // The tab navigates away before the status inspection completes.
+  app.tabs.set(11, { id: 11, url: "https://chatgpt.com/c/another-conversation" });
+  await app.listeners.message({ type: "jobflick:refresh" }, app.popupSender);
+  assert.equal(app.sentTabMessages.length, 0);
+  assert.equal(app.storage.jobflick_bridge_jobs_v1.job_12345678.orphaned, true);
 });
