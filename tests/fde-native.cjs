@@ -45,7 +45,9 @@ async function main() {
   fs.cpSync(path.join(production,"popup"),path.join(ext,"popup"),{recursive:true});
   // QA-only marker on a synthetic localhost page, never a real ChatGPT tab.
   fs.writeFileSync(path.join(ext,"qa-popup-url.js"),
-    "document.documentElement.dataset.jobflickQaPopupUrl = browser.runtime.getURL('popup/index.html');");
+    "document.addEventListener('jobflick-qa-open-popup',()=>{" +
+    "browser.runtime.sendMessage({type:'jobflick:qa-open-popup'}).catch(()=>{});" +
+    "});");
 
   // Only URL identity is adapted to synthetic localhost. All native protocol,
   // job tracking and other production background logic stays unchanged.
@@ -57,6 +59,16 @@ async function main() {
   assert(background.includes(rule), "Origin guard changed; inspect adapter");
   background = background.replace(rule,
     'if (u.protocol !== "http:" || !SITES.has(u.hostname) ||\n        u.username || u.password) return null;');
+  // QA-only route: Firefox itself opens its extension popup in a tab,
+  // avoiding Selenium's forbidden direct navigation to moz-extension://.
+  const messageAnchor="browser.runtime.onMessage.addListener((message, sender) => {";
+  assert(background.includes(messageAnchor),"Production background listener moved");
+  background=background.replace(messageAnchor,messageAnchor+`
+  if (message?.type === "jobflick:qa-open-popup") {
+    return browser.tabs.create({url:browser.runtime.getURL("popup/index.html")})
+      .then(tab=>({ok:true,tabId:tab.id}));
+  }
+`);
   fs.writeFileSync(path.join(ext, "background.js"), background);
 
   const fixture = path.resolve(__dirname, "./fixtures/fake-native-host.cjs");
@@ -133,14 +145,19 @@ async function main() {
     assert.match(submits[0].origin_tab_id, /^tab-[a-zA-Z0-9_-]{8,128}$/);
     assert.equal(requests.some(r => r.action === "show"), false, "Reports are never read automatically");
     assert.equal(requests.some(r => r.action === "cancel"), false);
-    // The QA-only page marker lets WebDriver navigate to this extension's
-    // popup page. No content-script change is included in production.
+    // WebDriver cannot navigate into moz-extension:// from an untrusted web
+    // page. Ask the QA-only content listener to have the extension itself
+    // create the tab, then switch WebDriver to that new window.
     phase="opening installed Firefox popup";
-    const popupUrl=await driver.executeScript(
-      "return document.documentElement.dataset.jobflickQaPopupUrl || ''"
+    const originHandle=await driver.getWindowHandle();
+    await driver.executeScript(
+      "document.dispatchEvent(new Event('jobflick-qa-open-popup'));"
     );
-    assert.match(popupUrl,/^moz-extension:\/\//);
-    await driver.get(popupUrl);
+    const popupHandle=await driver.wait(async()=>{
+      const handles=await driver.getAllWindowHandles();
+      return handles.find(handle=>handle!==originHandle) || false;
+    },10000);
+    await driver.switchTo().window(popupHandle);
     await driver.wait(until.elementLocated(By.css("#jobs .job")),10000);
     assert.match(await driver.findElement(By.css("#jobs")).getText(),/Firefox native QA/);
     phase="refreshing native job status";
