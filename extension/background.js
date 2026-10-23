@@ -341,6 +341,14 @@ async function onPopupMessage(message, sender) {
     case "jobflick:inbox": {
       await serializedWrite;
       const jobs = await saved();
+      // The full saved inbox is durable. Display only a bounded page, but
+      // let the user access older records instead of silently hiding them.
+      const offset = message.offset === undefined ? 0 : message.offset;
+      const limit = message.limit === undefined ? 40 : message.limit;
+      if (!Number.isInteger(offset) || offset < 0 || offset > 100000 ||
+          !Number.isInteger(limit) || limit < 1 || limit > 50) {
+        return { ok: false, message: "Invalid inbox page request" };
+      }
       const items = Object.values(jobs).filter(item =>
         knownRecord(item) && typeof item.id === "string")
         .map(item => ({
@@ -356,8 +364,13 @@ async function onPopupMessage(message, sender) {
             (item.orphaned ? "manual_only" :
               FINISHED.has(item.state) ? "report_pending_manual_delivery" :
                 "awaiting_completion")
-        })).sort((a, b) => b.submittedAt - a.submittedAt).slice(0, 300);
-      return { ok: true, jobs: items };
+        })).sort((a, b) =>
+          (b.submittedAt - a.submittedAt) || b.id.localeCompare(a.id));
+      const page = items.slice(offset, offset + limit);
+      return {
+        ok: true, jobs: page, hasMore: offset + limit < items.length,
+        nextOffset: offset + page.length
+      };
     }
     case "jobflick:preflight": {
       const id = message.id;
