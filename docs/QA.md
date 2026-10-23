@@ -408,3 +408,23 @@ and preservation of sentinel files representing personal Firefox profiles
 and native-host registration. The same run loads the production add-on in a
 disposable Firefox Developer Edition profile. This does not establish
 real authenticated ChatGPT attachment, Send or signed release acceptance.
+
+## Verified M1-08: Firefox multi-tab and event-script reload
+
+Disposable Firefox Developer Edition Native Messaging acceptance opens a
+second independent conversation tab with identical valid YAML. Without
+a user Run gesture it gains no Run control and does not orphan the first
+tab's result. After the original route changes A→B→A, delivery stays
+manual-only. A CI-only action calls actual Firefox `browser.runtime.reload()`;
+the page is refreshed, the durable record remains manual-only, and the
+native host receives no duplicate `submit_spec`.
+
+The test uses unchanged production content and background logic except
+localhost-only test routing and explicit CI diagnostics; it passes with
+both the nonexecuting native fixture and the isolated pinned real Jobflick
+daemon executing a fixed harmless Fish job.
+[Firefox acceptance](https://github.com/sguzman/jobflick-bridge/actions/runs/40039689984) ·
+[real native integration](https://github.com/sguzman/jobflick-bridge/actions/runs/40039686846).
+
+This verifies the M1-08 Firefox lifecycle task, not a full browser-process
+restart, authenticated site delivery, or real desktop compositor recovery.
