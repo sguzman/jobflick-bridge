@@ -23,6 +23,12 @@ async function main() {
   if (fs.existsSync(runnerManifest)) throw Error("QA refuses to replace an existing registered native host");
   const binary = process.env.FDE_BINARY;
   if (!binary || !path.isAbsolute(binary)) throw Error("FDE_BINARY must be absolute");
+  const realHost = process.env.JOBFLICK_QA_REAL === "true";
+  const realBinary = process.env.JOBFLICK_QA_BINARY;
+  if (realHost && (!realBinary || !path.isAbsolute(realBinary) ||
+                   !fs.existsSync(realBinary))) {
+    throw Error("Real FDE integration requires an existing pinned Jobflick binary in CI");
+  }
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "jobflick-fde-native-"));
   const ext = path.join(root, "addon");
   const home = path.join(root, "home");
@@ -31,6 +37,9 @@ async function main() {
   fs.mkdirSync(ext, { recursive: true });
   fs.mkdirSync(hostDir, { recursive: true });
   fs.mkdirSync(state, { recursive: true });
+  for (const directory of ["config","data","runtime","work"]) {
+    fs.mkdirSync(path.join(root,directory),{recursive:true,mode:0o700});
+  }
   const originId = "jobflick-bridge-native-qa@sguzman.github.io";
   const production = path.resolve(__dirname, "../extension");
   const manifest = JSON.parse(fs.readFileSync(path.join(production, "manifest.json"), "utf8"));
@@ -58,10 +67,18 @@ async function main() {
   const fakeHost = path.join(root, "fake-native-host");
   fs.copyFileSync(fixture, fakeHost);
   fs.chmodSync(fakeHost, 0o700);
+  const realWrapper=path.join(root,"real-native-host");
+  if (realHost) {
+    // A fixed shell wrapper is needed because Firefox's manifest accepts
+    // only an executable path, not command-line arguments.
+    fs.writeFileSync(realWrapper,'#!/bin/sh\nexec "$JOBFLICK_QA_BINARY" native-host\n',{mode:0o700});
+  }
   const nativeManifest=JSON.stringify({
     name: "io.github.sguzman.jobflick",
-    description: "Disposable no-execution QA Native Messaging fixture",
-    path: fakeHost, type: "stdio", allowed_extensions: [originId]
+    description: realHost ? "Disposable real Jobflick CI acceptance" :
+      "Disposable no-execution QA Native Messaging fixture",
+    path: realHost ? realWrapper : fakeHost,
+    type: "stdio", allowed_extensions: [originId]
   });
   fs.writeFileSync(path.join(hostDir, "io.github.sguzman.jobflick.json"), nativeManifest, { mode: 0o600 });
   // Firefox resolves user-level native manifests from its OS account home on
@@ -72,7 +89,9 @@ async function main() {
 
   const yaml = [
     "schema: 4", "name: Firefox native QA", "shell: fish",
-    "cwd: /tmp", "privilege: none", "timeout_seconds: 5", "command: pwd"
+    "cwd: "+path.join(root,"work"), "privilege: none", "timeout_seconds: 10",
+    "environment:", "  session: inherit", "  gpu: inherit",
+    "command: printf bridge_real_fde_smoke"
   ].join("\n");
   const html = "<!doctype html><html><head><meta charset='utf-8'></head><body>" +
     "<main><pre><code>" + yaml + "</code></pre></main></body></html>";
@@ -85,14 +104,33 @@ async function main() {
     server.listen(0, "127.0.0.1", resolve);
   });
   let driver;
+  let daemon=null;
+  let daemonLog="";
   let phase = "starting";
   // Browser and geckodriver inherit a HOME that only exists inside this test.
   // It cannot accidentally discover the runner's normal native host files.
   const savedHome = process.env.HOME;
   const savedState = process.env.JOBFLICK_QA_STATE;
+  const savedXdg = {};
+  for (const key of ["XDG_CONFIG_HOME","XDG_DATA_HOME","XDG_RUNTIME_DIR"]) {
+    savedXdg[key]=process.env[key];
+    process.env[key]=path.join(root,key==="XDG_CONFIG_HOME"?"config":key==="XDG_DATA_HOME"?"data":"runtime");
+  }
   process.env.HOME = home;
   process.env.JOBFLICK_QA_STATE = state;
   try {
+    if (realHost) {
+      phase="starting isolated real Jobflick daemon";
+      daemon=require("node:child_process").spawn(realBinary,["daemon"],{
+        env:process.env,stdio:["ignore","ignore","pipe"]
+      });
+      daemon.stderr.on("data",chunk=>{daemonLog=(daemonLog+chunk.toString()).slice(-3000);});
+      const socket=path.join(process.env.XDG_RUNTIME_DIR,"jobflick","daemon.sock");
+      for(let i=0;i<150&&!fs.existsSync(socket);i++){
+        await new Promise(resolve=>setTimeout(resolve,100));
+      }
+      assert(fs.existsSync(socket),"Real daemon startup failed: "+daemonLog);
+    }
     phase = "starting browser";
     driver = await new Builder().forBrowser("firefox")
       .setFirefoxOptions(new firefox.Options().setBinary(binary).addArguments("-headless"))
@@ -115,32 +153,49 @@ async function main() {
     phase = "trusted Run submission";
     await button.click();
     await driver.wait(async () => /Queued|succeeded/.test(await button.getText()), 12000);
-    phase = "waiting for native request log";
+    phase = "verifying native submission";
     const logFile = path.join(state, "native-requests.jsonl");
-    await driver.wait(() => {
-      if (!fs.existsSync(logFile)) return false;
-      return fs.readFileSync(logFile, "utf8").includes('"action":"submit_spec"');
-    }, 10000);
-    const requests = fs.readFileSync(logFile, "utf8").trim().split("\n").map(JSON.parse);
-    assert(requests.some(r => r.action === "validate_spec"));
-    const submits = requests.filter(r => r.action === "submit_spec");
-    assert.equal(submits.length, 1, "Exactly one browser click must enqueue once");
-    assert.match(submits[0].origin_tab_id, /^tab-[a-zA-Z0-9_-]{8,128}$/);
-    assert.equal(requests.some(r => r.action === "show"), false, "Reports are never read automatically");
-    assert.equal(requests.some(r => r.action === "cancel"), false);
+    if (!realHost) {
+      await driver.wait(() => {
+        if (!fs.existsSync(logFile)) return false;
+        return fs.readFileSync(logFile, "utf8").includes('"action":"submit_spec"');
+      }, 10000);
+      const requests=fs.readFileSync(logFile,"utf8").trim().split("\n").map(JSON.parse);
+      assert(requests.some(r=>r.action==="validate_spec"));
+      const submits=requests.filter(r=>r.action==="submit_spec");
+      assert.equal(submits.length,1,"Exactly one browser click must enqueue once");
+      assert.match(submits[0].origin_tab_id,/^tab-[a-zA-Z0-9_-]{8,128}$/);
+      assert.equal(requests.some(r=>r.action==="show"),false);
+      assert.equal(requests.some(r=>r.action==="cancel"),false);
+    }
     // Firefox does not expose extension-privileged popup tabs through
     // ordinary WebDriver commands. Those controls have dedicated behavioral
     // tests; browser acceptance here is the real native status path.
     phase="native finished status propagation";
     await driver.wait(async()=>/succeeded/.test(await button.getText()),10000);
-    const inspected=fs.readFileSync(logFile,"utf8").split("\n").filter(Boolean).map(JSON.parse);
-    assert(inspected.some(x=>x.action==="inspect"),"Firefox did not query terminal status");
-    assert.equal(inspected.filter(x=>x.action==="submit_spec").length,1);
-    assert.equal(inspected.some(x=>x.action==="show"),false);
-    assert.equal(inspected.some(x=>x.action==="cancel"),false);
+    if (realHost) {
+      const dir=path.join(process.env.XDG_DATA_HOME,"jobflick","jobs");
+      const files=fs.readdirSync(dir).filter(file=>file.endsWith(".json"));
+      assert.equal(files.length,1,"Browser should queue exactly one durable Jobflick job");
+      const job=JSON.parse(fs.readFileSync(path.join(dir,files[0]),"utf8"));
+      assert.equal(job.state,"succeeded");
+      assert.match(job.origin_tab_id,/^tab-[a-zA-Z0-9_-]{8,128}$/);
+      assert.equal(job.name,"Firefox native QA");
+      assert.equal(job.command,"printf bridge_real_fde_smoke");
+      assert(fs.readFileSync(job.log_path,"utf8").includes("bridge_real_fde_smoke"),
+        "The hardcoded harmless Fish command must produce output");
+    } else {
+      const inspected=fs.readFileSync(logFile,"utf8").split("\n").filter(Boolean).map(JSON.parse);
+      assert(inspected.some(x=>x.action==="inspect"),"Firefox did not query terminal status");
+      assert.equal(inspected.filter(x=>x.action==="submit_spec").length,1);
+      assert.equal(inspected.some(x=>x.action==="show"),false);
+      assert.equal(inspected.some(x=>x.action==="cancel"),false);
+    }
     assert.equal(await button.isEnabled(),false);
     await driver.uninstallAddon(id);
-    console.log("Headless FDE: real content/background Native Messaging, one submit and terminal status UI passed; no command, report fetch or ChatGPT Send");
+    console.log(realHost ?
+      "FDE + REAL Jobflick: one hardcoded harmless Fish job, persisted browser origin, and terminal status passed" :
+      "FDE + FAKE native host: one submit, terminal UI, no command execution or auto-report retrieval");
   } catch(error) {
     const logFile=path.join(state,"native-requests.jsonl");
     const actions=fs.existsSync(logFile) ?
@@ -154,11 +209,23 @@ async function main() {
     throw error;
   } finally {
     if (driver) await driver.quit();
+    if (daemon) {
+      daemon.kill("SIGTERM");
+      await Promise.race([
+        new Promise(resolve=>daemon.once("exit",resolve)),
+        new Promise(resolve=>setTimeout(resolve,1500))
+      ]);
+      if (daemon.exitCode===null) daemon.kill("SIGKILL");
+    }
     await new Promise(resolve => server.close(resolve));
     if (savedHome === undefined) delete process.env.HOME;
     else process.env.HOME = savedHome;
     if (savedState === undefined) delete process.env.JOBFLICK_QA_STATE;
     else process.env.JOBFLICK_QA_STATE = savedState;
+    for (const [key,value] of Object.entries(savedXdg)) {
+      if (value===undefined) delete process.env[key];
+      else process.env[key]=value;
+    }
     // Only our exact CI-only manifest was created; do not remove directories
     // or files belonging to other runner jobs.
     fs.rmSync(runnerManifest,{force:true});
