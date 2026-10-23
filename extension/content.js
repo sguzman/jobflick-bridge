@@ -9,6 +9,15 @@
   const dirty = new Set();
   const states = new WeakMap();
   const byJob = new Map();
+  // A ChatGPT SPA tab can survive thousands of jobs. Retain only a bounded
+  // number of live Run controls; older status lives in Jobflick's inbox.
+  const MAX_LIVE_STATUSES = 128;
+  function trackJob(id, state) {
+    if (!byJob.has(id) && byJob.size >= MAX_LIVE_STATUSES) {
+      byJob.delete(byJob.keys().next().value);
+    }
+    byJob.set(id, state);
+  }
   // Jobflick may complete before submit_spec's response reaches this tab.
   // Retain a small bounded status cache so early completion is not lost.
   const earlyStatus = new Map();
@@ -116,7 +125,7 @@
             return;
           }
           state.jobId = result.job.id;
-          byJob.set(state.jobId, state);
+          trackJob(state.jobId, state);
           const early = earlyStatus.get(state.jobId);
           if (early) earlyStatus.delete(state.jobId);
           // A harmless job can finish before submit_spec replies. Do not
@@ -137,6 +146,9 @@
             button.textContent = "Queued " + result.job.id.slice(0, 8);
             state.renderedStatus = "queued";
           }
+          // The DOM retains its final label; there is no reason to keep a
+          // strong JavaScript reference to this control after completion.
+          if (TERMINAL.has(state.renderedStatus)) byJob.delete(state.jobId);
           if (/^#[0-9a-f]{6}$/i.test(result.job.color || "")) {
             button.style.borderColor = result.job.color;
           }
@@ -228,6 +240,7 @@
       const state = byJob.get(message.jobId);
       if (state) {
         paintStatus(state, message);
+        if (TERMINAL.has(message.state)) byJob.delete(message.jobId);
       } else if (typeof message.jobId === "string" &&
                  /^[a-zA-Z0-9_-]{8,128}$/.test(message.jobId) &&
                  typeof message.state === "string") {

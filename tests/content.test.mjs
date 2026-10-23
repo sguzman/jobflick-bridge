@@ -96,14 +96,15 @@ function simulate(initialYaml = yaml, validateOK = true, probeOptions = {}) {
         }
         if (message.type === "jobflick:submit") {
           if (probeOptions.submitGate) await probeOptions.submitGate;
+          const submittedId = probeOptions.nextJobId?.() || "job_12345678";
           if (probeOptions.earlyStatus) {
             await runtimeListener({
-              type: "jobflick:status", jobId: "job_12345678",
+              type: "jobflick:status", jobId: submittedId,
               state: probeOptions.earlyState || "succeeded",
               name: "QA", color: "#aabbcc"
             });
           }
-          return { ok: true, job: { id: "job_12345678",
+          return { ok: true, job: { id: submittedId,
             name: "QA", color: "#aabbcc", state: probeOptions.submitState } };
         }
         throw new Error("Unexpected message type");
@@ -412,6 +413,42 @@ test("textarea drafts are treated as occupied without revealing text",async()=>{
   assert.equal(result.fileInputAmbiguous,false);
   assert.equal(result.selectedFilePresent,false);
   assert.equal(JSON.stringify(result).includes("private text"),false);
+});
+
+test("long-lived SPA bounds live status button references to 128 jobs", async () => {
+  let count=0;
+  const ids=[];
+  const app=simulate(yaml,true,{
+    blockCount:140,visibleCount:140,submitState:"queued",
+    nextJobId:()=>{
+      const id="job_"+String(++count).padStart(8,"0");
+      ids.push(id);
+      return id;
+    }
+  });
+  for(const pre of app.pres){
+    app.pointer(pre);
+    await app.pump();
+    assert(pre.button?.isConnected);
+    await pre.button.handlers.click({isTrusted:true});
+  }
+  assert.equal(ids.length,140);
+  assert.equal(app.messages.filter(m=>m.type==="jobflick:submit").length,140);
+  await app.runtimeListener({
+    type:"jobflick:status",jobId:ids[0],state:"running"
+  });
+  assert.match(app.pres[0].button.textContent,/Queued/,
+    "Oldest control is evicted rather than strongly retained indefinitely");
+  await app.runtimeListener({
+    type:"jobflick:status",jobId:ids[139],state:"succeeded"
+  });
+  assert.match(app.pres[139].button.textContent,/succeeded/,
+    "Newest controls still receive real-time completion");
+  await app.runtimeListener({
+    type:"jobflick:status",jobId:ids[139],state:"running"
+  });
+  assert.match(app.pres[139].button.textContent,/succeeded/,
+    "Terminal controls preserve their final displayed state");
 });
 
 test("terminal status is never downgraded by delayed native status events", async () => {
