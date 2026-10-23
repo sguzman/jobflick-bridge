@@ -136,3 +136,27 @@ test("job title from native host is rendered as text, never interpreted as marku
   assert.equal(app.named.jobs.children.length,1);
   assert.equal(app.calls.filter(c=>c.type==="jobflick:submit").length,0);
 });
+
+test("per-job destination check is read-only and cannot retrieve a report or send",async()=>{
+  const app=await boot([finished],message=>{
+    if(message.type==="jobflick:inbox")return {ok:true,jobs:[finished]};
+    if(message.type==="jobflick:preflight")return {
+      ok:true,originalConversationVerified:true,
+      composerPresent:true,composerOccupied:false,fileInputPresent:false
+    };
+    throw new Error("Unexpected popup action: "+message.type);
+  });
+  const button=app.find("Check original chat");
+  assert(button);
+  await button.click();
+  assert.equal(app.calls.filter(x=>x.type==="jobflick:preflight").length,1);
+  assert.equal(app.calls.filter(x=>x.type==="jobflick:report").length,0);
+  assert.equal(app.calls.filter(x=>x.type==="jobflick:submit").length,0);
+  assert.match(app.named.notice.textContent,/Read-only: nothing attached or sent/);
+});
+
+test("orphaned finished job has no original-chat preflight control",async()=>{
+  const app=await boot([{...finished,orphaned:true,deliveryState:"manual_only"}]);
+  assert.equal(app.find("Check original chat"),null);
+  assert(app.find("Save report"));
+});
