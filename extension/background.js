@@ -225,8 +225,11 @@ async function checkJobs(onlyId = null) {
     // otherwise one broken record can starve later jobs indefinitely.
     const checkedAt = Date.now();
     await mutate(jobs => {
-      for (const [id] of pending) {
-        if (jobs[id]) jobs[id].lastCheckedAt = checkedAt;
+      for (const [id, record] of pending) {
+        if (sameIdentity(id, jobs[id], recordIdentity(record)) &&
+            !jobs[id].integrityIssue) {
+          jobs[id].lastCheckedAt = checkedAt;
+        }
       }
     });
     for (const [id, record] of pending) {
@@ -245,7 +248,8 @@ async function checkJobs(onlyId = null) {
           status.job, "origin_tab_id", record.origin);
         if (wrongId || wrongOrigin) {
           await mutate(jobs => {
-            if (knownRecord(jobs[id])) {
+            if (sameIdentity(id, jobs[id], recordIdentity(record)) &&
+                !jobs[id].integrityIssue) {
               jobs[id].orphaned = true;
               jobs[id].deliveryState = "manual_only";
               jobs[id].integrityIssue = wrongId
@@ -266,7 +270,8 @@ async function checkJobs(onlyId = null) {
           name !== record.name || color !== record.color;
         if (changed) {
           await mutate(jobs => {
-            if (!knownRecord(jobs[id]) || jobs[id].integrityIssue) return;
+            if (!sameIdentity(id, jobs[id], recordIdentity(record)) ||
+                jobs[id].integrityIssue) return;
             jobs[id].state = state;
             if (FINISHED.has(state) && !jobs[id].orphaned) {
               jobs[id].deliveryState = "report_pending_manual_delivery";
