@@ -24,6 +24,15 @@ jobs:
         run: node tests/native-host-installer.test.cjs
       - name: Mozilla WebExtension lint
         run: npx --yes web-ext@10.8.0 lint --source-dir extension
+      - name: Build unsigned Firefox QA archive
+        run: npx --yes web-ext@10.8.0 build --source-dir extension --artifacts-dir dist --overwrite-dest
+      - name: Upload unsigned QA archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: jobflick-bridge-fde-qa-unsigned
+          path: dist/*.zip
+          if-no-files-found: error
+          retention-days: 14
       - name: Manifest parse
         run: node -e 'const m=require("./extension/manifest.json"); if (!m.browser_specific_settings?.gecko?.id) process.exit(1)'
 

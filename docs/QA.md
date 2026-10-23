@@ -56,3 +56,7 @@ CI also runs `tests/fde-smoke.cjs` in a disposable headless Firefox **Developer 
 ## Native host registration test
 
 CI runs a **disposable Fish installer integration test** with a fake, never-executed `jobflick` binary and temporary `HOME`/`XDG_DATA_HOME`. It checks the Firefox manifest, `allowed_extensions`, file permissions, refusal to overwrite an existing host, and uninstall semantics. It cannot prove the actual installed Jobflick daemon/native protocol works; that requires real Linux/FDE integration.
+
+## CI-built temporary test package
+
+Successful CI runs upload an unsigned `jobflick-bridge-fde-qa-unsigned` ZIP artifact containing **only** `extension/` sources, built with Mozilla `web-ext`. In Firefox Developer Edition's isolated `about:debugging` page, **Load Temporary Add-on** can select this ZIP instead of a local `extension/manifest.json`. Temporary installation still expires on restart. The package is **not signed, not released, and not approved for the personal browser profile**. Its availability is bounded by CI artifact retention.
