@@ -36,10 +36,21 @@ function simulate(initialYaml = yaml, validateOK = true, probeOptions = {}) {
     }
     addEventListener(type, callback) { this.handlers[type] = callback; }
     remove() { this.isConnected = false; }
-    getBoundingClientRect() { return { top: 5, bottom: 40 }; }
+    getBoundingClientRect() {
+      return this.visible === false ? { top: 9000, bottom: 9200 } : { top: 5, bottom: 40 };
+    }
   }
   const pre = new Element("pre");
   pre.yaml = initialYaml;
+  const pres = [pre];
+  const count = Math.max(1, Math.min(8000, probeOptions.blockCount || 1));
+  for (let i = 1; i < count; i++) {
+    const block = new Element("pre");
+    block.yaml = initialYaml;
+    pres.push(block);
+  }
+  const visibleCount = probeOptions.visibleCount ?? count;
+  pres.forEach((block, i) => { block.visible = i < visibleCount; });
   const document = {
     querySelector(selector) {
       if (selector.includes("#prompt-textarea") &&
@@ -53,7 +64,7 @@ function simulate(initialYaml = yaml, validateOK = true, probeOptions = {}) {
     },
     addEventListener(type, callback) { documentListeners[type] = callback; },
     createElement(tag) { return new Element(tag); },
-    querySelectorAll(selector) { return selector === "main pre" ? [pre] : []; }
+    querySelectorAll(selector) { return selector === "main pre" ? pres : []; }
   };
   const browser = {
     runtime: {
@@ -86,9 +97,9 @@ function simulate(initialYaml = yaml, validateOK = true, probeOptions = {}) {
       await Promise.resolve();
     }
   };
-  const pointer = () => documentListeners.pointerover({ target: pre });
-  const focus = () => documentListeners.focusin({ target: pre });
-  return { pre, pump, pointer, focus, messages: runtimeMessages, runtimeListener };
+  const pointer = (target = pre) => documentListeners.pointerover({ target });
+  const focus = (target = pre) => documentListeners.focusin({ target });
+  return { pre, pres, pump, pointer, focus, messages: runtimeMessages, runtimeListener };
 }
 
 test("idle page does not scan or validate until intentional pointer/focus", async () => {
@@ -170,4 +181,32 @@ test("no known file input yields an inconclusive read-only result", async () => 
   assert.equal(result.fileInputPresent, false);
   assert.equal(result.composerOccupied, false);
   assert.equal(app.messages.length, 0);
+});
+
+test("8,000-block history stays inert until explicit visible scan", async () => {
+  const app = simulate(yaml, true, { blockCount: 8000, visibleCount: 2 });
+  await app.pump();
+  assert.equal(app.messages.length, 0);
+  const result = await app.runtimeListener({ type: "jobflick:scan" });
+  assert.equal(result.ok, true);
+  await app.pump();
+  assert.equal(app.messages.filter(x => x.type === "jobflick:validate").length, 2);
+  assert.equal(app.messages.filter(x => x.type === "jobflick:submit").length, 0);
+});
+
+test("pointer bursts across 40 blocks are bounded to 16 queued candidates", async () => {
+  const app = simulate(yaml, true, { blockCount: 40 });
+  for (const pre of app.pres) app.pointer(pre);
+  await app.pump();
+  assert.equal(app.messages.filter(x => x.type === "jobflick:validate").length, 16);
+  assert.equal(app.messages.filter(x => x.type === "jobflick:submit").length, 0);
+});
+
+test("16 independent conversation content scripts never submit without clicks", async () => {
+  const apps = Array.from({ length: 16 }, () => simulate());
+  for (const app of apps) app.pointer();
+  await Promise.all(apps.map(app => app.pump()));
+  assert.equal(apps.reduce((sum, app) =>
+    sum + app.messages.filter(x => x.type === "jobflick:validate").length, 0), 16);
+  assert(apps.every(app => app.messages.every(x => x.type !== "jobflick:submit")));
 });
