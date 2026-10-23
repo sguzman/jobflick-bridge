@@ -654,8 +654,10 @@ test("unknown future records do not keep the Firefox polling alarm alive", async
   const app = boot(null, { storage: { jobflick_bridge_jobs_v1: unknown } });
   await app.listeners.message({ type: "jobflick:refresh" }, app.popupSender);
   assert.equal(app.requests.length, 0);
-  assert.equal(app.alarmActions.some(action => action.type === "create"), false);
-  assert.equal(app.alarmActions.at(-1).type, "clear");
+  assert.equal(app.alarmActions.length,0,
+    "Empty refresh does not rewrite or clear an alarm");
+  assert.equal(app.storageWrites.length,0,
+    "An unsupported future record remains untouched and inert");
   assert.deepEqual(app.storage.jobflick_bridge_jobs_v1.job_12345678, unknown.job_12345678);
 });
 
