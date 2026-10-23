@@ -48,3 +48,7 @@ Finished records may be forgotten from the toolbar inbox through two explicit cl
 ### Local report download behavior
 
 To avoid attempting a popup download from the asynchronous continuation of a native-host request, **Save report** first retrieves the report into popup memory. A second explicit click on **Download prepared report** constructs a bounded `File` and requests the local download synchronously from that new user gesture. Closing the popup discards the prepared copy without altering the durable Jobflick report. The extension still does not upload or send files to ChatGPT. Actual download behavior must be verified in Firefox Developer Edition.
+
+## Automated Firefox Developer Edition smoke
+
+CI also runs `tests/fde-smoke.cjs` in a disposable headless Firefox **Developer Edition** instance using Selenium/geckodriver. It temporarily installs the actual `extension/` add-on and uninstalls it, confirming the manifest is accepted by the target Firefox runtime. The driver creates an anonymous profile and does not register the Jobflick native host or authenticate to ChatGPT. This verifies **add-on loading only**, not the Run → Fish execution → report attachment flow. See the separate `fde-smoke` workflow job.

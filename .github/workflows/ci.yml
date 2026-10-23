@@ -23,3 +23,24 @@ jobs:
         run: npx --yes web-ext@10.8.0 lint --source-dir extension
       - name: Manifest parse
         run: node -e 'const m=require("./extension/manifest.json"); if (!m.browser_specific_settings?.gecko?.id) process.exit(1)'
+
+  fde-smoke:
+    name: Firefox Developer Edition temporary install
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - id: fde
+        uses: browser-actions/setup-firefox@v1
+        with:
+          firefox-version: latest-devedition
+      - uses: browser-actions/setup-geckodriver@v1
+      - name: Install CI-only WebDriver library
+        run: npm install --no-save --no-package-lock selenium-webdriver@4.35.0
+      - name: Headless Firefox Developer Edition add-on load
+        env:
+          FDE_BINARY: ${{ steps.fde.outputs.firefox-path }}
+        run: node tests/fde-smoke.cjs
