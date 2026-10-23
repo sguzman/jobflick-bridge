@@ -60,3 +60,7 @@ The bridge requests Firefox's read-only `webNavigation` permission to detect `hi
 ## Native job ID collision handling
 
 A Jobflick native response may have been accepted before the browser sees it. If its ID collides with an existing saved job, the bridge refuses to overwrite any previous origin, version, state or manual recovery metadata. The content script receives a submission-uncertain error and must not retry automatically. The extension does not assume that a second response with an identical ID authorizes a different chat. The durable Jobflick daemon remains responsible for its own queue and report identity.
+
+## Native origin-token agreement
+
+The real Jobflick native host can return an `origin_tab_id` on submission or inspection. Whenever present, the bridge verifies that it matches the opaque Firefox session token recorded for that job. A conflicting submission response is marked uncertain and never bound to a chat; a conflicting inspection response makes the prior browser record `manual_only` without delivering status to its tab. Neither condition triggers a second submission or automatic report retrieval. Historical native versions omitting this optional field remain supported.

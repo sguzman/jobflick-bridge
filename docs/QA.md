@@ -136,3 +136,7 @@ The lightweight workflow runs on every push to `main` and on explicit dispatch. 
 ## Duplicate host job ID regression
 
 Mocked tests submit a terminal job and then make a second native response return the same ID; the second browser message must fail closed while the original routing metadata stays intact. The same rule protects a future-version record that the current extension cannot interpret. No implicit resubmission, replacement or report fetch occurs. Actual Jobflick uses unique persisted job IDs; these are defensive adversarial tests, not evidence that normal native IDs collide.
+
+## Native origin disagreement regression
+
+Synthetic tests cover three outcomes: (1) real-backend-style matching submission origin accepted; (2) a conflicting submission origin rejected as uncertain, without creating an extension routing record; (3) a subsequent inspection with conflicting origin permanently orphaned for automatic delivery, with no status message sent to the previous tab. This protects the conversation association but does not substitute for authenticated attachment/Send QA.
