@@ -41,6 +41,11 @@ test("Firefox native host installer writes and safely removes only its own manif
     assert.equal(removed.status, 0, removed.stderr);
     assert.equal(fs.existsSync(manifest), false);
     assert.equal(fs.existsSync(wrapper), true, "Uninstall keeps the wrapper and Jobflick data intact");
+    const before=fs.statSync(wrapper).ino;
+    const reinstalled=run("--install");
+    assert.equal(reinstalled.status,0,"Reinstall should reuse identical existing wrapper: "+reinstalled.stderr);
+    assert.equal(fs.statSync(wrapper).ino,before,"Identical wrapper must not be rewritten");
+    assert.deepEqual(JSON.parse(fs.readFileSync(manifest,"utf8")),written);
   } finally {
     fs.rmSync(fixture, { recursive: true, force: true });
   }
@@ -70,6 +75,41 @@ test("installer rejects symlinked host manifest, including a dangling link", () 
     assert.equal(fs.lstatSync(manifest).isSymbolicLink(), true);
   } finally {
     fs.rmSync(fixture, { recursive: true, force: true });
+  }
+});
+
+test("installer never overwrites a foreign or symlinked native-host wrapper",()=>{
+  for(const link of [false,true]){
+    const fixture=fs.mkdtempSync(path.join(os.tmpdir(),"jobflick-bridge-wrapper-"));
+    try{
+      const home=path.join(fixture,"home"),data=path.join(fixture,"data");
+      const bin=path.join(fixture,"bin");
+      const wrapperDir=path.join(data,"jobflick-bridge");
+      fs.mkdirSync(home);
+      fs.mkdirSync(bin);
+      fs.mkdirSync(wrapperDir,{recursive:true});
+      fs.writeFileSync(path.join(bin,"jobflick"),"#!/bin/sh\nexit 0\n",{mode:0o700});
+      const wrapper=path.join(wrapperDir,"native-host");
+      const target=path.join(fixture,"foreign-executable");
+      fs.writeFileSync(target,"#!/bin/sh\necho foreign\n",{mode:0o700});
+      if(link)fs.symlinkSync(target,wrapper);
+      else fs.writeFileSync(wrapper,"#!/bin/sh\necho foreign\n",{mode:0o700});
+      const original=fs.readFileSync(target,"utf8");
+      const env={...process.env,HOME:home,XDG_DATA_HOME:data,
+        PATH:bin+path.delimiter+process.env.PATH};
+      const installer=path.join(__dirname,"../scripts/install-native-host.fish");
+      const result=spawnSync("fish",[installer,"--install"],{env,encoding:"utf8"});
+      assert.notEqual(result.status,0,"Refuse to overwrite foreign native wrapper");
+      assert.match(result.stderr,/Refusing to overwrite/);
+      assert.equal(fs.readFileSync(wrapper,"utf8"),"#!/bin/sh\necho foreign\n");
+      assert.equal(fs.readFileSync(target,"utf8"),original);
+      assert.equal(fs.lstatSync(wrapper).isSymbolicLink(),link);
+      const manifest=path.join(home,".mozilla/native-messaging-hosts",
+        "io.github.sguzman.jobflick.json");
+      assert.equal(fs.existsSync(manifest),false,"No registration on wrapper collision");
+    } finally {
+      fs.rmSync(fixture,{recursive:true,force:true});
+    }
   }
 });
 

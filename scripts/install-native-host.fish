@@ -44,11 +44,34 @@ switch $argv[1]
         set -l escaped_binary (string escape --style=script -- "$binary")
         printf '#!/usr/bin/env fish\nexec %s native-host\n' "$escaped_binary" > "$staging"; or exit 1
         chmod 700 -- "$staging"; or exit 1
-        mv -- "$staging" "$wrapper"; or exit 1
-        # No string interpolation into JSON for an untrusted path. jq escapes it.
-        jq -n --arg path "$wrapper" \
-          '{name:"io.github.sguzman.jobflick", description:"Local Jobflick Firefox bridge", path:$path, type:"stdio", allowed_extensions:["jobflick-bridge@sguzman.github.io"]}' > "$manifest"; or exit 1
-        chmod 600 -- "$manifest"; or exit 1
+        # Uninstall intentionally retains our wrapper. Reinstallation may
+        # reuse the EXACT same file, but must not overwrite an unrelated
+        # executable, directory or symlink at this path.
+        if test -e "$wrapper"; or test -L "$wrapper"
+            if test -L "$wrapper"; or not test -f "$wrapper"; or not cmp -s -- "$staging" "$wrapper"
+                rm -- "$staging"
+                echo "Existing native-host wrapper differs or is unsafe: $wrapper" >&2
+                echo "Refusing to overwrite; inspect/remove it explicitly first" >&2
+                exit 2
+            end
+            rm -- "$staging"; or exit 1
+        else
+            # Hard-link the staged executable atomically without clobbering
+            # a wrapper created between inspection and installation.
+            ln -- "$staging" "$wrapper"; or exit 1
+            rm -- "$staging"; or exit 1
+        end
+        # Stage the JSON privately and publish without replacing a manifest
+        # that might appear while installation is in progress.
+        set -l manifest_staging (mktemp "$manifest_dir/.jobflick-manifest.XXXXXXXX"); or exit 1
+        if not jq -n --arg path "$wrapper" \
+          '{name:"io.github.sguzman.jobflick", description:"Local Jobflick Firefox bridge", path:$path, type:"stdio", allowed_extensions:["jobflick-bridge@sguzman.github.io"]}' > "$manifest_staging"
+            rm -- "$manifest_staging"
+            exit 1
+        end
+        chmod 600 -- "$manifest_staging"; or exit 1
+        ln -- "$manifest_staging" "$manifest"; or exit 1
+        rm -- "$manifest_staging"; or exit 1
         echo "Registered native host for Firefox profiles: $manifest"
         echo "Note: this registration is per-user, not QA-profile isolated."
     case --uninstall
