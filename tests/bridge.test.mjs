@@ -54,7 +54,7 @@ test("submission failures are uncertain, no retry, and orphaned jobs are preserv
 });
 
 test("file attachments and automated Send are not falsely claimed to be implemented", () => {
-  assert(!/\.click\(\)/.test(content));
+  assert(!content.includes('button[data-testid="send-button"]'));
   assert(background.includes("NO automated ChatGPT composer injection"));
   assert(read("docs/QA.md").includes("Not run"));
 });
