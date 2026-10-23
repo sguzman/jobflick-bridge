@@ -196,3 +196,7 @@ A very short Fish job may finish before the native `submit_spec` response arrive
 ## Malformed native metadata regression
 
 Adversarial mocked host replies include `origin_tab_id: null`, numeric IDs, arrays and objects during submission, inspection and explicit report retrieval. Each supplied contradictory field must fail closed: no browser origin bind, no status propagation for the mismatched job, and no report export. Omitted optional metadata remains accepted for older compatible native hosts. Real pinned Jobflick returns valid UUIDs and a browser-origin token in CI.
+
+## Two-tier CI Linux package installation
+
+The isolated real Jobflick workflow attempts its pinned Linux dependency installation from the GitHub runner's existing apt indexes first. If those are stale or missing, it refreshes indexes and retries, with bounded HTTP timeouts and package retries. This avoids redundant slow Ubuntu mirror refreshes while retaining a real Fish + Rust/Firefox acceptance path. Successful CI installation is not evidence of local EndeavourOS/Hyprland acceptance.

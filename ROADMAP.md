@@ -126,3 +126,5 @@ Milestones are composed of named phases, features and **atomic tasks**. Every ta
 **G5 — Release:** signed deployment path, real FDE QA evidence, documentation and no secret leaks.
 
 Safety gates are not bypassed by an attractive percentage.
+
+Overall progress is the same evidence policy applied across all atomic tasks, recorded in the machine-readable `progress.json` `overall` field. `implemented` is reported separately from `verified`; only verified work changes the percentage.

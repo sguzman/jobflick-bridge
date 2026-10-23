@@ -270,7 +270,8 @@
           "title": "Status/name/color",
           "status": "verified",
           "evidence": [
-            "Actual Firefox Developer Edition received terminal succeeded state for a real Jobflick job after native inspect; origin ID preserved in durable backend metadata. https://github.com/sguzman/jobflick-bridge/actions/runs/40010624085"
+            "Actual Firefox Developer Edition received terminal succeeded state for a real Jobflick job after native inspect; origin ID preserved in durable backend metadata. https://github.com/sguzman/jobflick-bridge/actions/runs/40010624085",
+            "Unit regressions confirm immediate terminal native submit replies and monotonic priority against earlier terminal/running events; actual isolated real FDE/Jobflick succeeded. https://github.com/sguzman/jobflick-bridge/actions/runs/40028499706 https://github.com/sguzman/jobflick-bridge/actions/runs/40028499789"
           ]
         },
         {
@@ -520,7 +521,7 @@
           "title": "Adversarial security tests",
           "status": "implemented",
           "evidence": [
-            "Adversarial native identity quarantine blocks cancel and export on mismatched job ID/origin; optional show response ID/origin disagreement is quarantined, and reserved JavaScript prototype keys are refused for submission, polling and popup actions. Real FDE/Jobflick integration remains passing, authenticated ChatGPT security QA unaccepted. https://github.com/sguzman/jobflick-bridge/actions/runs/40027477393 https://github.com/sguzman/jobflick-bridge/actions/runs/40027477573"
+            "Adversarial Node tests reject reserved object-prototype job IDs, mismatched native origin/ID on submission, inspection and report retrieval, including explicitly supplied null, numeric, object and array identity metadata. Firefox and pinned real-native acceptance passing; authenticated ChatGPT security acceptance pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40028499706 https://github.com/sguzman/jobflick-bridge/actions/runs/40028499789"
           ]
         },
         {
@@ -528,7 +529,7 @@
           "title": "Scale/idle QA",
           "status": "implemented",
           "evidence": [
-            "Node stress/measurement: 8,000-code-block history, 40-job bounded status bursts, 325-job pagination, zero-write empty inbox and unrelated tab changes, single-write unchanged native job inspections, and terminal-only status notifications. Real long-duration idle/wake/resource profiling on EndeavourOS is unaccepted. https://github.com/sguzman/jobflick-bridge/actions/runs/40027477393"
+            "Bounded Node tests prove no storage writes on empty/unknown inbox, unrelated tabs, duplicate routes and stable long-running native state; Firefox CI also tests 8k blocks, 16 tabs, 40-job burst and 325-job paging. Long-duration idle profiling on EndeavourOS remains outstanding. https://github.com/sguzman/jobflick-bridge/actions/runs/40028499706"
           ]
         },
         {
@@ -584,11 +585,19 @@
   ],
   "last_ci": {
     "result": "success",
-    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40027477393",
-    "commit": "15ffda2f7081f2d88e048e7a9c991af1461a3554",
-    "scope": "112+ Node tests, Mozilla extension lint, unsigned QA package, isolated real Firefox Developer Edition add-on/DOM/native fixture tests, composer draft and selected-file preservation. Includes fail-closed quarantine, prototype-key job-ID rejection, and low-write idle job polling. No authenticated ChatGPT.",
-    "native_run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40027477573",
-    "native_commit": "15ffda2f7081f2d88e048e7a9c991af1461a3554",
-    "native_scope": "Pinned real Jobflick native host/daemon through actual headless Firefox Developer Edition: one hardcoded harmless Fish job, durable origin and finished native report -> bounded File -> synthetic page readback, A→B→A second transfer denied. Does not exercise authenticated ChatGPT upload or Send."
+    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40028499706",
+    "commit": "45e9921287bd54ed41c6624f475fcbe1766a240e",
+    "scope": "Node regressions and real disposable Firefox Developer Edition: read-only synthetic composer and file-selection preservation, status ordering for fast native jobs, idle/no-write resilience, strict native identity types, Mozilla lint, unsigned QA package. No authenticated ChatGPT.",
+    "native_run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40028499789",
+    "native_commit": "45e9921287bd54ed41c6624f475fcbe1766a240e",
+    "native_scope": "Pinned real Jobflick daemon plus actual FDE: harmless Fish submission and terminal state; explicit QA-only report handoff into bounded File and localhost page; A→B→A revocation; improved apt install path succeeded. No real ChatGPT attachment or Send."
+  },
+  "overall": {
+    "total": 63,
+    "verified": 36,
+    "implemented": 20,
+    "planned": 7,
+    "percent": 57,
+    "basis": "Only verified atomic tasks count toward percentage"
   }
 }
