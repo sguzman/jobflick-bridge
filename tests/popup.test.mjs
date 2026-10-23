@@ -299,3 +299,20 @@ test("popup reports missing advanced capability flags as unknown, not safe",asyn
   assert.match(app.named.notice.textContent,/input selection: unknown/);
   assert.equal(app.calls.filter(x=>x.type==="jobflick:report").length,0);
 });
+
+test("quarantined running records never expose Request stop",async()=>{
+  const app=await boot([{...running,integrityIssue:"native_job_id_mismatch",
+    deliveryState:"manual_only",orphaned:true}]);
+  assert.equal(app.find("Request stop"),null);
+  assert.equal(app.find("Confirm stop"),null);
+  assert.equal(app.calls.filter(x=>x.type==="jobflick:cancel").length,0);
+});
+
+test("quarantined finished records cannot Save report but can forget metadata",async()=>{
+  const app=await boot([{...finished,integrityIssue:"native_origin_mismatch",
+    deliveryState:"manual_only",orphaned:true}]);
+  assert.equal(app.find("Save report"),null);
+  assert.equal(app.find("Check original chat"),null);
+  assert(app.find("Forget bridge record"));
+  assert.equal(app.calls.filter(x=>x.type==="jobflick:report").length,0);
+});

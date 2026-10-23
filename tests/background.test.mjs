@@ -1268,3 +1268,71 @@ test("read-only advanced composer flags are explicitly unknown on legacy content
   assert.equal(response.selectedFilePresent,null);
   assert.equal(app.requests.length,0);
 });
+
+test("quarantined running job cannot be cancelled through popup native messaging",async()=>{
+  const id="job_12345678";
+  const record={id,recordVersion:1,state:"running",origin:"tab-test",
+    orphaned:true,deliveryState:"manual_only",
+    integrityIssue:"native_origin_mismatch"};
+  const app=boot(null,{storage:{jobflick_bridge_jobs_v1:{[id]:record}}});
+  const reply=await app.listeners.message({type:"jobflick:cancel",id},app.popupSender);
+  assert.equal(reply.ok,false);
+  assert.equal(app.requests.length,0);
+  assert.equal(record.integrityIssue,"native_origin_mismatch");
+});
+
+test("finished quarantined job cannot retrieve a report through the extension",async()=>{
+  const id="job_12345678";
+  const app=boot(null,{storage:{jobflick_bridge_jobs_v1:{[id]:{
+    id,recordVersion:1,state:"succeeded",origin:"tab-original",
+    orphaned:true,deliveryState:"manual_only",
+    integrityIssue:"native_job_id_mismatch"
+  }}}});
+  const reply=await app.listeners.message({type:"jobflick:report",id},app.popupSender);
+  assert.equal(reply.ok,false);
+  assert.match(reply.message,/identity mismatch/i);
+  assert.equal(app.requests.length,0);
+  const forget=await app.listeners.message({type:"jobflick:forget",id},app.popupSender);
+  assert.equal(forget.ok,true,"A user can still forget local terminal metadata");
+  assert.equal(app.requests.length,0);
+});
+
+test("report response identity mismatch is quarantined without exposing content",async()=>{
+  const id="job_12345678";
+  const app=boot(request=>{
+    if(request.action==="show")return {
+      ok:true,report:"secret from unrelated job",id:"job_87654321"
+    };
+    return {ok:true};
+  },{storage:{jobflick_bridge_jobs_v1:{[id]:{
+    id,recordVersion:1,state:"succeeded",origin:"tab-original",orphaned:false
+  }}}});
+  const reply=await app.listeners.message({type:"jobflick:report",id},app.popupSender);
+  assert.equal(reply.ok,false);
+  assert.equal(reply.report,undefined);
+  assert.equal(app.storage.jobflick_bridge_jobs_v1[id].integrityIssue,
+    "native_job_id_mismatch");
+  assert.equal(app.storage.jobflick_bridge_jobs_v1[id].orphaned,true);
+  const again=await app.listeners.message({type:"jobflick:report",id},app.popupSender);
+  assert.equal(again.ok,false);
+  assert.equal(app.requests.filter(x=>x.action==="show").length,1);
+});
+
+test("report response conflicting origin is quarantined without export",async()=>{
+  const id="job_12345678";
+  const app=boot(request=>{
+    if(request.action==="show")return {
+      ok:true,report:"other-origin",job:{
+        id,origin_tab_id:"tab-foreign"
+      }
+    };
+    return {ok:true};
+  },{storage:{jobflick_bridge_jobs_v1:{[id]:{
+    id,recordVersion:1,state:"succeeded",origin:"tab-original",orphaned:false
+  }}}});
+  const reply=await app.listeners.message({type:"jobflick:report",id},app.popupSender);
+  assert.equal(reply.ok,false);
+  assert.equal(reply.report,undefined);
+  assert.equal(app.storage.jobflick_bridge_jobs_v1[id].integrityIssue,
+    "native_origin_mismatch");
+});
