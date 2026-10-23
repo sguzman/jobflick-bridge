@@ -40,7 +40,7 @@ function findText(root,text) {
 
 async function boot(jobs=[],handler=null) {
   const named={};
-  for(const name of ["jobs","notice","scan","refresh","diagnose","probe-upload"])
+  for(const name of ["jobs","notice","scan","refresh","diagnose","probe-upload","load-older"])
     named[name]=new MockElement("div");
   const body=new MockElement("body");
   const calls=[],files=[],downloads=[],objects=[],openedTabs=[];
@@ -57,8 +57,21 @@ async function boot(jobs=[],handler=null) {
     runtime:{
       sendMessage:async message=>{
         calls.push(message);
-        if(handler) return handler(message);
-        if(message.type==="jobflick:inbox") return {ok:true,jobs};
+        if(handler) {
+          const reply=await handler(message);
+          if(message.type==="jobflick:inbox" && reply?.ok && Array.isArray(reply.jobs) &&
+              reply.nextOffset===undefined) {
+            return { ...reply,nextOffset:(message.offset||0) + reply.jobs.length,
+              hasMore:false };
+          }
+          return reply;
+        }
+        if(message.type==="jobflick:inbox") {
+          const offset=message.offset||0,limit=message.limit||40;
+          return {ok:true,jobs:jobs.slice(offset,offset+limit),
+            hasMore:offset+limit<jobs.length,
+            nextOffset:offset+Math.min(limit,Math.max(0,jobs.length-offset))};
+        }
         if(message.type==="jobflick:report") return {ok:true,report:"harmless report"};
         return {ok:true,message:"Acknowledged"};
       }
@@ -192,4 +205,34 @@ test("manual Open chat refuses foreign, authenticated and non-conversation URLs"
     assert.equal(app.find("Open chat"),null,bad);
     assert.equal(app.openedTabs.length,0);
   }
+});
+
+test("results panel paginates beyond 300 saved records without reading reports",async()=>{
+  const jobs=Array.from({length:325},(_,index)=>({
+    ...finished,id:"job_"+String(index).padStart(8,"0"),
+    name:"Archived "+index,submittedAt:325-index
+  }));
+  const app=await boot(jobs);
+  assert.equal(app.named.jobs.children.length,40);
+  assert.equal(app.named["load-older"].hidden,false);
+  for(let i=0;i<8;i++)await app.named["load-older"].click();
+  assert.equal(app.named.jobs.children.length,325);
+  assert.equal(app.named["load-older"].hidden,true);
+  assert.equal(app.calls.filter(c=>c.type==="jobflick:inbox").length,9);
+  assert.equal(app.calls.filter(c=>c.type==="jobflick:report").length,0);
+  assert.equal(app.calls.filter(c=>c.type==="jobflick:submit").length,0);
+  const ids=app.calls.filter(c=>c.type==="jobflick:inbox").map(c=>c.offset);
+  assert.deepEqual(ids,[0,40,80,120,160,200,240,280,320]);
+});
+
+test("an invalid inbox pagination response fails closed",async()=>{
+  const app=await boot([],message=>{
+    if(message.type==="jobflick:inbox")return {
+      ok:true,jobs:[],hasMore:true,nextOffset:-1
+    };
+    throw new Error("Unexpected popup action");
+  });
+  assert.match(app.named.notice.textContent,/Invalid inbox pagination response/);
+  assert.equal(app.named.jobs.children.length,0);
+  assert.equal(app.calls.filter(c=>c.type==="jobflick:report").length,0);
 });

@@ -6,6 +6,9 @@ const scan = document.getElementById("scan");
 const refresh = document.getElementById("refresh");
 const diagnose = document.getElementById("diagnose");
 const probe = document.getElementById("probe-upload");
+const older = document.getElementById("load-older");
+const PAGE_SIZE = 40;
+let nextOffset = 0;
 const FINISHED = new Set(["succeeded", "failed", "cancelled", "timed_out", "interrupted"]);
 
 function say(message) {
@@ -190,17 +193,43 @@ function renderItem(job) {
   return section;
 }
 
-async function load() {
-  const response = await ask("jobflick:inbox");
-  jobsElement.replaceChildren();
-  if (!response.jobs.length) {
-    jobsElement.append(element("p", "", "No jobs submitted from this Firefox extension yet."));
-    return;
-  }
-  for (const job of response.jobs) {
-    jobsElement.append(renderItem(job));
+async function loadOlder() {
+  older.disabled = true;
+  try {
+    const response = await ask("jobflick:inbox", {
+      offset: nextOffset, limit: PAGE_SIZE
+    });
+    if (!Array.isArray(response.jobs) || response.jobs.length > PAGE_SIZE ||
+        !Number.isInteger(response.nextOffset) ||
+        response.nextOffset !== nextOffset + response.jobs.length ||
+        typeof response.hasMore !== "boolean") {
+      throw new Error("Invalid inbox pagination response");
+    }
+    if (!nextOffset && !response.jobs.length) {
+      jobsElement.append(element("p", "", "No jobs submitted from this Firefox extension yet."));
+    }
+    for (const job of response.jobs) jobsElement.append(renderItem(job));
+    nextOffset = response.nextOffset;
+    older.hidden = !response.hasMore;
+  } finally {
+    older.disabled = false;
   }
 }
+
+async function load() {
+  jobsElement.replaceChildren();
+  nextOffset = 0;
+  older.hidden = true;
+  await loadOlder();
+}
+
+older.addEventListener("click", async () => {
+  try {
+    await loadOlder();
+  } catch (error) {
+    say(error.message);
+  }
+});
 
 scan.addEventListener("click", async () => {
   scan.disabled = true;
