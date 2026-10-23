@@ -44,3 +44,7 @@ Origin routing accepts only exact HTTPS `chatgpt.com` / `chat.openai.com` conver
 ## Concurrent submissions from one chat tab
 
 The background script serializes initial origin-token creation per numeric tab ID through an in-flight Promise map. Concurrent *distinct explicit* Run clicks reuse the same opaque browser-instance origin, while Jobflick still receives a separate authorized submission for each click. The in-flight map is cleared after resolution. This is different from ambiguous-transport retries, which remain prohibited. Mock tests prove exactly one token generation for two concurrent accepted submissions.
+
+## Startup provenance reconciliation
+
+On startup/install, Firefox compares **all** retained bridge job records, including finished jobs, against the in-session opaque token and current exact conversation URL. If a token is absent or a tab has changed, the record is marked permanently orphaned for automatic routing; its local inbox entry and Jobflick report remain available. The pending-job alarm only inspects unfinished native jobs. Reconciliation never submits a command or retrieves report content.

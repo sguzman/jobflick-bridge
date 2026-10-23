@@ -107,6 +107,31 @@ async function trustedTab(tabId, expectedUrl, token) {
   }
 }
 
+// Session identity can disappear on full browser restart. Reconcile even
+// FINISHED records, which the ordinary pending-job poll intentionally skips.
+// Never infer that a restored numeric tab ID belongs to an old conversation.
+async function reconcileOrigins() {
+  await serializedWrite;
+  const records = Object.values(await saved());
+  const orphanIds = [];
+  for (const record of records) {
+    if (!record || record.orphaned || typeof record.id !== "string") continue;
+    try {
+      const tab = await trustedTab(record.tabId, record.conversation, record.origin);
+      if (!tab) orphanIds.push(record.id);
+    } catch {
+      orphanIds.push(record.id);
+    }
+  }
+  if (orphanIds.length) {
+    await mutate(jobs => {
+      for (const id of orphanIds) {
+        if (jobs[id]) jobs[id].orphaned = true;
+      }
+    });
+  }
+}
+
 async function checkJobs() {
   // Multiple callers (alarms, tab updates and popup Refresh) share one
   // in-flight inspection. Refresh never claims completion prematurely.
@@ -144,7 +169,10 @@ async function checkJobs() {
           jobs[id].name = typeof status.job.name === "string" ? status.job.name : jobs[id].name;
           jobs[id].color = typeof status.job.color === "string" ? status.job.color : jobs[id].color;
         });
-        const tab = await trustedTab(record.tabId, record.conversation, record.origin);
+        // Once an origin is lost, do not silently reattach this record
+        // even when the user later navigates to a matching conversation.
+        const tab = record.orphaned ? null
+          : await trustedTab(record.tabId, record.conversation, record.origin);
         if (!tab) {
           await mutate(jobs => { if (jobs[id]) jobs[id].orphaned = true; });
           continue;
@@ -378,5 +406,9 @@ browser.tabs.onRemoved.addListener(id => {
     }
   });
 });
-browser.runtime.onStartup.addListener(() => { void checkJobs(); });
-browser.runtime.onInstalled.addListener(() => { void checkJobs(); });
+browser.runtime.onStartup.addListener(() => {
+  void reconcileOrigins().then(() => checkJobs()).catch(() => {});
+});
+browser.runtime.onInstalled.addListener(() => {
+  void reconcileOrigins().then(() => checkJobs()).catch(() => {});
+});

@@ -525,3 +525,41 @@ test("tab closure during asynchronous token creation cannot queue a job", async 
   assert.equal(response.ok, false);
   assert.equal(app.requests.filter(x => x.action === "submit_spec").length, 0);
 });
+
+test("startup reconciles even terminal records against session tokens", async () => {
+  const finished = {
+    job_12345678: {
+      id: "job_12345678", tabId: 11, origin: "tab-earlier-session",
+      conversation: "https://chatgpt.com/c/testing-1234", state: "succeeded",
+      orphaned: false, submittedAt: 100
+    }
+  };
+  const app = boot(null, { storage: { jobflick_bridge_jobs_v1: finished }, session: {} });
+  app.listeners.startup();
+  for (let attempts = 0; attempts < 20; attempts++) {
+    if (app.storage.jobflick_bridge_jobs_v1.job_12345678.orphaned) break;
+    await pause();
+  }
+  assert.equal(app.storage.jobflick_bridge_jobs_v1.job_12345678.orphaned, true);
+  const listing = await app.listeners.message({ type: "jobflick:inbox" }, app.popupSender);
+  assert.equal(listing.jobs[0].orphaned, true);
+  assert.equal(app.requests.filter(r => r.action === "submit_spec").length, 0);
+});
+
+test("startup keeps a verified living origin attached", async () => {
+  const tabToken = "tab-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+  const record = {
+    job_12345678: {
+      id: "job_12345678", tabId: 11, origin: tabToken,
+      conversation: "https://chatgpt.com/c/testing-1234", state: "succeeded",
+      orphaned: false, submittedAt: 100
+    }
+  };
+  const app = boot(null, {
+    storage: { jobflick_bridge_jobs_v1: record },
+    session: { jobflick_origin_11: tabToken }
+  });
+  app.listeners.startup();
+  for (let n = 0; n < 10; n++) await pause();
+  assert.equal(app.storage.jobflick_bridge_jobs_v1.job_12345678.orphaned, false);
+});
