@@ -112,7 +112,7 @@
           "title": "Accessible Run control",
           "status": "implemented",
           "evidence": [
-            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+            "Real FDE headless QA-only background with unchanged production content script verifies Run button and browser click. Keyboard/screen reader acceptance pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40002154617"
           ]
         },
         {
@@ -136,7 +136,7 @@
           "title": "Firefox lifecycle tests",
           "status": "implemented",
           "evidence": [
-            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+            "Production add-on installs/uninstalls in actual FDE; synthetic FDE DOM test passes with stale-YAML rejection. Event-page suspension/wake QA pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40002154617"
           ]
         }
       ],
@@ -179,7 +179,7 @@
           "title": "Diagnostics + uninstall",
           "status": "verified",
           "evidence": [
-            "Explicit read-only native host diagnostic tests cover reachable/missing/misbehaving host; disposable Fish installer covers uninstall: https://github.com/sguzman/jobflick-bridge/actions/runs/39998033616"
+            "Disposable Linux tests verify native-host diagnostic, exact manifest ownership on uninstall, and symlink resistance. https://github.com/sguzman/jobflick-bridge/actions/runs/40002154617"
           ]
         },
         {
@@ -357,7 +357,7 @@
           "title": "Multi-tab tests",
           "status": "implemented",
           "evidence": [
-            "16-conversation mock tests and wrong-tab origin safeguards; full report delivery not yet implemented. Evidence: https://github.com/sguzman/jobflick-bridge/actions/runs/40001190037"
+            "16 independent mocked content-script instances and exact route/preflight tests. Full multi-chat attachment acceptance pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40002154617"
           ]
         }
       ],
@@ -376,7 +376,7 @@
           "title": "Live upload discovery",
           "status": "implemented",
           "evidence": [
-            "Read-only user-triggered ChatGPT composer/file-input presence probe passes mocked tests, but live authenticated Firefox upload DOM and attachment acceptance remain pending: https://github.com/sguzman/jobflick-bridge/actions/runs/39998399853"
+            "Read-only generic and per-job attachment capability flags; authenticated ChatGPT upload DOM still unverified. https://github.com/sguzman/jobflick-bridge/actions/runs/40002154617"
           ]
         },
         {
@@ -493,7 +493,7 @@
           "title": "Recovery tests",
           "status": "implemented",
           "evidence": [
-            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+            "Mock startup reconciliation covers closed tabs, reused numeric IDs, unsupported future records and manual-only recovery. Live restart acceptance pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40002154617"
           ]
         }
       ],
@@ -520,7 +520,7 @@
           "title": "Scale/idle QA",
           "status": "implemented",
           "evidence": [
-            "24-job fair polling budget implemented and mocked, idle/live FDE performance acceptance pending: https://github.com/sguzman/jobflick-bridge/actions/runs/39996306288"
+            "Node stress tests cover 8,000 blocks, 16 tabs and 40 hover candidates; real headless FDE synthetic page also confirms no idle scanning. Prolonged live resource profiling pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40002154617"
           ]
         },
         {
@@ -544,7 +544,7 @@
           "title": "Safe QA setup",
           "status": "implemented",
           "evidence": [
-            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+            "Dedicated FDE QA launcher has syntax/scope checks; disposable headless FDE add-on and content-script testing passed; actual EndeavourOS profile QA pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40002154617"
           ]
         },
         {
@@ -576,8 +576,8 @@
   ],
   "last_ci": {
     "result": "success",
-    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40001190037",
-    "commit": "b9b8601c92f226d969a515d80f2979a49b4fbf45",
-    "scope": "Node behavior including popup controls, exact-origin preflight, 8k-block/16-tab mocks; Fish native installer/framing; Mozilla lint, unsigned package, disposable headless FDE add-on install. No authenticated ChatGPT execution/attachment acceptance."
+    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40002154617",
+    "commit": "986766300d0dbe0f148e74f12f54f87953b207e6",
+    "scope": "56+ Node/behavioral tests, disposable Fish native framing/ownership installer checks, Mozilla lint and unsigned QA archive; actual headless Firefox Developer Edition production add-on install plus synthetic content-script validation/click/stale-spec acceptance. No authenticated ChatGPT, real Jobflick command, or automatic upload/Send acceptance."
   }
 }

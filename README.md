@@ -2,7 +2,7 @@
 
 **Firefox Developer Edition-first WebExtension** connecting ChatGPT-authored Execarium jobs to the user's local Jobflick executor. The repository is independent; [the legacy Script-Monkey extension](https://github.com/sguzman/script-monkey/tree/main/extensions/jobflick-bridge) is reference material, not the implementation baseline.
 
-**Status:** Actual headless Firefox Developer Edition temporary add-on install/uninstall passed in CI. Authenticated ChatGPT, native Jobflick execution and attachment/auto-send acceptance remain pending. **Safety:** test first in a dedicated Firefox Developer Edition QA profile with harmless jobs. A browser profile does **not** sandbox commands run by Jobflick.
+**Status:** Headless Firefox Developer Edition accepts the production add-on and runs its production content script with a synthetic, non-executing QA background. Authenticated ChatGPT, native Jobflick execution and attachment/auto-send acceptance remain pending. **Safety:** test first in a dedicated Firefox Developer Edition QA profile with harmless jobs. A browser profile does **not** sandbox commands run by Jobflick.
 
 ## Intended flow
 
@@ -11,7 +11,7 @@
 3. ▶️ The user deliberately clicks **Run Jobflick**. No automatic queueing from page content.
 4. 🔌 Firefox Native Messaging submits the spec; Jobflick durably schedules and executes it.
 5. 📬 Completion is associated with its exact originating ChatGPT conversation.
-6. 📎 A report is returned as a file attachment, with guarded automatic submission only after live browser QA. Text delivery is a fallback, not the final design.
+6. 📎 A report is returned as a file attachment, with guarded automatic submission only after live browser QA. Manual report export is a fallback, not the final design.
 
 Execarium defines the format. Jobflick owns validation enforcement, Fish execution, scheduling, results, and cancellation. Jobflick Bridge owns Firefox integration, explicit browser authorization and result routing.
 
@@ -38,7 +38,7 @@ Execarium defines the format. Jobflick owns validation enforcement, Fish executi
 
 ## Local job inbox (Firefox toolbar)
 
-The Firefox toolbar popup lists jobs previously submitted by this extension, including jobs whose originating tabs closed. `Scan visible YAML` replaces the old no-popup toolbar action. `Refresh jobs` checks pending statuses; `Save report` requests a finished report from Jobflick **only after a user click** and saves a local text file. Reports are not stored inside browser extension storage or automatically uploaded. The file export is bounded at 512 KiB; the authoritative complete report/log remains with Jobflick. `Open chat` is manual navigation, not automatic delivery.
+The Firefox toolbar popup lists jobs previously submitted by this extension, including jobs whose originating tabs closed. `Scan visible YAML` replaces the old no-popup toolbar action. `Refresh jobs` checks pending statuses; `Save report` retrieves a finished report from Jobflick after an explicit click; a second **Download prepared report** click starts the local text-file download. Reports are not stored inside browser extension storage or automatically uploaded. The file export is bounded at 512 KiB; the authoritative complete report/log remains with Jobflick. `Open chat` is manual navigation, not automatic delivery.
 
 This is a recovery and inspection surface, **not** a claim that the future ChatGPT attachment/auto-send milestone has passed.
 
@@ -48,7 +48,7 @@ This is a recovery and inspection surface, **not** a claim that the future ChatG
 
 ## Verified CI gates
 
-The automated suite runs Node behavioral tests, Fish native-host installer tests in a disposable HOME, Mozilla `web-ext lint`, and a separate **real Firefox Developer Edition** WebDriver job that installs/uninstalls the temporary add-on in an anonymous profile. It never accesses the user's machine or starts real Jobflick jobs. [Latest passing CI run](https://github.com/sguzman/jobflick-bridge/actions/runs/39996913809).
+The automated suite runs Node behavioral tests, Fish native-host installer tests in a disposable HOME, Mozilla `web-ext lint`, and a separate **real Firefox Developer Edition** WebDriver job that installs/uninstalls the production add-on in an anonymous profile. A further disposable QA-only manifest runs the unmodified content script on synthetic ChatGPT-style HTML, confirming intent-driven Run button insertion, mouse-click handling, and rejection of YAML changed after validation. It never accesses the user's machine or starts real Jobflick jobs. [Latest passing CI run](https://github.com/sguzman/jobflick-bridge/actions/runs/40002154617).
 
 An unsigned Firefox QA ZIP is also produced by CI (artifact `jobflick-bridge-fde-qa-unsigned`). It is intended only for **temporary installation** in the dedicated QA profile via `about:debugging`, not for a release or an automatic native-host setup.
 
@@ -59,3 +59,7 @@ Before testing real local work, use the toolbar popup's **Check connection** act
 The Firefox popup's **Inspect composer** button checks only whether the active ChatGPT conversation exposes a recognized editable composer, whether it appears occupied, and whether a file input is currently present. It reads neither draft contents nor filenames. It makes no DOM mutations and cannot attach or send a report. These observations are deliberately only preliminary evidence; the actual upload path is still an unaccepted milestone.
 
 The popup also provides an explicit two-step **Request stop → Confirm stop** control for unfinished jobs. This asks Jobflick to stop the job and does not infer that the process actually stopped. No stop requests are sent automatically.
+
+## Exact-origin preflight and job lifecycle
+
+Finished jobs whose original tab still matches its opaque session token and **exact conversation URL** can be checked via **Check original chat**. This returns read-only composer/file-input flags, never a draft, report or uploaded file. If the tab closes or changes, the record becomes manual-only. Job records are versioned and retain their manual-delivery states without falsely claiming a ChatGPT send. A two-click stop action is available on unfinished jobs; native stop acknowledgement does not prove the process terminated.
