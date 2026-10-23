@@ -330,9 +330,10 @@
         {
           "id": "M4-03",
           "title": "Event page resume",
-          "status": "implemented",
+          "status": "verified",
           "evidence": [
-            "Startup/mock recovery and Firefox native routing already exercised; fresh concurrent-session token cleanup after tab closure prevents stale token resurrection, tested. Full browser restart/event-page wake/sleep in authenticated FDE profile remains unaccepted. https://github.com/sguzman/jobflick-bridge/actions/runs/40027477393"
+            "Startup/mock recovery and Firefox native routing already exercised; fresh concurrent-session token cleanup after tab closure prevents stale token resurrection, tested. Full browser restart/event-page wake/sleep in authenticated FDE profile remains unaccepted. https://github.com/sguzman/jobflick-bridge/actions/runs/40027477393",
+            "In actual disposable Firefox Developer Edition (no-execution native fixture and isolated pinned real Jobflick daemon), a previously finished Jobflick job was represented as a durable browser-side pending record while its original conversation was irreversibly orphaned. Real browser.runtime.reload() restarted the production background script, the recovered production checkJobs inspector queried the existing job, and its terminal succeeded status reappeared with deliveryState=manual_only. No second submit_spec, automatic report retrieval, rebind or Send. Both tiers passed: https://github.com/sguzman/jobflick-bridge/actions/runs/40040484782 https://github.com/sguzman/jobflick-bridge/actions/runs/40040484745. QA-only seeding/reconcile hooks are not in production; full browser-process restart and authenticated site acceptance remain separate tasks."
           ]
         },
         {
@@ -374,10 +375,10 @@
           ]
         }
       ],
-      "verified": 4,
+      "verified": 5,
       "total": 8,
-      "percent": 50,
-      "implemented": 2
+      "percent": 62,
+      "implemented": 1
     },
     {
       "id": "M5",
@@ -625,10 +626,10 @@
   },
   "overall": {
     "total": 63,
-    "verified": 42,
-    "implemented": 14,
+    "verified": 43,
+    "implemented": 13,
     "planned": 7,
-    "percent": 66,
+    "percent": 68,
     "basis": "Only verified atomic tasks count toward percentage"
   }
 }

@@ -469,3 +469,22 @@ uses the original content and popup source in disposable Firefox Developer
 Edition. External human screen-reader use, a real logged-in ChatGPT composer,
 and full desktop usability validation are still gated by M7-06; they are not
 implied by these automated accessibility API checks.
+
+## Verified M4-03: durable native inspection after Firefox event-script reload
+
+An isolated Firefox Developer Edition test submits exactly one fixed harmless
+Jobflick job. A QA-only diagnostic then models an unfinished durable browser
+record for that same authoritative native job after its conversation origin
+has been revoked. The real Firefox extension background script is reloaded,
+then production `checkJobs` resumes inspection of the original native job.
+Both the nonexecuting Native Messaging fixture and the pinned real daemon
+return terminal `succeeded` without re-enqueuing a command, changing the
+original-tab provenance, automatically retrieving a report or attempting
+ChatGPT attachment/Send. The record remains `manual_only` after recovery.
+
+[Firefox acceptance](https://github.com/sguzman/jobflick-bridge/actions/runs/40040484782) ·
+[Real Jobflick integration](https://github.com/sguzman/jobflick-bridge/actions/runs/40040484745).
+Only disposable QA code injects the pending-record fixture and explicit
+recheck: production Native Messaging, storage mutation and inspector code
+are unchanged. The gate verifies safe event-script recovery, **not** actual
+browser-process restart, authenticated ChatGPT attachment, or Send.
