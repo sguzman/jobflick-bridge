@@ -13,6 +13,8 @@
   // Retain a small bounded status cache so early completion is not lost.
   const earlyStatus = new Map();
   const MAX_EARLY_STATUSES = 32;
+  const TERMINAL = new Set(["succeeded", "failed", "cancelled", "timed_out", "interrupted"]);
+  const rank = value => TERMINAL.has(value) ? 2 : value === "running" ? 1 : 0;
   // A SPA may retain the exact same code node while changing conversations.
   // Bind each validation/Run control to the pathname that was inspected.
   // Query/hash changes on the same conversation do not revoke it.
@@ -24,6 +26,12 @@
   }
   function paintStatus(state, message) {
     if (!state?.button?.isConnected || state.route !== routeIdentity()) return;
+    // Native completion is terminal. Firefox event delivery can lag behind
+    // a newer acknowledgement; never repaint completion as running/queued.
+    if (TERMINAL.has(state.renderedStatus) ||
+        (state.renderedStatus && rank(message.state) < rank(state.renderedStatus))) return;
+    if (!["queued", "running", ...TERMINAL].includes(message.state)) return;
+    state.renderedStatus = message.state;
     state.button.textContent =
       (message.state === "succeeded" ? "✓ " : "● ") +
       message.state + " · " + message.jobId.slice(0, 8);
@@ -115,23 +123,19 @@
           // display "Queued" forever when the reply already knows it is
           // terminal. Conversely an early terminal event must beat a stale
           // queued/running submission acknowledgement.
-          const terminal = new Set([
-            "succeeded", "failed", "cancelled", "timed_out", "interrupted"
-          ]);
-          const precedence = value => terminal.has(value) ? 2 :
-            value === "running" ? 1 : 0;
           const acknowledged = {
             jobId: state.jobId,
             state: result.job.state,
             color: result.job.color || ""
           };
           const latest = early &&
-            precedence(early.state) >= precedence(acknowledged.state)
+            rank(early.state) >= rank(acknowledged.state)
             ? early : acknowledged;
           if (latest.state && latest.state !== "queued") {
             paintStatus(state, latest);
           } else {
             button.textContent = "Queued " + result.job.id.slice(0, 8);
+            state.renderedStatus = "queued";
           }
           if (/^#[0-9a-f]{6}$/i.test(result.job.color || "")) {
             button.style.borderColor = result.job.color;
@@ -171,7 +175,8 @@
           (old.button?.isConnected || old.validating)) continue;
       if (old?.jobId) byJob.delete(old.jobId);
       old?.button?.remove();
-      const state = { yaml, route, submitted: false, button: null, jobId: null, validating: true };
+      const state = { yaml, route, submitted: false, button: null, jobId: null,
+        validating: true, renderedStatus: null };
       states.set(pre, state);
       void validate(pre, state);
     }

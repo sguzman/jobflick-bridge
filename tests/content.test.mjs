@@ -414,6 +414,38 @@ test("textarea drafts are treated as occupied without revealing text",async()=>{
   assert.equal(JSON.stringify(result).includes("private text"),false);
 });
 
+test("terminal status is never downgraded by delayed native status events", async () => {
+  const app = simulate(yaml, true, { submitState: "queued" });
+  app.focus();
+  await app.pump();
+  await app.pre.button.handlers.click({ isTrusted: true });
+  const report = state => app.runtimeListener({
+    type: "jobflick:status", jobId: "job_12345678", state
+  });
+  await report("running");
+  assert.match(app.pre.button.textContent,/running/);
+  await report("succeeded");
+  assert.match(app.pre.button.textContent,/succeeded/);
+  await report("running");
+  await report("queued");
+  await report("failed");
+  assert.match(app.pre.button.textContent,/succeeded/,
+    "Late or conflicting status must not replace terminal state");
+  assert.equal(app.messages.filter(x => x.type === "jobflick:submit").length,1);
+});
+
+test("terminal submit acknowledgement is not downgraded by old queued event", async () => {
+  const app = simulate(yaml, true, { submitState: "cancelled" });
+  app.focus();
+  await app.pump();
+  await app.pre.button.handlers.click({isTrusted:true});
+  assert.match(app.pre.button.textContent,/cancelled/);
+  await app.runtimeListener({
+    type:"jobflick:status",jobId:"job_12345678",state:"queued"
+  });
+  assert.match(app.pre.button.textContent,/cancelled/);
+});
+
 test("already-finished native submission reply paints the terminal state immediately",async()=>{
   for(const state of ["succeeded","failed","cancelled","timed_out","interrupted"]){
     const app=simulate(yaml,true,{submitState:state});
