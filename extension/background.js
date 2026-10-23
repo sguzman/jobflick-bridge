@@ -275,14 +275,22 @@ async function checkJobs(onlyId = null) {
             jobs[id].color = color;
           });
         }
+        // A user can Forget a terminal record, or an independent request
+        // can quarantine it, while native inspect is still pending. Do not
+        // send any status to a stale UI owner or resurrect a removed record.
+        await serializedWrite;
+        const latest = (await saved())[id];
+        if (!sameIdentity(id, latest, recordIdentity(record)) ||
+            latest.integrityIssue) continue;
         // Once an origin is lost, do not silently reattach this record
         // even when the user later navigates to a matching conversation.
-        const tab = record.orphaned ? null
-          : await trustedTab(record.tabId, record.conversation, record.origin);
+        const tab = latest.orphaned ? null
+          : await trustedTab(latest.tabId, latest.conversation, latest.origin);
         if (!tab) {
-          if (!record.orphaned) {
+          if (!latest.orphaned) {
             await mutate(jobs => {
-              if (knownRecord(jobs[id]) && !jobs[id].orphaned) {
+              if (sameIdentity(id, jobs[id], recordIdentity(record)) &&
+                  !jobs[id].orphaned) {
                 jobs[id].orphaned = true;
                 jobs[id].deliveryState = "manual_only";
               }
@@ -291,7 +299,7 @@ async function checkJobs(onlyId = null) {
           continue;
         }
         if (changed) {
-          await browser.tabs.sendMessage(record.tabId, {
+          await browser.tabs.sendMessage(latest.tabId, {
             type: "jobflick:status", jobId: id, state,
             name: name || "", color: color || ""
           }).catch(() => {});
