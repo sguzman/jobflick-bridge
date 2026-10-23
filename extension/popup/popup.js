@@ -163,11 +163,11 @@ function renderItem(job) {
           (flags.composerPresent ? "found" : "not found") +
           " · draft: " + (flags.composerOccupied ? "occupied" : "empty/unknown") +
           " · file input: " + (flags.fileInputPresent ? "exposed" : "not exposed") +
-          " · multiple composers: " + (flags.composerAmbiguous === null ? "unknown" :
+          " · multiple composers: " + (typeof flags.composerAmbiguous !== "boolean" ? "unknown" :
             flags.composerAmbiguous ? "yes" : "no") +
-          " · multiple inputs: " + (flags.fileInputAmbiguous === null ? "unknown" :
+          " · multiple inputs: " + (typeof flags.fileInputAmbiguous !== "boolean" ? "unknown" :
             flags.fileInputAmbiguous ? "yes" : "no") +
-          " · input selection: " + (flags.selectedFilePresent === null ? "unknown" :
+          " · input selection: " + (typeof flags.selectedFilePresent !== "boolean" ? "unknown" :
             flags.selectedFilePresent ? "present" : "none detected") +
           ". Read-only: nothing attached or sent.");
       } catch (error) {
@@ -280,11 +280,11 @@ probe.addEventListener("click", async () => {
       "Composer: " + (result.composerPresent ? "found" : "not found"),
       "File picker input: " + (result.fileInputPresent ? "present" : "not exposed"),
       "Draft: " + (result.composerOccupied ? "occupied" : "empty or unavailable"),
-      "Multiple composers: " + (result.composerAmbiguous === null ? "unknown" :
+      "Multiple composers: " + (typeof result.composerAmbiguous !== "boolean" ? "unknown" :
         result.composerAmbiguous ? "yes" : "no"),
-      "Multiple file inputs: " + (result.fileInputAmbiguous === null ? "unknown" :
+      "Multiple file inputs: " + (typeof result.fileInputAmbiguous !== "boolean" ? "unknown" :
         result.fileInputAmbiguous ? "yes" : "no"),
-      "Selected input file: " + (result.selectedFilePresent === null ? "unknown" :
+      "Selected input file: " + (typeof result.selectedFilePresent !== "boolean" ? "unknown" :
         result.selectedFilePresent ? "yes" : "none detected")
     ];
     say(parts.join(" · ") + ". Read-only check: no file attached.");
