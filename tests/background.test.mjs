@@ -1555,6 +1555,64 @@ test("report response conflicting origin is quarantined without export",async()=
     "native_origin_mismatch");
 });
 
+test("native inspection finishing after record removal cannot notify old tab",async()=>{
+  const id="job_12345678";
+  const token="tab-valid";
+  let finishInspect;
+  const app=boot(request=>{
+    if(request.action==="inspect")return new Promise(resolve=>{finishInspect=resolve;});
+    throw Error("Unexpected native action");
+  },{
+    storage:{jobflick_bridge_jobs_v1:{[id]:{
+      id,recordVersion:1,state:"running",tabId:11,origin:token,
+      conversation:"https://chatgpt.com/c/testing-1234",submittedAt:5,
+      orphaned:false
+    }}},
+    session:{jobflick_origin_11:token}
+  });
+  const pending=app.listeners.message({type:"jobflick:refresh"},app.popupSender);
+  for(let i=0;i<12&&!finishInspect;i++)await pause();
+  assert.equal(typeof finishInspect,"function");
+  delete app.storage.jobflick_bridge_jobs_v1[id];
+  finishInspect({ok:true,job:{id,state:"succeeded",origin_tab_id:token}});
+  assert.equal((await pending).ok,true);
+  assert.equal(app.storage.jobflick_bridge_jobs_v1[id],undefined);
+  assert.equal(app.sentTabMessages.length,0,
+    "A removed record must not signal completion to the former chat");
+  assert.equal(app.requests.filter(r=>r.action==="inspect").length,1);
+});
+
+test("native inspection finishing after quarantine cannot paint old tab",async()=>{
+  const id="job_12345678";
+  const token="tab-valid";
+  let finishInspect;
+  const app=boot(request=>{
+    if(request.action==="inspect")return new Promise(resolve=>{finishInspect=resolve;});
+    throw Error("Unexpected native action");
+  },{
+    storage:{jobflick_bridge_jobs_v1:{[id]:{
+      id,recordVersion:1,state:"running",tabId:11,origin:token,
+      conversation:"https://chatgpt.com/c/testing-1234",submittedAt:6,
+      orphaned:false
+    }}},
+    session:{jobflick_origin_11:token}
+  });
+  const pending=app.listeners.message({type:"jobflick:refresh"},app.popupSender);
+  for(let i=0;i<12&&!finishInspect;i++)await pause();
+  assert.equal(typeof finishInspect,"function");
+  const record=app.storage.jobflick_bridge_jobs_v1[id];
+  record.integrityIssue="native_origin_mismatch";
+  record.orphaned=true;
+  record.deliveryState="manual_only";
+  finishInspect({ok:true,job:{id,state:"succeeded",origin_tab_id:token}});
+  assert.equal((await pending).ok,true);
+  assert.equal(app.sentTabMessages.length,0,
+    "A quarantined record must never notify the former browser tab");
+  assert.equal(record.integrityIssue,"native_origin_mismatch");
+  assert.equal(record.orphaned,true);
+  assert.equal(app.requests.filter(r=>r.action==="inspect").length,1);
+});
+
 test("unchanged long-running native status avoids local inbox rewrites and tab spam",async()=>{
   const id="job_12345678";
   const token="tab-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
