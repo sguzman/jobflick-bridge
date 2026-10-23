@@ -51,6 +51,23 @@ const knownRecord = record => record && typeof record === "object" &&
 const matchedRecord = (id, record) =>
   validJobId(id) && knownRecord(record) && record.id === id;
 
+// Retain only non-sensitive identity fields across asynchronous native/DOM
+// operations. A record may be forgotten, quarantined, or replaced while a
+// response is in flight. Never use a stale snapshot to authorize output.
+function recordIdentity(record) {
+  return {
+    origin: record.origin, tabId: record.tabId,
+    conversation: record.conversation, submittedAt: record.submittedAt
+  };
+}
+function sameIdentity(id, record, identity) {
+  return matchedRecord(id, record) &&
+    record.origin === identity.origin &&
+    record.tabId === identity.tabId &&
+    record.conversation === identity.conversation &&
+    record.submittedAt === identity.submittedAt;
+}
+
 function canonical(value) {
   try {
     const u = new URL(value);
@@ -619,7 +636,18 @@ async function onPopupMessage(message, sender) {
       if (record.integrityIssue) {
         return { ok: false, message: "Native identity mismatch; recover this report directly in Jobflick" };
       }
+      const identity = recordIdentity(record);
       const response = await native({ action: "show", id });
+      // A user may Forget this bridge record, or another inspection may
+      // quarantine it, while the native process is responding. A report
+      // cannot outlive that authorization. Orphaning alone is allowed:
+      // explicit manual download is intentionally the recovery fallback.
+      await serializedWrite;
+      const latest = (await saved())[id];
+      if (!sameIdentity(id, latest, identity) ||
+          !FINISHED.has(latest.state) || latest.integrityIssue) {
+        return { ok: false, message: "Bridge record changed during report retrieval; recover directly in Jobflick" };
+      }
       // A host's optional response metadata may reveal a different record.
       // Once this happens never continue exposing reports through the
       // extension, even when the local job previously finished.
@@ -629,7 +657,7 @@ async function onPopupMessage(message, sender) {
         response.job, "origin_tab_id", record.origin);
       if (wrongJobId || wrongOrigin) {
         await mutate(jobs => {
-          if (!knownRecord(jobs[id])) return;
+          if (!sameIdentity(id, jobs[id], identity)) return;
           jobs[id].orphaned = true;
           jobs[id].deliveryState = "manual_only";
           jobs[id].integrityIssue = wrongJobId
