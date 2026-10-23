@@ -28,6 +28,10 @@ switch $argv[1]
             echo "Refusing to overwrite; inspect/remove it explicitly first" >&2
             exit 2
         end
+        if not command -sq jq
+            echo "jq required; no changes made" >&2
+            exit 2
+        end
         mkdir -p -- "$host_dir" "$manifest_dir"; or exit 1
         chmod 700 -- "$host_dir"; or exit 1
         set -l staging (mktemp "$host_dir/native-host.XXXXXXXX"); or exit 1
@@ -36,10 +40,6 @@ switch $argv[1]
         chmod 700 -- "$staging"; or exit 1
         mv -- "$staging" "$wrapper"; or exit 1
         # No string interpolation into JSON for an untrusted path. jq escapes it.
-        if not command -sq jq
-            echo "jq required to write escaped host manifest (wrapper created)" >&2
-            exit 2
-        end
         jq -n --arg path "$wrapper" \
           '{name:"io.github.sguzman.jobflick", description:"Local Jobflick Firefox bridge", path:$path, type:"stdio", allowed_extensions:["jobflick-bridge@sguzman.github.io"]}' > "$manifest"; or exit 1
         chmod 600 -- "$manifest"; or exit 1
