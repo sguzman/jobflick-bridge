@@ -132,3 +132,7 @@ Background inbox pagination accepts at most 128 characters of search text and fi
 ## CI change scoping
 
 The lightweight workflow runs on every push to `main` and on explicit dispatch. The separate real-backend workflow runs automatically only for changes to the native-facing background/content/manifest, real-host tests and fixtures, native-host installer, package manifest, or integration workflow. It can still be dispatched manually. A passing lightweight run is **not** evidence of newly rerun real Jobflick integration; both statuses must be reported separately, using the latest native run relevant to the changed code. No release or authenticated ChatGPT automation is inferred from either.
+
+## Duplicate host job ID regression
+
+Mocked tests submit a terminal job and then make a second native response return the same ID; the second browser message must fail closed while the original routing metadata stays intact. The same rule protects a future-version record that the current extension cannot interpret. No implicit resubmission, replacement or report fetch occurs. Actual Jobflick uses unique persisted job IDs; these are defensive adversarial tests, not evidence that normal native IDs collide.

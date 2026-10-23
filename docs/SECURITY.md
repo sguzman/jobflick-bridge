@@ -56,3 +56,7 @@ The Firefox tab URL update listener revokes a job's automatic-delivery eligibili
 ## History API navigation and permissions
 
 The bridge requests Firefox's read-only `webNavigation` permission to detect `history.pushState()` / `replaceState()` conversation switches that may not trigger a full page load. Its history listener is filtered to top-level frames at the two already-authorized ChatGPT hostnames. No browsing history is stored or sent anywhere; only the current route comparison invalidates stale Jobflick delivery metadata.
+
+## Native job ID collision handling
+
+A Jobflick native response may have been accepted before the browser sees it. If its ID collides with an existing saved job, the bridge refuses to overwrite any previous origin, version, state or manual recovery metadata. The content script receives a submission-uncertain error and must not retry automatically. The extension does not assume that a second response with an identical ID authorizes a different chat. The durable Jobflick daemon remains responsible for its own queue and report identity.
