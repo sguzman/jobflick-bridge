@@ -15,7 +15,7 @@ Before any real shell job:
 
 | Test | Required observation | Status |
 | --- | --- | --- |
-| Firefox Developer Edition extension loads | No manifest/background errors | Not run |
+| Firefox Developer Edition extension loads | Real disposable headless Firefox add-on install/uninstall; authenticated desktop still pending | Headless CI pass (not full live QA) |
 | Missing native host | No jobs, clear failure | Not run |
 | Invalid schema/unsupported command | No Run action available | Not run |
 | Synthetic page click | No submission | Not run |

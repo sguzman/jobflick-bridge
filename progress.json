@@ -161,9 +161,9 @@
         {
           "id": "M2-02",
           "title": "Fish host installer",
-          "status": "implemented",
+          "status": "verified",
           "evidence": [
-            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+            "Disposable Fish installer integration: allowed_extensions, manifest owner mode, overwrite refusal and uninstall; actual Jobflick daemon integration untested: https://github.com/sguzman/jobflick-bridge/actions/runs/39996913809"
           ]
         },
         {
@@ -207,10 +207,10 @@
           ]
         }
       ],
-      "verified": 2,
+      "verified": 3,
       "total": 7,
-      "percent": 28,
-      "implemented": 5
+      "percent": 42,
+      "implemented": 4
     },
     {
       "id": "M3",
@@ -564,8 +564,8 @@
   ],
   "last_ci": {
     "result": "success",
-    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/39996306288",
-    "commit": "7ef3daf35793134b5f5b6dbbf83a7a7c17a170cb",
-    "scope": "Node syntax + mocked background/content behavior, fish syntax, Mozilla web-ext lint. No authenticated Firefox/ChatGPT or live native-host execution."
+    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/39996913809",
+    "commit": "2df0db06820c3f7e460873721506204fcbde7caf",
+    "scope": "Behavioral mock tests, Linux fake native-host installer, Firefox Developer Edition temporary add-on installation/uninstallation, Mozilla manifest lint. No authenticated ChatGPT, real Jobflick daemon job, or file upload acceptance."
   }
 }
