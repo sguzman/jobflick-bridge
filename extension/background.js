@@ -276,8 +276,12 @@ async function checkJobs(onlyId = null) {
           boundedName(status.job.name) : boundedName(record.name);
         const color = typeof status.job.color === "string" ?
           boundedColor(status.job.color) : boundedColor(record.color);
+        // Compare normalized values. Older records may omit name/color:
+        // an absent field and the bounded empty fallback must not trigger
+        // repeated inbox writes on every unchanged native inspection.
         const changed = state !== record.state ||
-          name !== record.name || color !== record.color;
+          name !== boundedName(record.name) ||
+          color !== boundedColor(record.color);
         if (changed) {
           await mutate(jobs => {
             if (!sameIdentity(id, jobs[id], recordIdentity(record)) ||
