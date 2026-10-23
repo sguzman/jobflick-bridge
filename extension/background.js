@@ -477,13 +477,15 @@ async function onPopupMessage(message, sender) {
         return { ok: false, message: "Invalid job ID" };
       }
       const record = (await saved())[id];
-      if (!matchedRecord(id, record) || !FINISHED.has(record.state) || record.orphaned) {
+      if (!matchedRecord(id, record) || !FINISHED.has(record.state) ||
+          record.orphaned || record.integrityIssue) {
         return { ok: false, message: "This job has no verified active original conversation" };
       }
+      const identity = recordIdentity(record);
       const tab = await trustedTab(record.tabId, record.conversation, record.origin);
       if (!tab) {
         await mutate(jobs => {
-          if (knownRecord(jobs[id])) {
+          if (sameIdentity(id, jobs[id], identity)) {
             jobs[id].orphaned = true;
             jobs[id].deliveryState = "manual_only";
           }
@@ -503,12 +505,21 @@ async function onPopupMessage(message, sender) {
       // asynchronous response. Reverify before claiming any destination.
       if (!await trustedTab(record.tabId, record.conversation, record.origin)) {
         await mutate(jobs => {
-          if (knownRecord(jobs[id])) {
+          if (sameIdentity(id, jobs[id], identity)) {
             jobs[id].orphaned = true;
             jobs[id].deliveryState = "manual_only";
           }
         });
         return { ok: false, message: "Original chat navigated during inspection; use manual report delivery" };
+      }
+      // The original local authorization might have been forgotten or
+      // quarantined during the composer probe, even if the URL still matches.
+      // Never issue a stale "verified" result on that earlier snapshot.
+      await serializedWrite;
+      const latest = (await saved())[id];
+      if (!sameIdentity(id, latest, identity) ||
+          !FINISHED.has(latest.state) || latest.orphaned || latest.integrityIssue) {
+        return { ok: false, message: "Original chat record changed during inspection; use manual recovery" };
       }
       // No report payload, draft text, file names, DOM edits or Send action.
       // Flags alone never imply an attachment can safely be inserted.
