@@ -23,7 +23,7 @@ async function main(){
   manifest.host_permissions=["http://127.0.0.1/*"];
   manifest.content_scripts=[{
     matches:["http://127.0.0.1/*"],
-    js:["attachment-adapter.js","content.js"],run_at:"document_idle"
+    js:["attachment-adapter.js","content.js","qa-probe.js"],run_at:"document_idle"
   }];
   manifest.background={scripts:["qa-background.js"]};
   manifest.action={default_title:"Synthetic browser QA"};
@@ -31,10 +31,19 @@ async function main(){
   fs.copyFileSync(path.join(extensionRoot,"attachment-adapter.js"),
     path.join(temporary,"attachment-adapter.js"));
   fs.copyFileSync(path.join(extensionRoot,"content.js"),path.join(temporary,"content.js"));
+  fs.writeFileSync(path.join(temporary,"qa-probe.js"),[
+    '"use strict";',
+    'document.getElementById("qa-inspect").addEventListener("click",async event=>{',
+    ' if(!event.isTrusted)return;',
+    ' const reply=await browser.runtime.sendMessage({type:"jobflick:qa-probe"});',
+    ' document.documentElement.dataset.qaProbe=JSON.stringify(reply);',
+    '});'
+  ].join("\n"));
   fs.writeFileSync(path.join(temporary,"qa-background.js"),[
     '"use strict";',
-    'browser.runtime.onMessage.addListener(message=>{',
+    'browser.runtime.onMessage.addListener((message,sender)=>{',
     ' if(message?.type==="jobflick:validate")return Promise.resolve({ok:true});',
+    ' if(message?.type==="jobflick:qa-probe")return browser.tabs.sendMessage(sender.tab.id,{type:"jobflick:probe-upload"});',
     ' if(message?.type==="jobflick:submit")return Promise.resolve({ok:false,message:"Synthetic fixture never queues work"});',
     ' return Promise.resolve({ok:false,message:"Unknown synthetic action"});',
     '});'
@@ -46,7 +55,10 @@ async function main(){
   ].join("\n");
   const escapeHtml=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;");
   const html='<!doctype html><html><head><meta charset="utf-8"></head><body>'+
-    '<main><pre><code>'+escapeHtml(yaml)+'</code></pre></main></body></html>';
+    '<main><pre><code>'+escapeHtml(yaml)+'</code></pre></main>'+
+    '<div id="prompt-textarea" contenteditable="true">Private QA draft - do not transmit</div>'+
+    '<input id="qa-original" type="file"><input id="qa-extra" type="file">'+
+    '<button id="qa-inspect" type="button">Inspect synthetic composer</button></body></html>';
   const server=http.createServer((_request,response)=>{
     response.writeHead(200,{"Content-Type":"text/html; charset=utf-8"});
     response.end(html);
@@ -136,8 +148,52 @@ async function main(){
     await newButton.sendKeys(Key.ENTER);
     await driver.wait(async()=>/Submission uncertain/.test(await newButton.getText()),10000);
 
+    // Read-only composer and FileList preflight in actual Firefox.
+    await driver.executeScript(
+      "const original=document.querySelector('#qa-original');"+
+      "const transfer=new DataTransfer();"+
+      "transfer.items.add(new File(['private fixture'],'private-selected.txt',{type:'text/plain'}));"+
+      "original.files=transfer.files;"
+    );
+    const inspect=await driver.findElement(By.id("qa-inspect"));
+    await inspect.click();
+    await driver.wait(async()=>await driver.executeScript(
+      "return !!document.documentElement.dataset.qaProbe"
+    ),10000);
+    let flags=JSON.parse(await driver.executeScript(
+      "return document.documentElement.dataset.qaProbe"));
+    assert.deepEqual(Object.keys(flags).sort(),[
+      "ok","composerPresent","composerAmbiguous","composerOccupied",
+      "fileInputPresent","fileInputAmbiguous","selectedFilePresent"
+    ].sort());
+    assert.equal(flags.composerOccupied,true);
+    assert.equal(flags.composerAmbiguous,false);
+    assert.equal(flags.fileInputAmbiguous,true);
+    assert.equal(flags.selectedFilePresent,true);
+    assert.equal(await driver.executeScript(
+      "return document.querySelector('#prompt-textarea').textContent"),
+      "Private QA draft - do not transmit");
+    assert.equal(await driver.executeScript(
+      "return document.querySelector('#qa-original').files[0].name"),
+      "private-selected.txt");
+
+    await driver.executeScript(
+      "document.querySelector('#qa-original').value='';"+
+      "document.querySelector('#qa-extra').remove();"+
+      "document.querySelector('#prompt-textarea').textContent='';"+
+      "document.documentElement.dataset.qaProbe='';"
+    );
+    await inspect.click();
+    await driver.wait(async()=>await driver.executeScript(
+      "return !!document.documentElement.dataset.qaProbe"
+    ),10000);
+    flags=JSON.parse(await driver.executeScript(
+      "return document.documentElement.dataset.qaProbe"));
+    assert.equal(flags.composerOccupied,false);
+    assert.equal(flags.fileInputAmbiguous,false);
+    assert.equal(flags.selectedFilePresent,false);
     await driver.uninstallAddon(id);
-    console.log("Synthetic FDE: idle, stale YAML, detached DOM, fresh rerender and trusted keyboard activation passed; no native commands executed");
+    console.log("Synthetic FDE: inert YAML controls, real keyboard activation, draft and selected-file read-only probes passed; no native commands executed");
   }finally{
     if(driver)await driver.quit();
     await new Promise(resolve=>server.close(resolve));
