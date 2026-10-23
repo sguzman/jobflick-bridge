@@ -188,3 +188,7 @@ Only tracked/changed ChatGPT routes can orphan existing jobs. Repeated same-conv
 ## Prototype-collision job ID adversarial coverage
 
 Mock native submission returns reserved JavaScript property names, including `__proto__` and `constructor`. Every case is refused before persisting or binding browser origin, with no automatic resubmission. The popup likewise rejects those IDs for preflight, report retrieval, cancellation and Forget. JSON-imported future/malformed local mappings containing such keys are not polled, exported or displayed as valid jobs. Real Jobflick-generated UUIDs are unaffected.
+
+## Very fast native job completion at submit acknowledgement
+
+A very short Fish job may finish before the native `submit_spec` response arrives. The Run control now accepts a terminal state directly from that response rather than displaying a stale Queued label indefinitely. When a terminal `inspect` status arrived even earlier, a subsequent queued or running submission acknowledgement must never downgrade it. Node regression cases cover all Jobflick terminal states, early-running vs queued and early-terminal vs queued/running. This does not enable automatic report retrieval or Send.
