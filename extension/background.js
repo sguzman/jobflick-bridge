@@ -177,6 +177,8 @@ async function checkJobs(onlyId = null) {
         !FINISHED.has(record.state) && record.state !== "unknown")
       .sort((a, b) => (a[1].lastCheckedAt || 0) - (b[1].lastCheckedAt || 0))
       .slice(0, MAX_STATUS_PER_POLL);
+    // Idle event-page wakes and unrelated tab completions remain read-only.
+    if (!pending.length) return true;
     // Record attempts even if the native host is temporarily unavailable;
     // otherwise one broken record can starve later jobs indefinitely.
     const checkedAt = Date.now();
@@ -648,15 +650,23 @@ browser.alarms.onAlarm.addListener(alarm => {
 async function reconcileTabRoute(tabId, nextUrl) {
   if (!Number.isInteger(tabId)) return;
   const next = canonical(nextUrl);
-  await mutate(jobs => {
-    for (const record of Object.values(jobs)) {
-      if (!knownRecord(record) || record.tabId !== tabId || record.orphaned) continue;
-      if (record.conversation !== next) {
-        record.orphaned = true;
-        record.deliveryState = "manual_only";
+  await serializedWrite;
+  const before = Object.values(await saved());
+  // Duplicate route notifications and unrelated tabs cannot generate full
+  // local inbox writes when no job actually needs to be orphaned.
+  if (before.some(record => knownRecord(record) &&
+      record.tabId === tabId && !record.orphaned &&
+      record.conversation !== next)) {
+    await mutate(jobs => {
+      for (const record of Object.values(jobs)) {
+        if (!knownRecord(record) || record.tabId !== tabId || record.orphaned) continue;
+        if (record.conversation !== next) {
+          record.orphaned = true;
+          record.deliveryState = "manual_only";
+        }
       }
-    }
-  });
+    });
+  }
   // A new chat in this tab must receive a fresh token. Do not remove the
   // identity while a record for the SAME conversation is still valid.
   const records = Object.values(await saved());
@@ -667,11 +677,13 @@ async function reconcileTabRoute(tabId, nextUrl) {
   }
 }
 
-browser.tabs.onUpdated.addListener((id, change) => {
+browser.tabs.onUpdated.addListener((id, change, tab) => {
   if (typeof change.url === "string") {
     void reconcileTabRoute(id, change.url)
       .then(() => checkJobs()).catch(() => {});
-  } else if (change.status === "complete") {
+  } else if (change.status === "complete" && canonical(tab?.url)) {
+    // Unrelated sites aren't Jobflick activity. Native alarm/startup paths
+    // still reconcile unfinished jobs while Firefox is browsing elsewhere.
     void checkJobs();
   }
 });
