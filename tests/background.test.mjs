@@ -1639,6 +1639,42 @@ test("duplicate same-chat navigation does not rewrite terminal records",async()=
   assert.equal(app.storageWrites.length,1,"Returning cannot rebind old metadata");
 });
 
+test("malformed stored ID cannot retain a Firefox session token on navigation",async()=>{
+  const storage={jobflick_bridge_jobs_v1:{
+    job_wrong_a:{id:"job_wrong_b",recordVersion:1,state:"running",tabId:11,
+      conversation:"https://chatgpt.com/c/testing-1234",origin:"tab-poison",
+      orphaned:false}
+  }};
+  const app=boot(null,{storage,session:{jobflick_origin_11:"tab-poison"}});
+  app.listeners.historyState({
+    tabId:11,frameId:0,url:"https://chatgpt.com/c/testing-1234"
+  });
+  for(let i=0;i<15;i++)await pause();
+  assert.equal(app.session.jobflick_origin_11,undefined,
+    "An invalid-key record must not keep the tab token alive");
+  assert.equal(app.storageWrites.length,0,
+    "No unrecognized record should be rewritten during navigation");
+  assert.equal(storage.jobflick_bridge_jobs_v1.job_wrong_a.orphaned,false);
+  assert.equal(app.requests.length,0);
+});
+
+test("malformed stored ID stays untouched when its Firefox tab closes",async()=>{
+  const storage={jobflick_bridge_jobs_v1:{
+    job_wrong_a:{id:"job_wrong_b",recordVersion:1,state:"running",tabId:11,
+      conversation:"https://chatgpt.com/c/testing-1234",origin:"tab-poison",
+      orphaned:false}
+  }};
+  const app=boot(null,{storage,session:{jobflick_origin_11:"tab-poison"}});
+  app.tabs.delete(11);
+  app.listeners.removed(11);
+  for(let i=0;i<15;i++)await pause();
+  assert.equal(app.session.jobflick_origin_11,undefined);
+  assert.equal(app.storageWrites.length,0);
+  assert.equal(storage.jobflick_bridge_jobs_v1.job_wrong_a.orphaned,false,
+    "Corrupt record preserved untouched for explicit recovery");
+  assert.equal(app.requests.length,0);
+});
+
 test("closing tab during pending session token write cannot leave recycled ID token",async()=>{
   let allowSessionWrite=null;
   const app=boot(null,{
