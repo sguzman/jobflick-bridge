@@ -1327,6 +1327,80 @@ test("finished quarantined job cannot retrieve a report through the extension",a
   assert.equal(app.requests.length,0);
 });
 
+test("forget during pending native show prevents stale report disclosure",async()=>{
+  const id="job_12345678";
+  let finishShow;
+  const app=boot(request=>{
+    if(request.action==="show")return new Promise(resolve=>{finishShow=resolve;});
+    throw Error("Unexpected native action");
+  },{storage:{jobflick_bridge_jobs_v1:{[id]:{
+    id,recordVersion:1,state:"succeeded",origin:"tab-local",
+    submittedAt:100,tabId:11,
+    conversation:"https://chatgpt.com/c/testing-1234",orphaned:false
+  }}}});
+  const pending=app.listeners.message({type:"jobflick:report",id},app.popupSender);
+  for(let n=0;n<12&&!finishShow;n++)await pause();
+  assert.equal(typeof finishShow,"function");
+  const forgotten=await app.listeners.message({type:"jobflick:forget",id},app.popupSender);
+  assert.equal(forgotten.ok,true);
+  finishShow({ok:true,report:"private synthetic report"});
+  const result=await pending;
+  assert.equal(result.ok,false);
+  assert.equal(result.report,undefined);
+  assert.equal(app.storage.jobflick_bridge_jobs_v1[id],undefined);
+  assert.equal(app.requests.filter(r=>r.action==="show").length,1);
+});
+
+test("quarantine during pending native show prevents stale report disclosure",async()=>{
+  const id="job_12345678";
+  let finishShow;
+  const app=boot(request=>{
+    if(request.action==="show")return new Promise(resolve=>{finishShow=resolve;});
+    throw Error("Unexpected native action");
+  },{storage:{jobflick_bridge_jobs_v1:{[id]:{
+    id,recordVersion:1,state:"succeeded",origin:"tab-local",
+    submittedAt:101,tabId:11,
+    conversation:"https://chatgpt.com/c/testing-1234",orphaned:false
+  }}}});
+  const pending=app.listeners.message({type:"jobflick:report",id},app.popupSender);
+  for(let n=0;n<12&&!finishShow;n++)await pause();
+  assert.equal(typeof finishShow,"function");
+  // Simulate a concurrent integrity inspection updating the durable record.
+  const stored=app.storage.jobflick_bridge_jobs_v1[id];
+  stored.integrityIssue="native_origin_mismatch";
+  stored.orphaned=true;
+  stored.deliveryState="manual_only";
+  finishShow({ok:true,report:"private synthetic report"});
+  const result=await pending;
+  assert.equal(result.ok,false);
+  assert.equal(result.report,undefined);
+  assert.equal(app.requests.filter(r=>r.action==="show").length,1);
+});
+
+test("orphaning during native show preserves explicit manual report fallback",async()=>{
+  const id="job_12345678";
+  let finishShow;
+  const app=boot(request=>{
+    if(request.action==="show")return new Promise(resolve=>{finishShow=resolve;});
+    throw Error("Unexpected native action");
+  },{storage:{jobflick_bridge_jobs_v1:{[id]:{
+    id,recordVersion:1,state:"succeeded",origin:"tab-local",
+    submittedAt:102,tabId:11,
+    conversation:"https://chatgpt.com/c/testing-1234",orphaned:false
+  }}}});
+  const pending=app.listeners.message({type:"jobflick:report",id},app.popupSender);
+  for(let n=0;n<12&&!finishShow;n++)await pause();
+  app.tabs.delete(11);
+  app.listeners.removed(11);
+  for(let n=0;n<12;n++)await pause();
+  assert.equal(app.storage.jobflick_bridge_jobs_v1[id].orphaned,true);
+  finishShow({ok:true,report:"synthetic report recovered by manual click"});
+  const result=await pending;
+  assert.equal(result.ok,true);
+  assert.equal(result.report,"synthetic report recovered by manual click");
+  assert.equal(app.requests.filter(r=>r.action==="show").length,1);
+});
+
 test("report response identity mismatch is quarantined without exposing content",async()=>{
   const id="job_12345678";
   const app=boot(request=>{
