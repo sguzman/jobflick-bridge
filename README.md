@@ -87,3 +87,7 @@ The popup's keyboard-accessible search form filters saved Jobflick records by jo
 ## 🧪 Two-tier Firefox CI
 
 `Firefox Bridge Checks` runs Node/behavioral tests, Mozilla lint, unsigned QA packaging, and actual headless Firefox Developer Edition installation/UI checks on every `main` update. `Firefox Bridge Real Jobflick Integration` separately builds pinned Jobflick and verifies a harmless Fish job through Native Messaging when production native-facing code, native test fixtures, host installer or its workflow changes. Documentation and popup-only changes do not trigger a needless Rust rebuild; their fast Firefox checks still run.
+
+## 📎 Future automatic report delivery
+
+Automatic report attachment and Send are deliberately disabled until their real authenticated Firefox acceptance gates pass. The safety and idempotency requirements are documented in [Report attachment and Send acceptance contract](docs/DELIVERY-CONTRACT.md). The current supported workflow is explicit local Save report → Download prepared report, with Jobflick retaining the durable original.
