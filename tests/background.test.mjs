@@ -70,7 +70,15 @@ function boot(nativeOverride = null, options = {}) {
       onUpdated: { addListener: callback => { listeners.updated = callback; } },
       onRemoved: { addListener: callback => { listeners.removed = callback; } }
     },
-    action: { onClicked: { addListener: callback => { listeners.action = callback; } } }
+    action: { onClicked: { addListener: callback => { listeners.action = callback; } } },
+    webNavigation: {
+      onHistoryStateUpdated: {
+        addListener: (callback, filter) => {
+          listeners.historyState = callback;
+          listeners.historyFilter = filter;
+        }
+      }
+    }
   };
   vm.runInNewContext(source, {
     browser, URL, TextEncoder, crypto: { randomUUID: options.randomUUID ||
@@ -803,4 +811,52 @@ test("navigation while native submission completes records job as manual-only",a
   },app.popupSender);
   assert.equal(verified.ok,false);
   assert.equal(app.requests.filter(x=>x.action==="submit_spec").length,1);
+});
+
+test("Firefox pushState to a different conversation permanently revokes old origin",async()=>{
+  const app=boot(request=>{
+    if(request.action==="submit_spec")return {
+      ok:true,job:{id:"job_12345678",state:"succeeded"}
+    };
+    return {ok:true};
+  });
+  await app.listeners.message({type:"jobflick:submit",yaml:sample},app.sender);
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(app.listeners.historyFilter)),
+    {url:[{hostEquals:"chatgpt.com"},{hostEquals:"chat.openai.com"}]}
+  );
+  app.listeners.historyState({
+    tabId:11,frameId:0,url:"https://chatgpt.com/c/different-through-pushstate"
+  });
+  for(let i=0;i<12;i++)await pause();
+  const old=app.storage.jobflick_bridge_jobs_v1.job_12345678;
+  assert.equal(old.orphaned,true);
+  assert.equal(old.deliveryState,"manual_only");
+  assert.equal(app.session.jobflick_origin_11,undefined);
+  app.listeners.historyState({
+    tabId:11,frameId:0,url:"https://chatgpt.com/c/testing-1234"
+  });
+  for(let i=0;i<12;i++)await pause();
+  assert.equal(old.orphaned,true);
+  const result=await app.listeners.message({
+    type:"jobflick:preflight",id:"job_12345678"
+  },app.popupSender);
+  assert.equal(result.ok,false);
+});
+
+test("iframe History API changes do not affect the parent ChatGPT delivery token",async()=>{
+  const app=boot(request=>{
+    if(request.action==="submit_spec")return {
+      ok:true,job:{id:"job_12345678",state:"succeeded"}
+    };
+    return {ok:true};
+  });
+  await app.listeners.message({type:"jobflick:submit",yaml:sample},app.sender);
+  const token=app.session.jobflick_origin_11;
+  app.listeners.historyState({
+    tabId:11,frameId:2,url:"https://chatgpt.com/c/embedded-history"
+  });
+  for(let i=0;i<5;i++)await pause();
+  assert.equal(app.session.jobflick_origin_11,token);
+  assert.equal(app.storage.jobflick_bridge_jobs_v1.job_12345678.orphaned,false);
 });

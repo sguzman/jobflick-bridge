@@ -511,6 +511,14 @@ browser.tabs.onUpdated.addListener((id, change) => {
     void checkJobs();
   }
 });
+// ChatGPT changes conversations with the History API without a full reload.
+// Observe only top-level route changes on the already-authorized hosts.
+browser.webNavigation.onHistoryStateUpdated.addListener(details => {
+  if (details.frameId !== 0 || !Number.isInteger(details.tabId)) return;
+  void reconcileTabRoute(details.tabId, details.url)
+    .then(() => checkJobs()).catch(() => {});
+}, { url: [{ hostEquals: "chatgpt.com" }, { hostEquals: "chat.openai.com" }] });
+
 browser.tabs.onRemoved.addListener(id => {
   void browser.storage.session.remove("jobflick_origin_" + id);
   // Keep job data; do not interpret a recycled numeric tab ID as its origin.

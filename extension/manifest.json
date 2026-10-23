@@ -12,7 +12,8 @@
   "permissions": [
     "nativeMessaging",
     "storage",
-    "alarms"
+    "alarms",
+    "webNavigation"
   ],
   "host_permissions": [
     "https://chatgpt.com/*",

@@ -52,3 +52,7 @@ The trusted Firefox popup offers `Open chat` only for exact, syntactically valid
 ## Navigation-origin invalidation
 
 The Firefox tab URL update listener revokes a job's automatic-delivery eligibility when the tab transitions away from the saved canonical conversation, even if the tab subsequently returns to that URL. The previous tab token is discarded once no non-orphaned record for that conversation remains; normal same-route reloads preserve the token. After `submit_spec` returns, the bridge also rechecks the origin **inside** its serialized record write, so a navigation while the native call is in flight records an accepted job as `manual_only`. These transitions never retry execution or discard the durable Jobflick report.
+
+## History API navigation and permissions
+
+The bridge requests Firefox's read-only `webNavigation` permission to detect `history.pushState()` / `replaceState()` conversation switches that may not trigger a full page load. Its history listener is filtered to top-level frames at the two already-authorized ChatGPT hostnames. No browsing history is stored or sent anywhere; only the current route comparison invalidates stale Jobflick delivery metadata.
