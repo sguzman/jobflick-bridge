@@ -95,6 +95,7 @@ function simulate(initialYaml = yaml, validateOK = true, probeOptions = {}) {
           return { ok: validateOK };
         }
         if (message.type === "jobflick:submit") {
+          if (probeOptions.submitGate) await probeOptions.submitGate;
           if (probeOptions.earlyStatus) {
             await runtimeListener({
               type: "jobflick:status", jobId: "job_12345678",
@@ -245,6 +246,44 @@ test("detached code moved outside main cannot execute",async()=>{
   await button.handlers.click({isTrusted:true});
   assert.equal(button.isConnected,false);
   assert.equal(app.messages.filter(x=>x.type==="jobflick:submit").length,0);
+});
+
+test("queued submit acknowledgment after navigation cannot paint another chat", async () => {
+  let release;
+  const submitGate = new Promise(resolve => { release = resolve; });
+  const app = simulate(yaml, true, { submitGate, submitState: "queued" });
+  app.focus();
+  await app.pump();
+  const oldButton = app.pre.button;
+  const pending = oldButton.handlers.click({ isTrusted: true });
+  await Promise.resolve();
+  assert.equal(app.messages.filter(x => x.type === "jobflick:submit").length, 1);
+  app.route.pathname = "/c/new-conversation";
+  release();
+  await pending;
+  assert.equal(oldButton.isConnected, false);
+  assert.equal(app.messages.filter(x => x.type === "jobflick:submit").length, 1,
+    "Navigation cannot trigger duplicate execution");
+  app.focus();
+  await app.pump();
+  assert.match(app.pre.button.textContent, /Run Jobflick/,
+    "New conversation may only show a freshly validated Run");
+});
+
+test("failed native submit reply after navigation removes stale control", async () => {
+  let release;
+  const submitGate = new Promise(resolve => { release = resolve; });
+  const app = simulate(yaml, true, { submitGate });
+  app.focus();
+  await app.pump();
+  const button = app.pre.button;
+  const pending = button.handlers.click({ isTrusted: true });
+  await Promise.resolve();
+  app.route.pathname = "/c/another-conversation";
+  release();
+  await pending;
+  assert.equal(button.isConnected, false);
+  assert.equal(app.messages.filter(x => x.type === "jobflick:submit").length, 1);
 });
 
 test("invalid YAML never shows Run button", async () => {

@@ -94,6 +94,14 @@
           const result = await browser.runtime.sendMessage({
             type: "jobflick:submit", yaml: state.yaml
           });
+          // A real native submission can finish after this tab navigates.
+          // Jobflick owns that durable job; do not paint a result into a
+          // different conversation or claim its old button is actionable.
+          if (!button.isConnected || !pre.isConnected || !pre.closest("main") ||
+              state.route !== routeIdentity()) {
+            button.remove();
+            return;
+          }
           if (!result?.ok || typeof result.job?.id !== "string") {
             button.textContent = "Submission uncertain — inspect Jobflick";
             button.title = result?.message || "Do not automatically retry";
@@ -129,6 +137,11 @@
             button.style.borderColor = result.job.color;
           }
         } catch (error) {
+          if (!button.isConnected || !pre.isConnected || !pre.closest("main") ||
+              state.route !== routeIdentity()) {
+            button.remove();
+            return;
+          }
           button.textContent = "Submission uncertain — inspect Jobflick";
           button.title = String(error);
         }
