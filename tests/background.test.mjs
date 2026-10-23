@@ -5,14 +5,16 @@ import vm from "node:vm";
 
 const source = readFileSync(new URL("../extension/background.js", import.meta.url), "utf8");
 
-function boot(nativeOverride = null) {
+function boot(nativeOverride = null, options = {}) {
   const listeners = {};
-  const storage = {};
-  const session = {};
+  const storage = options.storage || {};
+  const session = options.session || {};
   const requests = [];
   const tabs = new Map([[11, { id: 11, url: "https://chatgpt.com/c/testing-1234" }]]);
   const browser = {
     runtime: {
+      id: "jobflick-bridge@sguzman.github.io",
+      getURL: path => "moz-extension://unit/" + path,
       sendNativeMessage: async (_host, request) => {
         requests.push(request);
         if (nativeOverride) return nativeOverride(request);
@@ -47,6 +49,7 @@ function boot(nativeOverride = null) {
       onAlarm: { addListener: callback => { listeners.alarm = callback; } }
     },
     tabs: {
+      query: async () => [...tabs.values()].filter(tab => tab.active !== false),
       get: async id => {
         if (!tabs.has(id)) throw new Error("Unknown tab");
         return tabs.get(id);
@@ -63,6 +66,10 @@ function boot(nativeOverride = null) {
   }, { filename: "background.js" });
   return {
     listeners, storage, session, requests, tabs,
+    popupSender: {
+      id: "jobflick-bridge@sguzman.github.io",
+      url: "moz-extension://unit/popup/index.html"
+    },
     sender: {
       url: "https://chatgpt.com/c/testing-1234",
       tab: { id: 11, url: "https://chatgpt.com/c/testing-1234" }
@@ -134,4 +141,87 @@ test("closed origin tab flags confirmed job orphaned without discarding it", asy
   assert(record);
   assert.equal(record.orphaned, true);
   assert.equal(app.session.jobflick_origin_11, undefined);
+});
+
+test("only the exact extension popup can list jobs or retrieve reports", async () => {
+  const app = boot();
+  await app.listeners.message({ type: "jobflick:submit", yaml: sample }, app.sender);
+  const action = { type: "jobflick:inbox" };
+  assert.equal((await app.listeners.message(action, app.sender)).ok, false);
+  assert.equal((await app.listeners.message(action, {
+    id: app.popupSender.id, url: "moz-extension://unit/other.html"
+  })).ok, false);
+  const response = await app.listeners.message(action, app.popupSender);
+  assert.equal(response.ok, true);
+  assert.equal(response.jobs.length, 1);
+  assert.equal(response.jobs[0].id, "job_12345678");
+  assert.equal(app.requests.some(r => r.action === "show"), false);
+});
+
+test("report is only fetched on explicit popup request for a finished job", async () => {
+  const app = boot(request => {
+    if (request.action === "submit_spec") return {
+      ok: true, job: { id: "job_12345678", state: "queued", name: "Read only" }
+    };
+    if (request.action === "inspect") return {
+      ok: true, job: { id: request.id, state: "succeeded", name: "Read only" }
+    };
+    if (request.action === "show") return { ok: true, report: "completed report" };
+    return { ok: true };
+  });
+  await app.listeners.message({ type: "jobflick:submit", yaml: sample }, app.sender);
+  // Status polling updates metadata, not a report containing local output.
+  await app.listeners.message({ type: "jobflick:refresh" }, app.popupSender);
+  assert.equal(app.storage.jobflick_bridge_jobs_v1.job_12345678.state, "succeeded");
+  assert.equal("report" in app.storage.jobflick_bridge_jobs_v1.job_12345678, false);
+  assert.equal(app.requests.filter(v => v.action === "show").length, 0);
+  const response = await app.listeners.message({
+    type: "jobflick:report", id: "job_12345678"
+  }, app.popupSender);
+  assert.equal(response.ok, true);
+  assert.equal(response.report, "completed report");
+  assert.equal(app.requests.filter(v => v.action === "show").length, 1);
+});
+
+test("oversized finished report is rejected without browser storage disclosure", async () => {
+  const app = boot(request => {
+    if (request.action === "submit_spec") return {
+      ok: true, job: { id: "job_12345678", state: "succeeded" }
+    };
+    if (request.action === "show") return { ok: true, report: "z".repeat(524289) };
+    return { ok: true, job: { id: request.id, state: "succeeded" } };
+  });
+  await app.listeners.message({ type: "jobflick:submit", yaml: sample }, app.sender);
+  const result = await app.listeners.message({
+    type: "jobflick:report", id: "job_12345678"
+  }, app.popupSender);
+  assert.equal(result.ok, false);
+  assert.match(result.message, /512 KiB/);
+  assert.equal("report" in app.storage.jobflick_bridge_jobs_v1.job_12345678, false);
+});
+
+test("restarted event page keeps finished Jobflick inbox without reviving tab identity", async () => {
+  const first = boot(request => {
+    if (request.action === "submit_spec") return {
+      ok: true, job: { id: "job_12345678", state: "succeeded" }
+    };
+    return { ok: true, job: { id: request.id, state: "succeeded" } };
+  });
+  await first.listeners.message({ type: "jobflick:submit", yaml: sample }, first.sender);
+  const second = boot(null, { storage: first.storage, session: {} });
+  const listing = await second.listeners.message({ type: "jobflick:inbox" }, second.popupSender);
+  assert.equal(listing.ok, true);
+  assert.equal(listing.jobs.length, 1);
+  assert.equal(listing.jobs[0].id, "job_12345678");
+  assert.equal(second.session.jobflick_origin_11, undefined);
+  assert.equal(second.requests.filter(r => r.action === "submit_spec").length, 0);
+});
+
+test("untrusted sender cannot invoke scan or report even with valid IDs", async () => {
+  const app = boot();
+  for (const type of ["jobflick:scan", "jobflick:report", "jobflick:refresh"]) {
+    const result = await app.listeners.message({ type, id: "job_12345678" }, app.sender);
+    assert.equal(result.ok, false);
+  }
+  assert.equal(app.requests.length, 0);
 });

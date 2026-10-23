@@ -55,6 +55,21 @@ test("submission failures are uncertain, no retry, and orphaned jobs are preserv
 
 test("file attachments and automated Send are not falsely claimed to be implemented", () => {
   assert(!content.includes('button[data-testid="send-button"]'));
+  const popup = read("extension/popup/popup.js");
+  assert(popup.includes("URL.createObjectURL"));
+  assert(popup.includes("report"));
+  assert(!popup.includes("innerHTML"));
+  assert(!/eval\\s*\\(/.test(popup));
   assert(background.includes("NO automated ChatGPT composer injection"));
   assert(read("docs/QA.md").includes("Not run"));
+});
+
+test("extension popup is packaged locally and requires no new browser domains", () => {
+  assert.equal(manifest.action.default_popup, "popup/index.html");
+  const html = read("extension/popup/index.html");
+  assert(html.includes('src="popup.js"'));
+  assert(!html.includes("http://") && !html.includes("https://"));
+  assert(!manifest.permissions.includes("downloads"));
+  assert(!manifest.permissions.includes("clipboardRead"));
+  assert(!manifest.permissions.includes("<all_urls>"));
 });
