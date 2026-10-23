@@ -8,7 +8,7 @@ const fs=require("node:fs");
 const os=require("node:os");
 const path=require("node:path");
 const http=require("node:http");
-const {Builder,By,until}=require("selenium-webdriver");
+const {Builder,By,Key}=require("selenium-webdriver");
 const firefox=require("selenium-webdriver/firefox");
 
 const JOB="job_qa000001";
@@ -39,6 +39,10 @@ async function main(){
   manifest.content_scripts=[{
     matches:["http://127.0.0.1/*"],js:["qa-seed.js"],run_at:"document_idle"
   }];
+  // CI-only shortcut opens the actual Firefox toolbar-action popup.
+  // Unlike a moz-extension:// tab, the action popup has the exact sender
+  // identity that the untouched production background authorizes.
+  manifest.commands={"_execute_action":{suggested_key:{default:"Alt+Shift+J"}}};
   fs.writeFileSync(path.join(ext,"manifest.json"),JSON.stringify(manifest));
   // QA-only authorized extension tab opening. Marionette does not permit
   // direct driver.get() of moz-extension URLs; Firefox itself may open
@@ -71,7 +75,7 @@ async function main(){
     '(async()=>{',
     ' const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));',
     ' const wait=async fn=>{for(let i=0;i<100;i++){const value=fn();if(value)return value;await delay(100);}',
-    '   throw Error("Popup condition timed out");};',
+    '   throw Error("Popup condition timed out; notice="+document.getElementById("notice")?.textContent);};',
     ' const rows=()=>document.querySelectorAll("main#jobs section.job").length;',
     ' const byText=text=>[...document.querySelectorAll("button")].find(b=>b.textContent.trim()===text);',
     ' try{',
@@ -172,16 +176,12 @@ async function main(){
     const url=await driver.executeScript(
       "return document.documentElement.dataset.qaPopupUrl");
     assert.match(url,/^moz-extension:\/\/[^/]+\/popup\/index\.html$/);
-    const handles=await driver.getAllWindowHandles();
-    await (await driver.findElement(By.id("qa-open"))).click();
-    await driver.wait(async()=>(
-      await driver.getAllWindowHandles()).length===handles.length+1,10000);
-    const popupTab=(await driver.getAllWindowHandles()).find(h=>!handles.includes(h));
-    assert(popupTab,"Firefox extension did not open a privileged tab");
-    // Selenium cannot inspect moz-extension:// privileged browsing contexts,
-    // but the actual popup can exercise itself with a disposable QA script.
-    // Its result is collected through browser.storage.local by the CI-only
-    // localhost content script, without modifying popup.js/background.js.
+    // Genuine WebDriver keyboard input invokes _execute_action. The popup
+    // remains inaccessible to Marionette, so extension-side QA records the
+    // outcome and the localhost content script returns only those flags.
+    await driver.actions()
+      .keyDown(Key.ALT).keyDown(Key.SHIFT).sendKeys("j")
+      .keyUp(Key.SHIFT).keyUp(Key.ALT).perform();
     await driver.wait(async()=>(
       await driver.executeScript("return Boolean(document.documentElement.dataset.qaResult)")
     ),20000);
