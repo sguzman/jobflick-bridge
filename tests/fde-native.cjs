@@ -46,11 +46,20 @@ async function main() {
   manifest.browser_specific_settings.gecko.id = originId;
   manifest.host_permissions = ["http://127.0.0.1/*"];
   manifest.content_scripts = [{ matches: ["http://127.0.0.1/*"],
-    js: ["content.js"], run_at: "document_idle" }];
+    js: ["content.js","qa-route.js"], run_at: "document_idle" }];
   manifest.action = { default_title: "Firefox Native QA" };
   fs.writeFileSync(path.join(ext, "manifest.json"), JSON.stringify(manifest));
   // Use the complete unmodified production content script.
   fs.copyFileSync(path.join(production, "content.js"), path.join(ext, "content.js"));
+  // Disposable QA-only diagnostic; no user content or report is exposed.
+  fs.writeFileSync(path.join(ext,"qa-route.js"), [
+    'document.addEventListener("jobflick-qa-read-route",()=>{',
+    '  browser.runtime.sendMessage({type:"jobflick:qa-route"})',
+    '    .then(reply=>{document.documentElement.dataset.jobflickQaRoute=',
+    '      reply?.count===1 ? (reply.manualOnly?"manual_only":"active") : "missing";',
+    '    }).catch(()=>{});',
+    '});'
+  ].join("\\n"));
   // Only URL identity is adapted to synthetic localhost. All native protocol,
   // job tracking and other production background logic stays unchanged.
   const originalBackground = fs.readFileSync(path.join(production, "background.js"), "utf8");
@@ -61,6 +70,22 @@ async function main() {
   assert(background.includes(rule), "Origin guard changed; inspect adapter");
   background = background.replace(rule,
     'if (u.protocol !== "http:" || !SITES.has(u.hostname) ||\n        u.username || u.password) return null;');
+  const historyHostFilter='[{ hostEquals: "chatgpt.com" }, { hostEquals: "chat.openai.com" }]';
+  assert(background.includes(historyHostFilter),"Production history filter changed");
+  background=background.replace(historyHostFilter,'[{ hostEquals: "127.0.0.1" }]');
+  const listenerAnchor='browser.runtime.onMessage.addListener((message, sender) => {';
+  assert(background.includes(listenerAnchor),"Background listener moved");
+  background=background.replace(listenerAnchor,listenerAnchor+`
+  if(message?.type==="jobflick:qa-route"){
+    return saved().then(records=>{
+      const items=Object.values(records).filter(record=>knownRecord(record));
+      return {ok:true,count:items.length,
+        manualOnly:items.length===1 &&
+          items[0].orphaned===true &&
+          items[0].deliveryState==="manual_only"};
+    });
+  }
+`);
   fs.writeFileSync(path.join(ext, "background.js"), background);
 
   const fixture = path.resolve(__dirname, "./fixtures/fake-native-host.cjs");
@@ -198,6 +223,27 @@ async function main() {
       assert.equal(inspected.some(x=>x.action==="cancel"),false);
     }
     assert.equal(await button.isEnabled(),false);
+    // Real Firefox History API navigation, not merely a mocked event.
+    // Its URL must revoke this finished job's origin even after returning.
+    phase="SPA navigation origin revocation";
+    const readState=async()=>{
+      await driver.executeScript(
+        "document.dispatchEvent(new Event('jobflick-qa-read-route'));"
+      );
+      return driver.executeScript(
+        "return document.documentElement.dataset.jobflickQaRoute || ''"
+      );
+    };
+    await driver.wait(async()=>await readState()==="active",8000);
+    await driver.executeScript(
+      "history.pushState({},'', '/c/different-qa-conversation');"
+    );
+    await driver.wait(async()=>await readState()==="manual_only",10000);
+    await driver.executeScript(
+      "history.pushState({},'', '/c/test-native-1234');"
+    );
+    await driver.wait(async()=>await readState()==="manual_only",8000);
+
     await driver.uninstallAddon(id);
     console.log(realHost ?
       "FDE + REAL Jobflick: one hardcoded harmless Fish job, persisted browser origin, and terminal status passed" :
