@@ -321,7 +321,7 @@
           "title": "Event page resume",
           "status": "implemented",
           "evidence": [
-            "Reconciliation tested in Node mocks; real Firefox restart and event-page wake/sleep not yet accepted. https://github.com/sguzman/jobflick-bridge/actions/runs/40008094593"
+            "Startup/mock recovery and Firefox native routing already exercised; fresh concurrent-session token cleanup after tab closure prevents stale token resurrection, tested. Full browser restart/event-page wake/sleep in authenticated FDE profile remains unaccepted. https://github.com/sguzman/jobflick-bridge/actions/runs/40027477393"
           ]
         },
         {
@@ -412,8 +412,10 @@
         {
           "id": "M5-06",
           "title": "Preserve draft/attachments",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "Partial/synthetic only: production read-only composer probe preserves occupied draft text and an existing selected File in real isolated Firefox Developer Edition, and bounded report helper refuses overwriting a selected File. No site-specific uploaded attachment-chip verification, authenticated ChatGPT preservation or Send acceptance. https://github.com/sguzman/jobflick-bridge/actions/runs/40027477393"
+          ]
         },
         {
           "id": "M5-07",
@@ -439,7 +441,7 @@
       "verified": 1,
       "total": 9,
       "percent": 11,
-      "implemented": 4
+      "implemented": 5
     },
     {
       "id": "M6",
@@ -499,7 +501,7 @@
           "title": "Recovery tests",
           "status": "implemented",
           "evidence": [
-            "Live synthetic FDE History API A→B→A revokes original route token and prevents a second QA-only native report-to-File transfer. Full restart, offline and authenticated popup recovery remain pending: https://github.com/sguzman/jobflick-bridge/actions/runs/40025229365"
+            "Node recovery tests now cover tab closure racing an in-flight session-token write, duplicate route A→B→A, no local storage writes on unrelated tabs and full reversion to manual-only. Disposable real FDE + pinned Jobflick native report-to-File route revocation passed. Actual full desktop browser restart/authenticated ChatGPT recovery remains pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40027477393 https://github.com/sguzman/jobflick-bridge/actions/runs/40027477573"
           ]
         }
       ],
@@ -518,7 +520,7 @@
           "title": "Adversarial security tests",
           "status": "implemented",
           "evidence": [
-            "Adversarial tab origin mismatch, duplicate native IDs, FileList existing selection/oversize and real Firefox A→B→A after real native report handoff all refuse unsafe actions. Authenticated site security QA pending: https://github.com/sguzman/jobflick-bridge/actions/runs/40025229365"
+            "Adversarial native identity quarantine blocks cancel and export on mismatched job ID/origin; optional show response ID/origin disagreement is quarantined, and reserved JavaScript prototype keys are refused for submission, polling and popup actions. Real FDE/Jobflick integration remains passing, authenticated ChatGPT security QA unaccepted. https://github.com/sguzman/jobflick-bridge/actions/runs/40027477393 https://github.com/sguzman/jobflick-bridge/actions/runs/40027477573"
           ]
         },
         {
@@ -526,7 +528,7 @@
           "title": "Scale/idle QA",
           "status": "implemented",
           "evidence": [
-            "8,000-block/16-tab mock load, 40-job fast poll cap, alarm deadline preserved across repeated status metadata writes, and 325-job paginated inbox tests; real long-duration idle resource profiling pending: https://github.com/sguzman/jobflick-bridge/actions/runs/40021007135"
+            "Node stress/measurement: 8,000-code-block history, 40-job bounded status bursts, 325-job pagination, zero-write empty inbox and unrelated tab changes, single-write unchanged native job inspections, and terminal-only status notifications. Real long-duration idle/wake/resource profiling on EndeavourOS is unaccepted. https://github.com/sguzman/jobflick-bridge/actions/runs/40027477393"
           ]
         },
         {
@@ -582,11 +584,11 @@
   ],
   "last_ci": {
     "result": "success",
-    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40025229446",
-    "commit": "af6121160f81d0369e42bc0cf39902984bea1de1",
-    "scope": "Static/Node tests, actual disposable headless Firefox Developer Edition content UI, native fake host, inert File helper, manual 2-click local report export and limited composer flags. No authenticated ChatGPT.",
-    "native_run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40025229365",
-    "native_commit": "af6121160f81d0369e42bc0cf39902984bea1de1",
-    "native_scope": "Real pinned Jobflick daemon in headless Firefox, one harmless Fish job, native origin and terminal status, explicit QA-only native show -> bounded File -> synthetic localhost page with exact job filename/content, A→B→A revocation prevents second transfer. No live ChatGPT upload or Send."
+    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40027477393",
+    "commit": "15ffda2f7081f2d88e048e7a9c991af1461a3554",
+    "scope": "112+ Node tests, Mozilla extension lint, unsigned QA package, isolated real Firefox Developer Edition add-on/DOM/native fixture tests, composer draft and selected-file preservation. Includes fail-closed quarantine, prototype-key job-ID rejection, and low-write idle job polling. No authenticated ChatGPT.",
+    "native_run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40027477573",
+    "native_commit": "15ffda2f7081f2d88e048e7a9c991af1461a3554",
+    "native_scope": "Pinned real Jobflick native host/daemon through actual headless Firefox Developer Edition: one hardcoded harmless Fish job, durable origin and finished native report -> bounded File -> synthetic page readback, A→B→A second transfer denied. Does not exercise authenticated ChatGPT upload or Send."
   }
 }
