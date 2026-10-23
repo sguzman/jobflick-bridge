@@ -163,6 +163,12 @@ function renderItem(job) {
           (flags.composerPresent ? "found" : "not found") +
           " · draft: " + (flags.composerOccupied ? "occupied" : "empty/unknown") +
           " · file input: " + (flags.fileInputPresent ? "exposed" : "not exposed") +
+          " · multiple composers: " + (flags.composerAmbiguous === null ? "unknown" :
+            flags.composerAmbiguous ? "yes" : "no") +
+          " · multiple inputs: " + (flags.fileInputAmbiguous === null ? "unknown" :
+            flags.fileInputAmbiguous ? "yes" : "no") +
+          " · input selection: " + (flags.selectedFilePresent === null ? "unknown" :
+            flags.selectedFilePresent ? "present" : "none detected") +
           ". Read-only: nothing attached or sent.");
       } catch (error) {
         say(error.message);
@@ -273,7 +279,13 @@ probe.addEventListener("click", async () => {
     const parts = [
       "Composer: " + (result.composerPresent ? "found" : "not found"),
       "File picker input: " + (result.fileInputPresent ? "present" : "not exposed"),
-      "Draft: " + (result.composerOccupied ? "occupied" : "empty or unavailable")
+      "Draft: " + (result.composerOccupied ? "occupied" : "empty or unavailable"),
+      "Multiple composers: " + (result.composerAmbiguous === null ? "unknown" :
+        result.composerAmbiguous ? "yes" : "no"),
+      "Multiple file inputs: " + (result.fileInputAmbiguous === null ? "unknown" :
+        result.fileInputAmbiguous ? "yes" : "no"),
+      "Selected input file: " + (result.selectedFilePresent === null ? "unknown" :
+        result.selectedFilePresent ? "yes" : "none detected")
     ];
     say(parts.join(" · ") + ". Read-only check: no file attached.");
   } catch (error) {

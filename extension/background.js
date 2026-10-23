@@ -458,7 +458,13 @@ async function onPopupMessage(message, sender) {
         ok: true, originalConversationVerified: true,
         composerPresent: response.composerPresent,
         composerOccupied: response.composerOccupied,
-        fileInputPresent: response.fileInputPresent
+        fileInputPresent: response.fileInputPresent,
+        composerAmbiguous: typeof response.composerAmbiguous === "boolean"
+          ? response.composerAmbiguous : null,
+        fileInputAmbiguous: typeof response.fileInputAmbiguous === "boolean"
+          ? response.fileInputAmbiguous : null,
+        selectedFilePresent: typeof response.selectedFilePresent === "boolean"
+          ? response.selectedFilePresent : null
       };
     }
     case "jobflick:probe-upload": {
@@ -479,7 +485,13 @@ async function onPopupMessage(message, sender) {
         ok: true,
         composerPresent: response.composerPresent,
         composerOccupied: response.composerOccupied,
-        fileInputPresent: response.fileInputPresent
+        fileInputPresent: response.fileInputPresent,
+        composerAmbiguous: typeof response.composerAmbiguous === "boolean"
+          ? response.composerAmbiguous : null,
+        fileInputAmbiguous: typeof response.fileInputAmbiguous === "boolean"
+          ? response.fileInputAmbiguous : null,
+        selectedFilePresent: typeof response.selectedFilePresent === "boolean"
+          ? response.selectedFilePresent : null
       };
     }
     case "jobflick:diagnose": {

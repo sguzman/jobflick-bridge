@@ -284,3 +284,18 @@ test("native identity conflicts are visible and never trigger report or command 
   assert.equal(app.calls.filter(x=>x.type==="jobflick:report").length,0);
   assert.equal(app.calls.filter(x=>x.type==="jobflick:submit").length,0);
 });
+
+test("popup reports missing advanced capability flags as unknown, not safe",async()=>{
+  const app=await boot([finished],message=>{
+    if(message.type==="jobflick:inbox")return {ok:true,jobs:[finished]};
+    if(message.type==="jobflick:preflight")return {
+      ok:true,originalConversationVerified:true,
+      composerPresent:true,composerOccupied:false,fileInputPresent:true
+    };
+    throw new Error("Unexpected popup action");
+  });
+  await app.find("Check original chat").click();
+  assert.match(app.named.notice.textContent,/multiple composers: unknown/);
+  assert.match(app.named.notice.textContent,/input selection: unknown/);
+  assert.equal(app.calls.filter(x=>x.type==="jobflick:report").length,0);
+});

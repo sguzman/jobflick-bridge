@@ -1256,3 +1256,15 @@ test("conflicting native origin is quarantined once without background polling",
   assert.equal(app.requests.filter(x=>x.action==="inspect").length,1);
   assert.equal(app.requests.filter(x=>x.action==="show").length,0);
 });
+
+test("read-only advanced composer flags are explicitly unknown on legacy content scripts",async()=>{
+  const app=boot();
+  const response=await app.listeners.message({
+    type:"jobflick:probe-upload"
+  },app.popupSender);
+  assert.equal(response.ok,true);
+  assert.equal(response.composerAmbiguous,null);
+  assert.equal(response.fileInputAmbiguous,null);
+  assert.equal(response.selectedFilePresent,null);
+  assert.equal(app.requests.length,0);
+});
