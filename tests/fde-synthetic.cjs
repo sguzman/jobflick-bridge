@@ -9,7 +9,7 @@ const fs=require("node:fs");
 const os=require("node:os");
 const path=require("node:path");
 const http=require("node:http");
-const {Builder,By,until}=require("selenium-webdriver");
+const {Builder,By,until,Key}=require("selenium-webdriver");
 const firefox=require("selenium-webdriver/firefox");
 
 async function main(){
@@ -99,8 +99,44 @@ async function main(){
     await stale.click();
     await driver.wait(async()=>/YAML changed/.test(await stale.getText()),10000);
 
+    // React may detach the code block without immediately removing its
+    // adjacent extension button. That orphaned button must do nothing.
+    await driver.navigate().refresh();
+    const oldButton=await driver.wait(async()=>{
+      await driver.executeScript(
+        "document.querySelector('pre').dispatchEvent(new Event('focusin',{bubbles:true}));"
+      );
+      const found=await driver.findElements(By.css(".jobflick-bridge-run"));
+      return found[0] || false;
+    },10000);
+    const beforeDetached=await oldButton.getText();
+    await driver.executeScript("document.querySelector('main pre').remove();");
+    await oldButton.click();
+    assert.equal(await oldButton.getText(),beforeDetached,
+      "Detached Run control must not enter submitting state");
+
+    // A rerendered code block is not the same DOM node: it must explicitly
+    // revalidate in Firefox before gaining a fresh Run control.
+    await driver.executeScript(
+      "const p=document.createElement('pre');const c=document.createElement('code');"+
+      "c.textContent=arguments[0];p.append(c);document.querySelector('main').append(p);",
+      yaml
+    );
+    const newButton=await driver.wait(async()=>{
+      await driver.executeScript(
+        "document.querySelector('main pre').dispatchEvent(new Event('focusin',{bubbles:true}));"
+      );
+      const items=await driver.findElements(By.css(".jobflick-bridge-run"));
+      return items.length===2 ? items[1] : false;
+    },10000);
+    assert.match(await newButton.getText(),/Run Jobflick/);
+    // Native button keyboard activation must be trusted and subject to
+    // the same synthetic no-execution background refusal.
+    await newButton.sendKeys(Key.ENTER);
+    await driver.wait(async()=>/Submission uncertain/.test(await newButton.getText()),10000);
+
     await driver.uninstallAddon(id);
-    console.log("Synthetic FDE content script: idle, validated button, real click and stale-YAML guard passed; no native jobs submitted");
+    console.log("Synthetic FDE: idle, stale YAML, detached DOM, fresh rerender and trusted keyboard activation passed; no native commands executed");
   }finally{
     if(driver)await driver.quit();
     await new Promise(resolve=>server.close(resolve));

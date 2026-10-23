@@ -104,3 +104,7 @@ Results for same-tab navigation or a composer probe interrupted by navigation be
 The pinned, isolated Jobflick backend CI now exercises a second harmless schema-4 job (`sleep` followed by an unreachable `printf`) and sends the real `cancel` Native Messaging action. It waits for the durable `cancelled` state and refuses to equate a native acknowledgement with completed cancellation. The popup's two-step confirmation remains independently covered by behavioral tests; privileged popup click-through in authenticated Firefox is still pending.
 
 The popup's `Open chat` control requires an explicit click and opens only a validated ChatGPT conversation URL, stripping old query/fragment parameters. It is a manual navigation helper, never an auto-delivery or provenance-rebinding mechanism. Its behavioral tests reject foreign domains, userinfo and non-conversation routes.
+
+## Native Firefox rerender and keyboard gate
+
+The synthetic FDE browser test also removes a validated code block while leaving its Run button in the DOM. A click on this detached control must be inert; a newly inserted code block is separately validated and gains its own Run button. The new button is activated with Firefox WebDriver's Enter key, which must reach the same intentionally non-executing QA background. This proves key handling and detached-node rejection in actual Firefox, not a screen-reader audit or authenticated ChatGPT React-internals compatibility.
