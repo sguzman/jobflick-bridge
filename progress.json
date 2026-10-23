@@ -177,9 +177,9 @@
         {
           "id": "M2-04",
           "title": "Diagnostics + uninstall",
-          "status": "implemented",
+          "status": "verified",
           "evidence": [
-            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+            "Explicit read-only native host diagnostic tests cover reachable/missing/misbehaving host; disposable Fish installer covers uninstall: https://github.com/sguzman/jobflick-bridge/actions/runs/39998033616"
           ]
         },
         {
@@ -207,10 +207,10 @@
           ]
         }
       ],
-      "verified": 3,
+      "verified": 4,
       "total": 7,
-      "percent": 42,
-      "implemented": 4
+      "percent": 57,
+      "implemented": 3
     },
     {
       "id": "M3",
@@ -518,9 +518,9 @@
         {
           "id": "M7-03",
           "title": "Permission audit",
-          "status": "implemented",
+          "status": "verified",
           "evidence": [
-            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+            "Broad tabs permission removed based on Mozilla host-permission capability; narrow manifest scope verified by web-ext lint and CI tests: https://github.com/sguzman/jobflick-bridge/actions/runs/39998033616"
           ]
         },
         {
@@ -558,16 +558,16 @@
           "evidence": []
         }
       ],
-      "verified": 0,
+      "verified": 1,
       "total": 8,
-      "percent": 0,
-      "implemented": 5
+      "percent": 12,
+      "implemented": 4
     }
   ],
   "last_ci": {
     "result": "success",
-    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/39997227946",
-    "commit": "8e0ffafd098af55b8f70930856b1aa858d34bb3e",
-    "scope": "Node behavioral tests, Fish syntax and disposable native-host installer, Mozilla web-ext lint and unsigned packaging, headless Firefox Developer Edition temporary installation. Authenticated ChatGPT/native execution/attachment untested."
+    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/39998033616",
+    "commit": "361a4fbd6a44b89a867e1dd8247f5ca2dcb65166",
+    "scope": "Headless Firefox Developer Edition add-on install/uninstall, static/behavioral tests, narrowed tab permission, bounded conversation routes, native-host diagnostic mocks, disposable Fish installer. No authenticated ChatGPT / live Jobflick execution / actual upload/send acceptance."
   }
 }
