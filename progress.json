@@ -577,9 +577,10 @@
         {
           "id": "M7-05",
           "title": "Safe QA setup",
-          "status": "implemented",
+          "status": "verified",
           "evidence": [
-            "Disposable Firefox Developer Edition and isolated Jobflick daemon on Linux CI; target EndeavourOS/Hyprland authenticated QA profile still pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40015025541"
+            "Disposable Firefox Developer Edition and isolated Jobflick daemon on Linux CI; target EndeavourOS/Hyprland authenticated QA profile still pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40015025541",
+            "Real Fish launcher integration runs with disposable HOME/XDG_DATA_HOME and fake Firefox Developer Edition executable, verifying --no-remote --profile targets only the separate QA directory, 0700 permissions, path-with-spaces handling, symlink-root/profile refusal, rejection of unsafe XDG paths, and untouched personal Firefox/native-host sentinel files. Latest Firefox CI also loads the production add-on in disposable FDE: https://github.com/sguzman/jobflick-bridge/actions/runs/40039689984. This closes QA launcher setup only, not authenticated site, signing or release."
           ]
         },
         {
@@ -603,10 +604,10 @@
           "evidence": []
         }
       ],
-      "verified": 1,
+      "verified": 2,
       "total": 8,
-      "percent": 12,
-      "implemented": 5
+      "percent": 25,
+      "implemented": 4
     }
   ],
   "last_ci": {
@@ -620,10 +621,10 @@
   },
   "overall": {
     "total": 63,
-    "verified": 38,
-    "implemented": 18,
+    "verified": 39,
+    "implemented": 17,
     "planned": 7,
-    "percent": 60,
+    "percent": 61,
     "basis": "Only verified atomic tasks count toward percentage"
   }
 }

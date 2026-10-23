@@ -391,3 +391,20 @@ access to a user's browser profile.
 The focused acceptance evidence is [Firefox CI](https://github.com/sguzman/jobflick-bridge/actions/runs/40039332191). The broader
 screen-reader, reduced-motion and high-contrast usability audit remains
 unverified under M7-04; this gate covers the accessible Run control itself.
+
+## Verified one-command isolated QA launcher
+
+The target-side command `fish scripts/qa-firefox-developer.fish` starts
+Firefox Developer Edition with its own `--no-remote --profile` directory,
+without registering a native host or changing personal Firefox profiles.
+Empty, relative or root-level `XDG_DATA_HOME` overrides are rejected, as
+are symlinked QA profile boundaries. Loading the temporary add-on into this
+separate QA window remains an explicit one-time step.
+
+[Passing Firefox/Fish launcher acceptance](https://github.com/sguzman/jobflick-bridge/actions/runs/40039689984)
+runs the actual Fish launcher against a fake Firefox executable and private
+HOME/XDG tree, proving its arguments, directory permissions, symlink denial,
+and preservation of sentinel files representing personal Firefox profiles
+and native-host registration. The same run loads the production add-on in a
+disposable Firefox Developer Edition profile. This does not establish
+real authenticated ChatGPT attachment, Send or signed release acceptance.
