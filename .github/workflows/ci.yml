@@ -65,3 +65,7 @@ jobs:
         env:
           FDE_BINARY: ${{ steps.fde.outputs.firefox-path }}
         run: node tests/fde-native.cjs
+      - name: Headless Firefox Developer Edition local file handoff probe
+        env:
+          FDE_BINARY: ${{ steps.fde.outputs.firefox-path }}
+        run: node tests/fde-attachment.cjs
