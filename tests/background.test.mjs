@@ -1106,3 +1106,46 @@ test("search is bounded to local job metadata and never reads native reports",as
   assert.equal(bad.ok,false);
   assert.equal(app.requests.length,0);
 });
+
+test("duplicate native job IDs cannot overwrite existing origin or report routing",async()=>{
+  const app=boot(request=>{
+    if(request.action==="submit_spec")return {
+      ok:true,job:{id:"job_12345678",state:"queued",name:"New from host"}
+    };
+    if(request.action==="inspect")return {
+      ok:true,job:{id:request.id,state:"running"}
+    };
+    return {ok:true};
+  });
+  const first=await app.listeners.message({
+    type:"jobflick:submit",yaml:sample
+  },app.sender);
+  assert.equal(first.ok,true);
+  const original=JSON.stringify(app.storage.jobflick_bridge_jobs_v1.job_12345678);
+  const second=await app.listeners.message({
+    type:"jobflick:submit",yaml:sample
+  },app.sender);
+  assert.equal(second.ok,false);
+  assert.match(second.message,/existing job ID/);
+  assert.match(second.message,/submission may have succeeded/);
+  assert.equal(JSON.stringify(app.storage.jobflick_bridge_jobs_v1.job_12345678),original);
+  assert.equal(app.requests.filter(x=>x.action==="submit_spec").length,2);
+  assert.equal(Object.keys(app.storage.jobflick_bridge_jobs_v1).length,1);
+});
+
+test("unsupported future record cannot be overwritten by a reused native job ID",async()=>{
+  const record={id:"job_12345678",recordVersion:999,state:"running",
+    origin:"protected",conversation:"https://chatgpt.com/c/original-file"};
+  const app=boot(request=>{
+    if(request.action==="submit_spec")return {
+      ok:true,job:{id:"job_12345678",state:"queued"}
+    };
+    return {ok:true};
+  },{storage:{jobflick_bridge_jobs_v1:{job_12345678:record}}});
+  const result=await app.listeners.message({
+    type:"jobflick:submit",yaml:sample
+  },app.sender);
+  assert.equal(result.ok,false);
+  assert.equal(app.storage.jobflick_bridge_jobs_v1.job_12345678.recordVersion,999);
+  assert.equal(app.storage.jobflick_bridge_jobs_v1.job_12345678.origin,"protected");
+});
