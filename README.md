@@ -2,7 +2,7 @@
 
 **Firefox Developer Edition-first WebExtension** connecting ChatGPT-authored Execarium jobs to the user's local Jobflick executor. The repository is independent; [the legacy Script-Monkey extension](https://github.com/sguzman/script-monkey/tree/main/extensions/jobflick-bridge) is reference material, not the implementation baseline.
 
-**Status:** Disposable headless Firefox Developer Edition now validates and queues through the actual Jobflick daemon, executes one hardcoded harmless Fish fixture, and displays successful terminal status. Authenticated ChatGPT, file attachment and auto-send remain unverified. **Safety:** test first in a dedicated Firefox Developer Edition QA profile with harmless jobs. A browser profile does **not** sandbox commands run by Jobflick.
+**Status:** **77% verified (49/63 atomic tasks)**. Disposable headless Firefox Developer Edition validates and queues through the actual Jobflick daemon, executes one hardcoded harmless Fish fixture, and displays successful terminal status. Firefox Run/rerender, native transport, explicit execution tracking and manual recovery have passed their isolated acceptance gates. Authenticated ChatGPT attachment, guarded Send, live privileged-popup integration and release signing remain unverified. **Safety:** test first in a dedicated Firefox Developer Edition QA profile with harmless jobs. A browser profile does **not** sandbox commands run by Jobflick.
 
 ## Intended flow
 
@@ -127,7 +127,7 @@ Unrelated site navigation and tab completion do not cause Jobflick native inspec
 
 ## 🧪 Current verified CI and memory bounds
 
-[Firefox Developer Edition checks](https://github.com/sguzman/jobflick-bridge/actions/runs/40039054482) · [real pinned Jobflick/Firefox integration](https://github.com/sguzman/jobflick-bridge/actions/runs/40039054521).
+[Latest verified Firefox checks](https://github.com/sguzman/jobflick-bridge/actions/runs/40041874551) · [real pinned Jobflick/Firefox integration](https://github.com/sguzman/jobflick-bridge/actions/runs/40041196148).
 
 The latest checks cover stale asynchronous response authorization, exact original-chat routing, Firefox keyboard and synthetic file acceptance, native cancellation/report recovery, bounded fast retries during storage errors, and conflicting native metadata quarantine. Run status stays monotonic, completed controls release their JavaScript status references, and each long-lived ChatGPT content script keeps at most 128 live status mappings; older jobs remain accessible through the authoritative Jobflick inbox. Firefox host registration now refuses clobbering a foreign native wrapper or manifest while allowing safe reinstall. Stored job names and colors are bounded, and malformed legacy inbox URLs are never used as Open chat destinations. These are verified synthetic and native-transport checks, **not** authenticated ChatGPT file upload, automatic Send, or long-duration desktop profiling.
 
@@ -135,3 +135,26 @@ The latest checks cover stale asynchronous response authorization, exact origina
 ## 📄 M5-04 verified: no composer log injection
 
 Real isolated Firefox Developer Edition now verifies that a fixed harmless job's native report is passed as a bounded local text/plain File without altering a preoccupied composer or an existing user attachment indicator. [Real Jobflick acceptance](https://github.com/sguzman/jobflick-bridge/actions/runs/40039054521). This independently completes the atomic *avoid giant text injection* task, not authenticated ChatGPT upload or Send.
+
+
+## 📬 Verified manual recovery and Firefox routing
+
+The complete Firefox platform/UX milestone now passes its atomic acceptance
+matrix, including the A→B→A SPA rerender regression in real disposable
+Firefox Developer Edition. The production content script revokes stale
+validation/Run grants when the background observes a History API navigation.
+An unrelated tab cannot inherit execution or report-delivery authorization.
+
+The explicit local inbox and fallback flow has also passed browser-level
+acceptance: the unchanged production popup HTML/JS/CSS displayed and searched
+325 synthetic jobs with 40-record pages and a final partial page; an explicit
+Open chat action requested only the canonical stored conversation; two
+separate Save/Download gestures wrote a complete bounded report File; and
+two separate Forget gestures removed only browser tracking metadata.
+These popup checks ran on localhost with a synthetic runtime, **not** in a
+privileged `moz-extension:` toolbar popup or an authenticated ChatGPT
+session. [Firefox CI evidence](https://github.com/sguzman/jobflick-bridge/actions/runs/40041874551).
+
+The authoritative work ledger is [progress.json](progress.json); live
+ChatGPT attachment acknowledgment, draft-safe Send and release signing remain
+required gates. Synthetic browser results never establish automatic delivery.
