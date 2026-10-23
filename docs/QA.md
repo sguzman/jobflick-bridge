@@ -84,3 +84,9 @@ CI now also boots **headless Firefox Developer Edition** with a separate, dispos
 ## Native Messaging in actual headless Firefox (no command execution)
 
 A separate CI test, `tests/fde-native.cjs`, temporarily installs a QA-only copy of the production background/content scripts in **Firefox Developer Edition**. It adapts only the URL allowlist to a localhost synthetic conversation, and registers a purpose-built Node Native Messaging fixture under a disposable `HOME` with `allowed_extensions` set to the QA Gecko ID. The fake host parses the length-prefixed protocol and **never executes Fish or starts Jobflick**. The browser must validate the synthetic Execarium block, show Run, send exactly one `submit_spec` after a real click, and generate an opaque origin token. The test checks there is no automatic report retrieval, cancellation or duplicate submission. The fixture never logs YAML or report contents. This verifies Firefox-to-Native-Messaging wiring, not the actual Jobflick daemon or authenticated ChatGPT.
+
+## Firefox Native Messaging integration: observed acceptance
+
+The headless Firefox Developer Edition QA test now passes with the production content/background logic and synthetic localhost origin substitution. With a disposable, non-executing Native Messaging fixture it observes the validate → Run click → one submit → opaque origin token → inspect → terminal status path. It explicitly verifies that the report is **not** fetched automatically. The test can neither assert the real installed Jobflick daemon's Fish execution nor control Firefox's privileged `moz-extension://` popup via ordinary WebDriver. Popup controls are tested separately with behavioral mocks; authenticated Firefox Developer Edition QA remains a distinct, unpassed acceptance gate.
+
+A regression test also simulates terminal status arriving before the asynchronous submit acknowledgement, ensuring that the Run button does not regress from finished to queued.

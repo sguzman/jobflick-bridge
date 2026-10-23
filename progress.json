@@ -136,7 +136,7 @@
           "title": "Firefox lifecycle tests",
           "status": "implemented",
           "evidence": [
-            "Production add-on installs/uninstalls in actual FDE; synthetic FDE DOM test passes with stale-YAML rejection. Event-page suspension/wake QA pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40002154617"
+            "Real headless Firefox temporary addon install plus localhost synthetic UI and native messaging tests; event-page suspension and full browser restart still awaiting target QA. https://github.com/sguzman/jobflick-bridge/actions/runs/40008094593"
           ]
         }
       ],
@@ -187,7 +187,7 @@
           "title": "Real validator",
           "status": "implemented",
           "evidence": [
-            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+            "Real validator delegated to Jobflick by protocol; fake native host verified in Firefox, actual Jobflick validator integration still pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40008094593"
           ]
         },
         {
@@ -201,16 +201,16 @@
         {
           "id": "M2-07",
           "title": "Mock + smoke tests",
-          "status": "implemented",
+          "status": "verified",
           "evidence": [
-            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+            "Actual headless Firefox Developer Edition loads the production background and content scripts with only synthetic localhost URL adaptation. A no-execution Native Messaging host receives framed validate_spec, exactly one submit_spec and inspect with an opaque browser-created origin; Node test proves framed responses without stdin EOF. https://github.com/sguzman/jobflick-bridge/actions/runs/40008094593"
           ]
         }
       ],
-      "verified": 5,
+      "verified": 6,
       "total": 7,
-      "percent": 71,
-      "implemented": 2
+      "percent": 85,
+      "implemented": 1
     },
     {
       "id": "M3",
@@ -268,9 +268,9 @@
         {
           "id": "M3-07",
           "title": "Status/name/color",
-          "status": "implemented",
+          "status": "verified",
           "evidence": [
-            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+            "Real headless Firefox Developer Edition displays terminal succeeded status after a fake/native inspect, and the Jobflick color is propagated by the status message. No real Fish job executed. https://github.com/sguzman/jobflick-bridge/actions/runs/40008094593"
           ]
         },
         {
@@ -290,10 +290,10 @@
           ]
         }
       ],
-      "verified": 7,
+      "verified": 8,
       "total": 9,
-      "percent": 77,
-      "implemented": 2
+      "percent": 88,
+      "implemented": 1
     },
     {
       "id": "M4",
@@ -303,9 +303,9 @@
         {
           "id": "M4-01",
           "title": "Terminal-state inspection",
-          "status": "implemented",
+          "status": "verified",
           "evidence": [
-            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+            "Actual Firefox event-page polls a fake native host for terminal succeeded and updates job state, without automatic show/report retrieval; real Jobflick daemon acceptance remains separate. https://github.com/sguzman/jobflick-bridge/actions/runs/40008094593"
           ]
         },
         {
@@ -321,7 +321,7 @@
           "title": "Event page resume",
           "status": "implemented",
           "evidence": [
-            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+            "Reconciliation tested in Node mocks; real Firefox restart and event-page wake/sleep not yet accepted. https://github.com/sguzman/jobflick-bridge/actions/runs/40008094593"
           ]
         },
         {
@@ -361,10 +361,10 @@
           ]
         }
       ],
-      "verified": 3,
+      "verified": 4,
       "total": 8,
-      "percent": 37,
-      "implemented": 3
+      "percent": 50,
+      "implemented": 2
     },
     {
       "id": "M5",
@@ -477,7 +477,7 @@
           "title": "Results panel",
           "status": "implemented",
           "evidence": [
-            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+            "Popup inbox confirmed by Node behavioral tests; Gecko WebDriver disallows privileged moz-extension popup browsing context, requires dedicated target QA. https://github.com/sguzman/jobflick-bridge/actions/runs/40008094593"
           ]
         },
         {
@@ -520,7 +520,7 @@
           "title": "Scale/idle QA",
           "status": "implemented",
           "evidence": [
-            "Node stress tests cover 8,000 blocks, 16 tabs and 40 hover candidates; real headless FDE synthetic page also confirms no idle scanning. Prolonged live resource profiling pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40002154617"
+            "Node bounded stress tests for 8,000 blocks and 16 content scripts, actual FDE browser event and native tests; long-run idle profiling outstanding. https://github.com/sguzman/jobflick-bridge/actions/runs/40008094593"
           ]
         },
         {
@@ -576,8 +576,8 @@
   ],
   "last_ci": {
     "result": "success",
-    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40002154617",
-    "commit": "986766300d0dbe0f148e74f12f54f87953b207e6",
-    "scope": "56+ Node/behavioral tests, disposable Fish native framing/ownership installer checks, Mozilla lint and unsigned QA archive; actual headless Firefox Developer Edition production add-on install plus synthetic content-script validation/click/stale-spec acceptance. No authenticated ChatGPT, real Jobflick command, or automatic upload/Send acceptance."
+    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40008094593",
+    "commit": "acc84d72ee984561e00c8e3478d44cbc79b44d2a",
+    "scope": "Node structural/behavioral tests including early status race and native non-EOF framing; disposable Fish installer tests, Mozilla web-ext lint, unsigned QA package; real headless Firefox Developer Edition content-script UI and actual browser-to-fake-native-host validation, single submit, opaque origin, inspect and terminal status. No real Jobflick Fish execution, authenticated ChatGPT, attachment or Send."
   }
 }

@@ -48,7 +48,7 @@ This is a recovery and inspection surface, **not** a claim that the future ChatG
 
 ## Verified CI gates
 
-The automated suite runs Node behavioral tests, Fish native-host installer tests in a disposable HOME, Mozilla `web-ext lint`, and a separate **real Firefox Developer Edition** WebDriver job that installs/uninstalls the production add-on in an anonymous profile. A further disposable QA-only manifest runs the unmodified content script on synthetic ChatGPT-style HTML, confirming intent-driven Run button insertion, mouse-click handling, and rejection of YAML changed after validation. It never accesses the user's machine or starts real Jobflick jobs. [Latest passing CI run](https://github.com/sguzman/jobflick-bridge/actions/runs/40002154617).
+The automated suite runs Node behavioral tests, Fish native-host installer tests in a disposable HOME, Mozilla `web-ext lint`, and a separate **real Firefox Developer Edition** WebDriver job that installs/uninstalls the production add-on in an anonymous profile. A further disposable QA-only manifest runs the unmodified content script on synthetic ChatGPT-style HTML, confirming intent-driven Run button insertion, mouse-click handling, and rejection of YAML changed after validation. It never accesses the user's machine or starts real Jobflick jobs. [Latest passing CI run](https://github.com/sguzman/jobflick-bridge/actions/runs/40008094593).
 
 An unsigned Firefox QA ZIP is also produced by CI (artifact `jobflick-bridge-fde-qa-unsigned`). It is intended only for **temporary installation** in the dedicated QA profile via `about:debugging`, not for a release or an automatic native-host setup.
 
@@ -63,3 +63,7 @@ The popup also provides an explicit two-step **Request stop → Confirm stop** c
 ## Exact-origin preflight and job lifecycle
 
 Finished jobs whose original tab still matches its opaque session token and **exact conversation URL** can be checked via **Check original chat**. This returns read-only composer/file-input flags, never a draft, report or uploaded file. If the tab closes or changes, the record becomes manual-only. Job records are versioned and retain their manual-delivery states without falsely claiming a ChatGPT send. A two-click stop action is available on unfinished jobs; native stop acknowledgement does not prove the process terminated.
+
+## 🦊 Current verified integration boundary
+
+In disposable headless Firefox Developer Edition, the production bridge now connects to a **fake, no-execution** Native Messaging host. It validates fixture YAML, queues exactly once on the user's browser click, checks native status, and shows a terminal result. This test uses only a localhost URL adapter and a synthetic Gecko add-on ID, never the user's authenticated browser or real Jobflick daemon. Separate Node tests exercise the popup inbox, manual report preparation, and cancellation confirmation; Firefox's privileged popup UI remains unaccepted under WebDriver. Automatic attachment and Send are not implemented.
