@@ -377,3 +377,17 @@ job-specific filename was checked independently. This is **not** confirmation
 that ChatGPT accepted any upload, and does not complete M5-03/M5-05/M5-06
 or guarded Send. [Real pinned daemon acceptance](https://github.com/sguzman/jobflick-bridge/actions/runs/40039054521) ·
 [Firefox/static tests](https://github.com/sguzman/jobflick-bridge/actions/runs/40039054482).
+
+## Verified M1-05: Firefox Run-control accessibility semantics
+
+The actual production Run button exposes a computed `button` role and
+`Run Jobflick` in its accessible name through Firefox's WebDriver
+accessibility APIs. Firefox accepts both native Enter and Space activation
+as user input; once submission is uncertain, the button is disabled so
+another keyboard/pointer action cannot enqueue a duplicate. This runs
+in disposable Firefox Developer Edition, without native execution or
+access to a user's browser profile.
+
+The focused acceptance evidence is [Firefox CI](https://github.com/sguzman/jobflick-bridge/actions/runs/40039332191). The broader
+screen-reader, reduced-motion and high-contrast usability audit remains
+unverified under M7-04; this gate covers the accessible Run control itself.
