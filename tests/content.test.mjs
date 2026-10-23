@@ -64,7 +64,25 @@ function simulate(initialYaml = yaml, validateOK = true, probeOptions = {}) {
     },
     addEventListener(type, callback) { documentListeners[type] = callback; },
     createElement(tag) { return new Element(tag); },
-    querySelectorAll(selector) { return selector === "main pre" ? pres : []; }
+    querySelectorAll(selector) {
+      if (selector === "main pre") return pres;
+      if (selector.includes("#prompt-textarea")) {
+        const count = probeOptions.composerCount ??
+          (probeOptions.composerPresent ? 1 : 0);
+        return Array.from({ length: count }, () => ({
+          value: probeOptions.composerValue,
+          textContent: probeOptions.composerText || ""
+        }));
+      }
+      if (selector === 'input[type="file"]') {
+        const count = probeOptions.fileInputCount ??
+          (probeOptions.fileInputPresent ? 1 : 0);
+        return Array.from({ length: count }, () => ({
+          files: probeOptions.fileSelected ? [{ name: "not disclosed" }] : []
+        }));
+      }
+      return [];
+    }
   };
   const browser = {
     runtime: {
@@ -172,7 +190,8 @@ test("read-only attachment capability probe returns only booleans", async () => 
   });
   const result = await app.runtimeListener({ type: "jobflick:probe-upload" });
   assert.deepEqual(Object.keys(result).sort(), [
-    "composerOccupied", "composerPresent", "fileInputPresent", "ok"
+    "composerOccupied", "composerPresent", "fileInputPresent", "ok",
+    "composerAmbiguous", "fileInputAmbiguous", "selectedFilePresent"
   ].sort());
   assert.equal(result.composerPresent, true);
   assert.equal(result.composerOccupied, true);
@@ -237,4 +256,32 @@ test("detached Run control removes itself without native submission or DOM obser
   await button.handlers.click({ isTrusted: true });
   assert.equal(button.isConnected, false);
   assert.equal(app.messages.filter(x => x.type === "jobflick:submit").length, 0);
+});
+
+test("read-only probe detects multiple upload inputs without returning file names",async()=>{
+  const app=simulate(yaml,true,{
+    composerCount:2,fileInputCount:2,fileSelected:true,
+    composerValue:"private draft must not leave content script"
+  });
+  const result=await app.runtimeListener({type:"jobflick:probe-upload"});
+  assert.equal(result.ok,true);
+  assert.equal(result.composerAmbiguous,true);
+  assert.equal(result.fileInputAmbiguous,true);
+  assert.equal(result.selectedFilePresent,true);
+  assert.equal(result.composerOccupied,true);
+  assert.equal("filename" in result,false);
+  assert.equal("draft" in result,false);
+  assert.equal(app.messages.length,0);
+});
+
+test("textarea drafts are treated as occupied without revealing text",async()=>{
+  const app=simulate(yaml,true,{
+    composerCount:1,composerValue:"private text",fileInputCount:1
+  });
+  const result=await app.runtimeListener({type:"jobflick:probe-upload"});
+  assert.equal(result.composerOccupied,true);
+  assert.equal(result.composerAmbiguous,false);
+  assert.equal(result.fileInputAmbiguous,false);
+  assert.equal(result.selectedFilePresent,false);
+  assert.equal(JSON.stringify(result).includes("private text"),false);
 });
