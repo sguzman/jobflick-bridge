@@ -23,7 +23,8 @@ function simulate(initialYaml = yaml, validateOK = true, probeOptions = {}) {
     matches(selector) { return selector === this.tag; }
     closest(selector) {
       if (selector === "pre" && this.tag === "pre") return this;
-      if (selector === "main") return this.tag === "pre" ? { isConnected: true } : null;
+      if (selector === "main") return this.tag === "pre" && this.insideMain !== false
+        ? { isConnected: true } : null;
       return null;
     }
     querySelector(selector) {
@@ -42,6 +43,7 @@ function simulate(initialYaml = yaml, validateOK = true, probeOptions = {}) {
   }
   const pre = new Element("pre");
   pre.yaml = initialYaml;
+  const route = { origin: "https://chatgpt.com", pathname: "/c/testing-1234" };
   const pres = [pre];
   const count = Math.max(1, Math.min(8000, probeOptions.blockCount || 1));
   for (let i = 1; i < count; i++) {
@@ -109,7 +111,8 @@ function simulate(initialYaml = yaml, validateOK = true, probeOptions = {}) {
     }
   };
   vm.runInNewContext(content, {
-    document, browser, Element, TextEncoder, innerHeight: 768, globalThis: {},
+    document, browser, Element, TextEncoder, innerHeight: 768,
+    globalThis: { location: route },
     setTimeout: fn => { const id = ++timerId; timerJobs.set(id, fn); return id; },
     clearTimeout: id => timerJobs.delete(id),
     WeakMap, Set, Promise
@@ -128,7 +131,7 @@ function simulate(initialYaml = yaml, validateOK = true, probeOptions = {}) {
   };
   const pointer = (target = pre) => documentListeners.pointerover({ target });
   const focus = (target = pre) => documentListeners.focusin({ target });
-  return { pre, pres, pump, pointer, focus, messages: runtimeMessages, runtimeListener };
+  return { pre, pres, route, pump, pointer, focus, messages: runtimeMessages, runtimeListener };
 }
 
 test("idle page does not scan or validate until intentional pointer/focus", async () => {
@@ -197,6 +200,51 @@ test("YAML mutation during async validation cannot create a stale Run button", a
   assert.equal(app.messages.filter(x => x.type === "jobflick:validate").length, 2);
   assert.match(app.pre.button.textContent, /Run Jobflick/);
   assert.equal(app.messages.filter(x => x.type === "jobflick:submit").length, 0);
+});
+
+test("SPA route change revokes old Run button even when code node survives",async()=>{
+  const app=simulate();
+  app.focus();
+  await app.pump();
+  const oldButton=app.pre.button;
+  assert.equal(oldButton.isConnected,true);
+  app.route.pathname="/c/other-conversation";
+  await oldButton.handlers.click({isTrusted:true});
+  assert.equal(oldButton.isConnected,false,
+    "A Run control from a prior conversation must remove itself");
+  assert.equal(app.messages.filter(x=>x.type==="jobflick:submit").length,0);
+  app.focus();
+  await app.pump();
+  assert.notEqual(app.pre.button,oldButton);
+  assert.equal(app.messages.filter(x=>x.type==="jobflick:validate").length,2,
+    "Same code node in a different conversation requires new validation");
+});
+
+test("late native validation on a previous SPA route cannot create Run",async()=>{
+  let release;
+  const validationGate=new Promise(resolve=>{release=resolve;});
+  const app=simulate(yaml,true,{validationGate});
+  app.focus();
+  await app.pump();
+  app.route.pathname="/c/new-conversation";
+  release();
+  await app.pump();
+  assert.equal(app.pre.button,undefined,"Old-route validation cannot authorize new route");
+  app.focus();
+  await app.pump();
+  assert.match(app.pre.button.textContent,/Run Jobflick/);
+  assert.equal(app.messages.filter(x=>x.type==="jobflick:submit").length,0);
+});
+
+test("detached code moved outside main cannot execute",async()=>{
+  const app=simulate();
+  app.focus();
+  await app.pump();
+  const button=app.pre.button;
+  app.pre.insideMain=false;
+  await button.handlers.click({isTrusted:true});
+  assert.equal(button.isConnected,false);
+  assert.equal(app.messages.filter(x=>x.type==="jobflick:submit").length,0);
 });
 
 test("invalid YAML never shows Run button", async () => {
