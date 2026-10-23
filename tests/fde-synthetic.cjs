@@ -243,9 +243,14 @@ async function main(){
       const found=await driver.findElements(By.css(".jobflick-bridge-run"));
       return found[0] || false;
     },10000);
-    const before=await driver.executeScript(
-      "return document.querySelector('main pre')");
-    assert(before);
+    await driver.executeScript(
+      "document.documentElement.dataset.qaSubmitCount='';"+
+      "document.dispatchEvent(new Event('jobflick-qa-count'));");
+    const countBefore=await driver.wait(async()=>{
+      const value=await driver.executeScript(
+        "return document.documentElement.dataset.qaSubmitCount");
+      return value!=="" ? Number(value)+1 : false;
+    },5000)-1;
     await driver.executeScript(
       "history.pushState({},'', '/intermediate-qa-route');"+
       "history.pushState({},'', '/');");
@@ -260,12 +265,13 @@ async function main(){
     },10000);
     assert.match(await restored.getText(),/Run Jobflick/);
     await driver.executeScript(
+      "document.documentElement.dataset.qaSubmitCount='';"+
       "document.dispatchEvent(new Event('jobflick-qa-count'));");
     await driver.wait(async()=>await driver.executeScript(
-      "return document.documentElement.dataset.qaSubmitCount!==undefined"),5000);
-    assert.equal(await driver.executeScript(
-      "return document.documentElement.dataset.qaSubmitCount"),"0",
-      "Round-trip History navigation is never an execution gesture");
+      "return document.documentElement.dataset.qaSubmitCount!==''"),5000);
+    assert.equal(Number(await driver.executeScript(
+      "return document.documentElement.dataset.qaSubmitCount")),countBefore,
+      "Round-trip History navigation must never submit an additional job");
 
     // Read-only composer and FileList preflight in actual Firefox.
     await driver.executeScript(
