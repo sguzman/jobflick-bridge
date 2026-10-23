@@ -9,6 +9,7 @@ const MAX_STATUS_PER_POLL = 24;
 const FAST_RECHECK_LIMIT = 6;
 const FAST_RECHECK_DELAY_MS = 1200;
 const FAST_RECHECK_BATCH = 4;
+const MAX_FAST_RECHECK_JOBS = 32;
 const FINISHED = new Set(["succeeded", "failed", "cancelled", "timed_out", "interrupted"]);
 const SITES = new Set(["chatgpt.com", "chat.openai.com"]);
 
@@ -226,6 +227,9 @@ async function checkJobs(onlyId = null) {
 // recovery path. With no submitted jobs there is no timer or CPU wakeup.
 function requestFastRecheck(id) {
   if (typeof setTimeout !== "function") return;
+  // Native status alarms cover excess bursts. Never retain an unbounded
+  // timer worklist even if many conversations are submitted rapidly.
+  if (!fastRechecks.has(id) && fastRechecks.size >= MAX_FAST_RECHECK_JOBS) return;
   fastRechecks.set(id, FAST_RECHECK_LIMIT);
   if (fastRecheckTimer === null) {
     fastRecheckTimer = setTimeout(drainFastRechecks, FAST_RECHECK_DELAY_MS);
