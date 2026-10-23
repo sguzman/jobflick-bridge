@@ -507,3 +507,21 @@ This closes the isolated multi-tab and race-test matrix, **not** the
 production ChatGPT attachment or automatic Send gates. The report-handoff
 listener used for destination denial is CI-only and is not in the released
 extension.
+
+## Verified M1-07: Firefox SPA rerender and A→B→A revocation
+
+A route-comparison-only Run control could survive A→B→A History API
+transitions if React reused the exact same code element and nobody clicked
+while visiting B. The production background now notifies the content script
+of each top-level Firefox History API transition. Its monotonic navigation
+epoch invalidates pending native validation and removes the previous Run
+controls, including when the URL has already returned to A. A new Run
+control requires renewed user focus and native validation. No automatic
+submission or transcript-wide idle observer is introduced.
+
+The production content and background logic, deterministic regressions, and
+actual disposable Firefox Developer Edition A→B→A browser test passed
+[Firefox acceptance](https://github.com/sguzman/jobflick-bridge/actions/runs/40041478128).
+The related production-source [real Jobflick native acceptance](https://github.com/sguzman/jobflick-bridge/actions/runs/40041196148)
+also passed. M1-07 is verified for the isolated Firefox integration; live
+authenticated ChatGPT composer/upload acceptance remains separately gated.

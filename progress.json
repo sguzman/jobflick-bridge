@@ -128,12 +128,13 @@
         {
           "id": "M1-07",
           "title": "DOM rerender resilience",
-          "status": "implemented",
+          "status": "verified",
           "evidence": [
             "Actual FDE synthetic rerender, stale Run control removal, changed YAML and pushState route revocation tested; authenticated ChatGPT React DOM acceptance pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40015025541",
             "Native validation of an unchanged YAML block is coalesced while pending; stale late responses cannot add a Run button after YAML mutation. New Node races and the complete isolated Firefox Developer Edition checks passed: https://github.com/sguzman/jobflick-bridge/actions/runs/40030357579. Authenticated ChatGPT React acceptance remains pending.",
             "Validated Run controls now bind to the original SPA origin/pathname; old controls reject trusted clicks after navigation, unchanged YAML must be revalidated on the new route, and late native validators cannot revive previous-route controls. Both Node and real disposable Firefox Developer Edition synthetic History API tests passed: https://github.com/sguzman/jobflick-bridge/actions/runs/40032659397. Authenticated ChatGPT React acceptance remains pending.",
-            "Run controls dismiss themselves after an asynchronous submit response on a different SPA route; original submission remains exactly once, and stale failure/queued acknowledgments do not repaint the new chat. Node regressions and Firefox suite passed: https://github.com/sguzman/jobflick-bridge/actions/runs/40033650901. Live authenticated React acceptance pending."
+            "Run controls dismiss themselves after an asynchronous submit response on a different SPA route; original submission remains exactly once, and stale failure/queued acknowledgments do not repaint the new chat. Node regressions and Firefox suite passed: https://github.com/sguzman/jobflick-bridge/actions/runs/40033650901. Live authenticated React acceptance pending.",
+            "Production Firefox content/background integration now revokes Run controls and pending validations on background-observed top-level History API transitions, including rapid A->B->A reuse of the exact same pre/code DOM node and YAML. Stale controls are removed without a click; only renewed focus triggers fresh native validation. Tests include late async validation, detached/rerendered nodes, stale submit replies, forged clicks and no additional native submission. Real disposable Firefox Developer Edition full CI passed https://github.com/sguzman/jobflick-bridge/actions/runs/40041478128; production-source native Jobflick integration passed https://github.com/sguzman/jobflick-bridge/actions/runs/40041196148. This is a synthetic conversation-UI acceptance, not live authenticated ChatGPT upload."
           ]
         },
         {
@@ -146,10 +147,10 @@
           ]
         }
       ],
-      "verified": 7,
+      "verified": 8,
       "total": 8,
-      "percent": 87,
-      "implemented": 1,
+      "percent": 100,
+      "implemented": 0,
       "planned": 0
     },
     {
@@ -627,10 +628,10 @@
   },
   "overall": {
     "total": 63,
-    "verified": 44,
-    "implemented": 12,
+    "verified": 45,
+    "implemented": 11,
     "planned": 7,
-    "percent": 69,
+    "percent": 71,
     "basis": "Only verified atomic tasks count toward percentage"
   }
 }
