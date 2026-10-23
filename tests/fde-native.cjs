@@ -152,7 +152,13 @@ async function main() {
     assert.match(await button.getText(), /Run Jobflick/);
     phase = "trusted Run submission";
     await button.click();
-    await driver.wait(async () => /Queued|succeeded/.test(await button.getText()), 12000);
+    // Real Rust daemon startup and browser Native Messaging are separate
+    // processes. Give the actual backend a bounded 20s, but retain a faster
+    // 12s gate for the no-execution fixture.
+    await driver.wait(async () =>
+      /Queued|running|succeeded|failed|timed_out|interrupted|cancelled/.test(
+        await button.getText()
+      ), realHost ? 20000 : 12000);
     phase = "verifying native submission";
     const logFile = path.join(state, "native-requests.jsonl");
     if (!realHost) {
@@ -202,10 +208,18 @@ async function main() {
       fs.readFileSync(logFile,"utf8").split("\n").filter(Boolean)
         .map(line=>{try{return JSON.parse(line).action;}catch{return "invalid-log";}}) : [];
     const page=driver ? await driver.executeScript(
-      "return {url:location.pathname,codes:document.querySelectorAll('main pre code').length,buttons:document.querySelectorAll('.jobflick-bridge-run').length}"
+      "return {url:location.pathname,codes:document.querySelectorAll('main pre code').length,buttons:document.querySelectorAll('.jobflick-bridge-run').length,buttonState:document.querySelector('.jobflick-bridge-run')?.textContent?.slice(0,120) || 'none'}"
     ).catch(()=>({unavailable:true})) : {unavailable:true};
+    const recordDir=path.join(root,"data","jobflick","jobs");
+    const records=realHost && fs.existsSync(recordDir) ?
+      fs.readdirSync(recordDir).filter(x=>x.endsWith(".json")).slice(0,5)
+        .map(file=>{try{
+          const record=JSON.parse(fs.readFileSync(path.join(recordDir,file),"utf8"));
+          return {id:record.id,state:record.state,hasOrigin:!!record.origin_tab_id};
+        }catch{return {unreadable:true};}}) : [];
     console.error("Native QA phase:",phase,"requested_actions:",JSON.stringify(actions),
-      "page:",JSON.stringify(page));
+      "page:",JSON.stringify(page),"jobs:",JSON.stringify(records),
+      "daemon_error_tail:",daemonLog.slice(-500));
     throw error;
   } finally {
     if (driver) await driver.quit();
