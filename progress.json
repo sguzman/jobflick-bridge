@@ -260,9 +260,9 @@
         {
           "id": "M3-06",
           "title": "Alarm polling",
-          "status": "implemented",
+          "status": "verified",
           "evidence": [
-            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+            "Bounded 24-job polling and fair 40-job coverage pass mocked tests; no idle Firefox QA: https://github.com/sguzman/jobflick-bridge/actions/runs/39996306288"
           ]
         },
         {
@@ -288,10 +288,10 @@
           ]
         }
       ],
-      "verified": 6,
+      "verified": 7,
       "total": 9,
-      "percent": 66,
-      "implemented": 2
+      "percent": 77,
+      "implemented": 1
     },
     {
       "id": "M4",
@@ -325,9 +325,9 @@
         {
           "id": "M4-04",
           "title": "Exact tab + conversation",
-          "status": "implemented",
+          "status": "verified",
           "evidence": [
-            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+            "Navigation mismatch and tab-ID reuse tests prevent status delivery to wrong tab: https://github.com/sguzman/jobflick-bridge/actions/runs/39996306288"
           ]
         },
         {
@@ -357,10 +357,10 @@
           "evidence": []
         }
       ],
-      "verified": 2,
+      "verified": 3,
       "total": 8,
-      "percent": 25,
-      "implemented": 3
+      "percent": 37,
+      "implemented": 2
     },
     {
       "id": "M5",
@@ -376,8 +376,10 @@
         {
           "id": "M5-02",
           "title": "Bounded report file",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "Bounded 512 KiB text File prepared locally, Firefox real download acceptance pending: https://github.com/sguzman/jobflick-bridge/actions/runs/39996306288"
+          ]
         },
         {
           "id": "M5-03",
@@ -427,7 +429,7 @@
       "verified": 0,
       "total": 9,
       "percent": 0,
-      "implemented": 1
+      "implemented": 2
     },
     {
       "id": "M6",
@@ -445,9 +447,9 @@
         {
           "id": "M6-02",
           "title": "Restart reconciliation",
-          "status": "implemented",
+          "status": "verified",
           "evidence": [
-            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+            "Mock Firefox restart recovers pending/finished state and marks missing tab origins orphaned: https://github.com/sguzman/jobflick-bridge/actions/runs/39996306288"
           ]
         },
         {
@@ -487,10 +489,10 @@
           ]
         }
       ],
-      "verified": 0,
+      "verified": 1,
       "total": 7,
-      "percent": 0,
-      "implemented": 5
+      "percent": 14,
+      "implemented": 4
     },
     {
       "id": "M7",
@@ -508,8 +510,10 @@
         {
           "id": "M7-02",
           "title": "Scale/idle QA",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "24-job fair polling budget implemented and mocked, idle/live FDE performance acceptance pending: https://github.com/sguzman/jobflick-bridge/actions/runs/39996306288"
+          ]
         },
         {
           "id": "M7-03",
@@ -555,13 +559,13 @@
       "verified": 0,
       "total": 8,
       "percent": 0,
-      "implemented": 3
+      "implemented": 4
     }
   ],
   "last_ci": {
     "result": "success",
-    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/39995564322",
-    "commit": "ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020",
-    "scope": "JavaScript syntax, mocked background/content tests, Fish installer/launcher syntax, and Mozilla web-ext lint. Not a live Firefox or native Jobflick execution acceptance."
+    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/39996306288",
+    "commit": "7ef3daf35793134b5f5b6dbbf83a7a7c17a170cb",
+    "scope": "Node syntax + mocked background/content behavior, fish syntax, Mozilla web-ext lint. No authenticated Firefox/ChatGPT or live native-host execution."
   }
 }
