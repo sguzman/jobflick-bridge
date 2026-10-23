@@ -7,7 +7,7 @@ const fs=require("node:fs");
 const os=require("node:os");
 const path=require("node:path");
 const http=require("node:http");
-const {Builder,By,until}=require("selenium-webdriver");
+const {Builder,By,until,Key}=require("selenium-webdriver");
 const firefox=require("selenium-webdriver/firefox");
 
 const JOB="job_12345678";
@@ -70,9 +70,54 @@ async function main(){
       return (await driver.findElements(
         By.xpath("//button[normalize-space(.)='Save report']"))).length>0;
     },10000);
+    // The production popup DOM must expose meaningful accessibility names,
+    // accessible control roles and a polite live region to Firefox's native
+    // accessibility tree. These assertions use the actual browser rather
+    // than assuming that visible text implies an accessible button.
+    const accessible=async(selector,role,name)=>{
+      const item=await driver.findElement(By.css(selector));
+      assert.equal(await item.getAriaRole(),role,selector+" accessibility role");
+      assert.match(await item.getAccessibleName(),name,
+        selector+" computed accessible name");
+      return item;
+    };
+    await accessible("#scan","button",/Scan visible YAML/);
+    await accessible("#refresh","button",/Refresh jobs/);
+    await accessible("#diagnose","button",/Check connection/);
+    await accessible("#probe-upload","button",/Inspect composer/);
+    await accessible("#filter-query","searchbox",/Find job by name, ID or state/);
+    const saveControl=await accessible(
+      "main#jobs section.job button","button",/Save report/);
+    assert.equal(await driver.executeScript(
+      "return document.querySelector('#notice').getAttribute('role')"),"status");
+    assert.equal(await driver.executeScript(
+      "return document.querySelector('#notice').getAttribute('aria-live')"),"polite");
+    // The popup defines semantic system colors and no transitions or
+    // animations. Force both scheme branches without modifying Firefox
+    // preferences or a persistent profile.
+    const schemes=await driver.executeScript(
+      "const prior=document.documentElement.style.colorScheme;"+
+      "const values=['light','dark'].map(scheme=>{"+
+      "document.documentElement.style.colorScheme=scheme;"+
+      "const c=getComputedStyle(document.body);"+
+      "const button=getComputedStyle(document.querySelector('#scan'));"+
+      "return {scheme,bg:c.backgroundColor,fg:c.color,"+
+      "motion:button.animationDuration,transition:button.transitionDuration};});"+
+      "document.documentElement.style.colorScheme=prior;return values;"
+    );
+    assert.notEqual(schemes[0].bg,schemes[0].fg);
+    assert.notEqual(schemes[1].bg,schemes[1].fg);
+    assert.notEqual(schemes[0].bg,schemes[1].bg,
+      "System light and dark color tokens must produce distinct backgrounds");
+    for(const scheme of schemes){
+      assert.equal(scheme.motion,"0s");
+      assert.equal(scheme.transition,"0s");
+    }
     const target=path.join(dir,"jobflick-"+JOB+".txt");
     assert.equal(fs.existsSync(target),false,"Never download on popup load");
-    await (await findSave()).click();
+    // Real Firefox keyboard activation is the user gesture. The first
+    // Enter prepares only; Space later requests the actual local download.
+    await saveControl.sendKeys(Key.ENTER);
     await driver.wait(async()=>(
       await driver.findElements(
         By.xpath("//button[normalize-space(.)='Download prepared report']")
@@ -80,9 +125,11 @@ async function main(){
     assert.equal(fs.existsSync(target),false,"First click only prepares a File");
     const actions=await driver.executeScript("return window.__qaRequests");
     assert.deepEqual(actions,["jobflick:inbox","jobflick:report"]);
-    await (await driver.findElement(
-      By.xpath("//button[normalize-space(.)='Download prepared report']")
-    )).click();
+    const downloadControl=await driver.findElement(
+      By.xpath("//button[normalize-space(.)='Download prepared report']"));
+    assert.equal(await downloadControl.getAriaRole(),"button");
+    assert.match(await downloadControl.getAccessibleName(),/Download prepared report/);
+    await downloadControl.sendKeys(Key.SPACE);
     await driver.wait(()=>fs.existsSync(target),10000);
     assert.equal(fs.readFileSync(target,"utf8"),REPORT);
     const after=await driver.executeScript("return window.__qaRequests");
