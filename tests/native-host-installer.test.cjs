@@ -123,3 +123,27 @@ test("installed Fish wrapper passes binary Native Messaging frames to child exec
     fs.rmSync(fixture, { recursive: true, force: true });
   }
 });
+
+test("uninstaller refuses a forged manifest even if it mentions the add-on ID", () => {
+  const fixture=fs.mkdtempSync(path.join(os.tmpdir(),"jobflick-bridge-foreign-"));
+  try {
+    const home=path.join(fixture,"home");
+    const manifestDir=path.join(home,".mozilla/native-messaging-hosts");
+    fs.mkdirSync(manifestDir,{recursive:true});
+    const manifest=path.join(manifestDir,"io.github.sguzman.jobflick.json");
+    const foreign={
+      name:"io.github.sguzman.jobflick",type:"stdio",
+      description:"Mentions jobflick-bridge@sguzman.github.io but owned elsewhere",
+      path:"/unexpected/native/host",
+      allowed_extensions:["jobflick-bridge@sguzman.github.io"]
+    };
+    fs.writeFileSync(manifest,JSON.stringify(foreign));
+    const env={...process.env,HOME:home,XDG_DATA_HOME:path.join(fixture,"data")};
+    const installer=path.join(__dirname,"../scripts/install-native-host.fish");
+    const result=spawnSync("fish",[installer,"--uninstall"],{encoding:"utf8",env});
+    assert.notEqual(result.status,0);
+    assert.deepEqual(JSON.parse(fs.readFileSync(manifest,"utf8")),foreign);
+  }finally{
+    fs.rmSync(fixture,{recursive:true,force:true});
+  }
+});

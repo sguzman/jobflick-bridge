@@ -52,13 +52,21 @@ switch $argv[1]
         echo "Registered native host for Firefox profiles: $manifest"
         echo "Note: this registration is per-user, not QA-profile isolated."
     case --uninstall
-        if test -L "$manifest"
-            echo "Refusing to follow/remove symlinked native host manifest" >&2
+        if test -L "$manifest_dir"; or test -L "$manifest"
+            echo "Refusing to follow symlinked native host registration" >&2
             exit 2
         end
         if test -f "$manifest"
-            if not grep -q '"jobflick-bridge@sguzman.github.io"' "$manifest"
-                echo "Manifest does not match this extension; refusing deletion" >&2
+            if not command -sq jq
+                echo "jq is required to verify manifest ownership before deletion" >&2
+                exit 2
+            end
+            # Do not delete another extension's host even if its description
+            # mentions our ID. Validate the complete ownership contract.
+            if not jq -e --arg wrapper "$wrapper" \
+              '.name == "io.github.sguzman.jobflick" and .type == "stdio" and .path == $wrapper and .allowed_extensions == ["jobflick-bridge@sguzman.github.io"]' \
+              "$manifest" >/dev/null 2>/dev/null
+                echo "Manifest ownership does not match; refusing deletion" >&2
                 exit 2
             end
             rm -- "$manifest"; or exit 1
