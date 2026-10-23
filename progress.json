@@ -112,7 +112,8 @@
           "title": "Accessible Run control",
           "status": "implemented",
           "evidence": [
-            "Real FDE headless QA-only background with unchanged production content script verifies Run button and browser click. Keyboard/screen reader acceptance pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40002154617"
+            "Real FDE headless QA-only background with unchanged production content script verifies Run button and browser click. Keyboard/screen reader acceptance pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40002154617",
+            "Native Space activation (in addition to Enter) verified against the production Run control in isolated Firefox Developer Edition, with the nonexecuting QA background refusing submission. Screen-reader acceptance remains pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40030568393"
           ]
         },
         {
@@ -488,7 +489,8 @@
           "title": "Results panel",
           "status": "implemented",
           "evidence": [
-            "Firefox popup now has 40-record pagination, keyboard-accessible local job search, no-match feedback, read-only per-job preflight and bounded manual report retrieval. Node tests cover >300 archived jobs and name/ID/state filtering; authenticated Firefox popup UX not yet accepted: https://github.com/sguzman/jobflick-bridge/actions/runs/40021007135"
+            "Firefox popup now has 40-record pagination, keyboard-accessible local job search, no-match feedback, read-only per-job preflight and bounded manual report retrieval. Node tests cover >300 archived jobs and name/ID/state filtering; authenticated Firefox popup UX not yet accepted: https://github.com/sguzman/jobflick-bridge/actions/runs/40021007135",
+            "Local inbox now excludes malformed v1/current records whose storage map key and claimed record ID disagree; no forged actionable ID is displayed. Node and Firefox checks passed: https://github.com/sguzman/jobflick-bridge/actions/runs/40030699492. Authenticated popup QA remains outstanding."
           ]
         },
         {
@@ -524,7 +526,8 @@
           "status": "implemented",
           "evidence": [
             "Adversarial Node tests reject reserved object-prototype job IDs, mismatched native origin/ID on submission, inspection and report retrieval, including explicitly supplied null, numeric, object and array identity metadata. Firefox and pinned real-native acceptance passing; authenticated ChatGPT security acceptance pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40028499706 https://github.com/sguzman/jobflick-bridge/actions/runs/40028499789",
-            "Additional adversarial validation and file handoff tests passed: concurrent pointer/focus does not duplicate in-flight validation, edited YAML rejects late replies, and Firefox reports failure after synchronous page-side FileList clear/detach. https://github.com/sguzman/jobflick-bridge/actions/runs/40030357579"
+            "Additional adversarial validation and file handoff tests passed: concurrent pointer/focus does not duplicate in-flight validation, edited YAML rejects late replies, and Firefox reports failure after synchronous page-side FileList clear/detach. https://github.com/sguzman/jobflick-bridge/actions/runs/40030357579",
+            "Defensive storage-record identity matching now blocks mismatched-key records from native polling, report read, preflight and Forget, while keeping their underlying data unchanged; adversarial Node and Firefox QA checks passed: https://github.com/sguzman/jobflick-bridge/actions/runs/40030699492."
           ]
         },
         {
