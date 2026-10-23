@@ -148,6 +148,20 @@ async function main(){
     await newButton.sendKeys(Key.ENTER);
     await driver.wait(async()=>/Submission uncertain/.test(await newButton.getText()),10000);
 
+    // A second disposable page must support Space activation as well.
+    // The QA background rejects submission; keyboard focus is the only
+    // authorization signal under test, never an actual native command.
+    await driver.navigate().refresh();
+    const spaceButton=await driver.wait(async()=>{
+      await driver.executeScript(
+        "document.querySelector('main pre').dispatchEvent(new Event('focusin',{bubbles:true}));"
+      );
+      const found=await driver.findElements(By.css(".jobflick-bridge-run"));
+      return found[0] || false;
+    },10000);
+    await spaceButton.sendKeys(Key.SPACE);
+    await driver.wait(async()=>/Submission uncertain/.test(await spaceButton.getText()),10000);
+
     // Read-only composer and FileList preflight in actual Firefox.
     await driver.executeScript(
       "const original=document.querySelector('#qa-original');"+
@@ -193,7 +207,7 @@ async function main(){
     assert.equal(flags.fileInputAmbiguous,false);
     assert.equal(flags.selectedFilePresent,false);
     await driver.uninstallAddon(id);
-    console.log("Synthetic FDE: inert YAML controls, real keyboard activation, draft and selected-file read-only probes passed; no native commands executed");
+    console.log("Synthetic FDE: inert YAML controls, Enter/Space keyboard activation, draft and selected-file read-only probes passed; no native commands executed");
   }finally{
     if(driver)await driver.quit();
     await new Promise(resolve=>server.close(resolve));
