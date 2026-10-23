@@ -191,6 +191,19 @@ async function checkJobs(onlyId = null) {
         if (!status.ok || !status.job || typeof status.job.state !== "string") continue;
         const state = status.job.state;
         if (!["queued", "running", ...FINISHED].includes(state)) continue;
+        // The native backend may return an explicit origin token. A
+        // contradictory token must never be routed to this Firefox tab.
+        // Older backends without this optional field remain supported.
+        if (typeof status.job.origin_tab_id === "string" &&
+            status.job.origin_tab_id !== record.origin) {
+          await mutate(jobs => {
+            if (knownRecord(jobs[id])) {
+              jobs[id].orphaned = true;
+              jobs[id].deliveryState = "manual_only";
+            }
+          });
+          continue;
+        }
         await mutate(jobs => {
           if (!jobs[id]) return;
           jobs[id].state = state;
@@ -304,6 +317,12 @@ async function onBridgeMessage(message, sender) {
   const id = result.job?.id;
   if (typeof id !== "string" || !/^[a-zA-Z0-9_-]{8,128}$/.test(id)) {
     throw new Error("Submission uncertain; inspect Jobflick before retrying");
+  }
+  if (typeof result.job.origin_tab_id === "string" &&
+      result.job.origin_tab_id !== origin) {
+    // The command may already be queued. Do not bind its report to a
+    // contradictory native origin or attempt a new submission.
+    throw new Error("Native job origin did not match this Firefox tab; inspect Jobflick");
   }
   // A native host can take long enough that the user leaves this chat
   // after the last pre-submit check. Never record such a job as eligible for
