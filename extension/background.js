@@ -179,15 +179,18 @@ async function reconcileOrigins() {
     if (!matchedRecord(id, record) || record.orphaned) continue;
     try {
       const tab = await trustedTab(record.tabId, record.conversation, record.origin);
-      if (!tab) orphanIds.push(id);
+      if (!tab) orphanIds.push([id, recordIdentity(record)]);
     } catch {
-      orphanIds.push(id);
+      orphanIds.push([id, recordIdentity(record)]);
     }
   }
   if (orphanIds.length) {
     await mutate(jobs => {
-      for (const id of orphanIds) {
-        if (knownRecord(jobs[id])) {
+      for (const [id, identity] of orphanIds) {
+        // Reconciliation runs asynchronously across browser startup. A job
+        // ID can have been replaced or quarantined since the tab probe.
+        if (sameIdentity(id, jobs[id], identity) &&
+            !jobs[id].orphaned && !jobs[id].integrityIssue) {
           jobs[id].orphaned = true;
           jobs[id].deliveryState = "manual_only";
         }
@@ -672,10 +675,20 @@ async function onPopupMessage(message, sender) {
       if (!matchedRecord(id, current) || !FINISHED.has(current.state)) {
         return { ok: false, message: "Only finished bridge records may be forgotten" };
       }
-      // Forget only the extension's routing metadata. No native action, no
-      // cancellation, no deletion of Jobflick's durable job or output.
-      await mutate(jobs => { if (FINISHED.has(jobs[id]?.state)) delete jobs[id]; });
-      return { ok: true };
+      // Forget only the extension's routing metadata. A concurrent native
+      // reconciliation may replace the same ID while this request waits for
+      // the serialized writer. Never delete that replacement.
+      const identity = recordIdentity(current);
+      let forgotten = false;
+      await mutate(jobs => {
+        if (sameIdentity(id, jobs[id], identity) &&
+            FINISHED.has(jobs[id].state)) {
+          delete jobs[id];
+          forgotten = true;
+        }
+      });
+      return forgotten ? { ok: true } :
+        { ok: false, message: "Bridge record changed before Forget; refresh the inbox" };
     }
     case "jobflick:report": {
       const id = message.id;

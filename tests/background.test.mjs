@@ -38,11 +38,17 @@ function boot(nativeOverride = null, options = {}) {
     },
     storage: {
       local: {
-        get: async key => ({ [key]: storage[key] }),
+        get: async key => {
+          if (options.beforeLocalRead) await options.beforeLocalRead(key, storage);
+          return { [key]: storage[key] };
+        },
         set: async data => { storageWrites.push(1); Object.assign(storage, data); }
       },
       session: {
-        get: async key => ({ [key]: session[key] }),
+        get: async key => {
+          if (options.beforeSessionRead) await options.beforeSessionRead(key, session);
+          return { [key]: session[key] };
+        },
         set: async data => {
           if (options.beforeSessionWrite) await options.beforeSessionWrite(data);
           Object.assign(session, data);
@@ -699,6 +705,42 @@ test("unsupported future record versions survive untouched and cannot be exporte
   await app.listeners.message({ type: "jobflick:refresh" }, app.popupSender);
   assert.equal(app.requests.length, 0);
   assert.equal(app.storage.jobflick_bridge_jobs_v1.job_12345678.recordVersion, 200);
+});
+
+test("Forget cannot delete a replacement record with the same job ID", async () => {
+  const id="job_12345678";
+  const old={id,recordVersion:1,state:"succeeded",tabId:11,
+    origin:"tab-old",conversation:"https://chatgpt.com/c/testing-1234",
+    submittedAt:1,orphaned:false};
+  const replacement={...old,origin:"tab-replacement",submittedAt:2};
+  let reads=0;
+  const storage={jobflick_bridge_jobs_v1:{[id]:old}};
+  const app=boot(null,{storage,beforeLocalRead:(_key,store)=>{
+    if(++reads===2)store.jobflick_bridge_jobs_v1[id]=replacement;
+  }});
+  const answer=await app.listeners.message({type:"jobflick:forget",id},app.popupSender);
+  assert.equal(answer.ok,false,"An earlier click is not authority to remove a new record");
+  assert.equal(storage.jobflick_bridge_jobs_v1[id],replacement);
+  assert.equal(app.requests.length,0);
+});
+
+test("startup reconciliation cannot orphan a replacement record from stale origin", async () => {
+  const id="job_12345678";
+  const old={id,recordVersion:1,state:"succeeded",tabId:11,
+    origin:"tab-old",conversation:"https://chatgpt.com/c/testing-1234",
+    submittedAt:1,orphaned:false};
+  const replacement={...old,origin:"tab-new",submittedAt:2};
+  const storage={jobflick_bridge_jobs_v1:{[id]:old}};
+  const app=boot(null,{storage,beforeSessionRead:(_key,_session)=>{
+    storage.jobflick_bridge_jobs_v1[id]=replacement;
+  }});
+  app.listeners.startup();
+  for(let n=0;n<16;n++)await pause();
+  assert.equal(storage.jobflick_bridge_jobs_v1[id],replacement);
+  assert.equal(replacement.orphaned,false,
+    "Old browser session loss must not orphan a different durable identity");
+  assert.equal(replacement.deliveryState,undefined);
+  assert.equal(app.requests.length,0);
 });
 
 test("concurrent popup cancellation messages issue at most one native request", async () => {
