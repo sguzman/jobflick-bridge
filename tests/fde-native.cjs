@@ -37,39 +37,11 @@ async function main() {
   manifest.browser_specific_settings.gecko.id = originId;
   manifest.host_permissions = ["http://127.0.0.1/*"];
   manifest.content_scripts = [{ matches: ["http://127.0.0.1/*"],
-    js: ["qa-marker.js", "content.js"], run_at: "document_idle" }];
+    js: ["content.js"], run_at: "document_idle" }];
   manifest.action = { default_title: "Firefox Native QA" };
   fs.writeFileSync(path.join(ext, "manifest.json"), JSON.stringify(manifest));
-  fs.writeFileSync(path.join(ext,"qa-marker.js"),
-    "document.documentElement.dataset.jobflickQaMarker = \"injected\";");
-  const productionContent=fs.readFileSync(path.join(production,"content.js"),"utf8");
-  // QA-only read-only diagnostic: public fixture YAML, never a real command.
-  // It reveals background/host failures that production intentionally hides.
-  const qaProbe=`
-;(() => {
-  const probe = "schema: 4\\nname: Firefox native QA\\nshell: fish\\ncwd: /tmp\\nprivilege: none\\ntimeout_seconds: 5\\ncommand: pwd";
-  document.documentElement.dataset.jobflickNativeQa = "request-pending";
-  browser.runtime.sendMessage({type:"jobflick:validate",yaml:probe})
-    .then(reply => { document.documentElement.dataset.jobflickNativeQa =
-      String(reply?.message || reply?.ok || "empty"); })
-    .catch(error => { document.documentElement.dataset.jobflickNativeQa =
-      "error: " + String(error?.message || error); });
-})();
-`;
-  const decoratedContent=`
-document.documentElement.dataset.jobflickContentPhase = "begin";
-try {
-`+productionContent+`
-document.documentElement.dataset.jobflickContentPhase = "initialized";
-} catch(error) {
-  document.documentElement.dataset.jobflickContentPhase =
-    "error: " + String(error?.message || error);
-}
-`+qaProbe;
-  fs.writeFileSync(path.join(ext, "content.js"),decoratedContent);
-  // Catch errors before Firefox attempts the temporary add-on installation.
-  require("node:child_process").execFileSync(process.execPath,
-    ["--check",path.join(ext,"content.js")],{stdio:"pipe"});
+  // Use the complete unmodified production content script.
+  fs.copyFileSync(path.join(production, "content.js"), path.join(ext, "content.js"));
   // Only URL identity is adapted to synthetic localhost. All native protocol,
   // job tracking and other production background logic stays unchanged.
   const originalBackground = fs.readFileSync(path.join(production, "background.js"), "utf8");
@@ -164,7 +136,7 @@ document.documentElement.dataset.jobflickContentPhase = "initialized";
       fs.readFileSync(logFile,"utf8").split("\n").filter(Boolean)
         .map(line=>{try{return JSON.parse(line).action;}catch{return "invalid-log";}}) : [];
     const page=driver ? await driver.executeScript(
-      "return {url:location.pathname,codes:document.querySelectorAll('main pre code').length,buttons:document.querySelectorAll('.jobflick-bridge-run').length,validation:document.documentElement.dataset.jobflickNativeQa||'no-qa-response',phase:document.documentElement.dataset.jobflickContentPhase||'not-started',injected:document.documentElement.dataset.jobflickQaMarker||'not-injected'}"
+      "return {url:location.pathname,codes:document.querySelectorAll('main pre code').length,buttons:document.querySelectorAll('.jobflick-bridge-run').length}"
     ).catch(()=>({unavailable:true})) : {unavailable:true};
     console.error("Native QA phase:",phase,"requested_actions:",JSON.stringify(actions),
       "page:",JSON.stringify(page));
