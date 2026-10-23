@@ -70,6 +70,7 @@ async function main() {
     server.listen(0, "127.0.0.1", resolve);
   });
   let driver;
+  let phase = "starting";
   // Browser and geckodriver inherit a HOME that only exists inside this test.
   // It cannot accidentally discover the runner's normal native host files.
   const savedHome = process.env.HOME;
@@ -77,13 +78,17 @@ async function main() {
   process.env.HOME = home;
   process.env.JOBFLICK_QA_STATE = state;
   try {
+    phase = "starting browser";
     driver = await new Builder().forBrowser("firefox")
       .setFirefoxOptions(new firefox.Options().setBinary(binary).addArguments("-headless"))
       .build();
+    phase = "installing addon";
     const id = await driver.installAddon(ext, true);
     assert.equal(id, originId);
+    phase = "opening localhost conversation";
     await driver.get("http://127.0.0.1:" + server.address().port + "/c/test-native-1234");
     await driver.wait(until.elementLocated(By.css("main pre code")), 10000);
+    phase = "native validation and Run button";
     const button = await driver.wait(async () => {
       await driver.executeScript(
         "document.querySelector('pre').dispatchEvent(new Event('focusin',{bubbles:true}));"
@@ -92,8 +97,10 @@ async function main() {
       return items[0] || false;
     }, 12000);
     assert.match(await button.getText(), /Run Jobflick/);
+    phase = "trusted Run submission";
     await button.click();
     await driver.wait(async () => /Queued|succeeded/.test(await button.getText()), 12000);
+    phase = "waiting for native request log";
     const logFile = path.join(state, "native-requests.jsonl");
     await driver.wait(() => {
       if (!fs.existsSync(logFile)) return false;
@@ -108,6 +115,17 @@ async function main() {
     assert.equal(requests.some(r => r.action === "cancel"), false);
     await driver.uninstallAddon(id);
     console.log("Headless FDE Native Messaging: real bridge validate, single submit, opaque origin succeeded using fake no-execution host");
+  } catch(error) {
+    const logFile=path.join(state,"native-requests.jsonl");
+    const actions=fs.existsSync(logFile) ?
+      fs.readFileSync(logFile,"utf8").split("\n").filter(Boolean)
+        .map(line=>{try{return JSON.parse(line).action;}catch{return "invalid-log";}}) : [];
+    const page=driver ? await driver.executeScript(
+      "return {url:location.pathname,codes:document.querySelectorAll('main pre code').length,buttons:document.querySelectorAll('.jobflick-bridge-run').length}"
+    ).catch(()=>({unavailable:true})) : {unavailable:true};
+    console.error("Native QA phase:",phase,"requested_actions:",JSON.stringify(actions),
+      "page:",JSON.stringify(page));
+    throw error;
   } finally {
     if (driver) await driver.quit();
     await new Promise(resolve => server.close(resolve));
