@@ -546,8 +546,10 @@
         {
           "id": "M7-07",
           "title": "Packaging/signing",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "Unsigned QA archive generated in Firefox-specific CI. Signing and release distribution remain untested: https://github.com/sguzman/jobflick-bridge/actions/runs/39997227946"
+          ]
         },
         {
           "id": "M7-08",
@@ -559,13 +561,13 @@
       "verified": 0,
       "total": 8,
       "percent": 0,
-      "implemented": 4
+      "implemented": 5
     }
   ],
   "last_ci": {
     "result": "success",
-    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/39996913809",
-    "commit": "2df0db06820c3f7e460873721506204fcbde7caf",
-    "scope": "Behavioral mock tests, Linux fake native-host installer, Firefox Developer Edition temporary add-on installation/uninstallation, Mozilla manifest lint. No authenticated ChatGPT, real Jobflick daemon job, or file upload acceptance."
+    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/39997227946",
+    "commit": "8e0ffafd098af55b8f70930856b1aa858d34bb3e",
+    "scope": "Node behavioral tests, Fish syntax and disposable native-host installer, Mozilla web-ext lint and unsigned packaging, headless Firefox Developer Edition temporary installation. Authenticated ChatGPT/native execution/attachment untested."
   }
 }
