@@ -69,7 +69,8 @@ function renderItem(job) {
     section.append(element("div", "meta", "Stop requested; awaiting Jobflick's final state"));
   }
   const controls = element("div", "controls");
-  if (["queued", "running"].includes(job.state) && !job.cancelRequested) {
+  if (["queued", "running"].includes(job.state) && !job.cancelRequested &&
+      !job.integrityIssue) {
     const stop = element("button", "", "Request stop");
     stop.type = "button";
     let confirmed = false;
@@ -98,6 +99,7 @@ function renderItem(job) {
     controls.append(stop);
   }
   if (FINISHED.has(job.state)) {
+    if (!job.integrityIssue) {
     const button = element("button", "", "Save report");
     button.type = "button";
     let preparedReport = null;
@@ -125,6 +127,7 @@ function renderItem(job) {
       }
     });
     controls.append(button);
+    }
 
     const forget = element("button", "", "Forget bridge record");
     forget.type = "button";
@@ -152,7 +155,8 @@ function renderItem(job) {
     controls.append(forget);
   }
   // Read-only per-job destination validation; no file is retrieved or sent.
-  if (FINISHED.has(job.state) && !job.orphaned) {
+  if (FINISHED.has(job.state) && !job.orphaned &&
+      !job.integrityIssue) {
     const inspect = element("button", "", "Check original chat");
     inspect.type = "button";
     inspect.addEventListener("click", async () => {
