@@ -16,9 +16,10 @@
     const code = pre?.querySelector("code");
     if (!code) return null;
     const yaml = code.textContent || "";
-    if (new TextEncoder().encode(yaml).byteLength > MAX_YAML_BYTES) return null;
+    if (yaml.length > MAX_YAML_BYTES) return null;
     if (!/^\s*schema:\s*[1-4]\s*$/m.test(yaml.slice(0,256))) return null;
     if (!/^\s*(command|commands):/m.test(yaml)) return null;
+    if (new TextEncoder().encode(yaml).byteLength > MAX_YAML_BYTES) return null;
     return yaml;
   }
 
