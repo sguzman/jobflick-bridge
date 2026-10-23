@@ -276,9 +276,9 @@
         {
           "id": "M3-08",
           "title": "Cancel option",
-          "status": "implemented",
+          "status": "verified",
           "evidence": [
-            "Two-click popup stop request; one native cancel attempt under concurrent requests; awaiting real Jobflick stop acceptance. Evidence: https://github.com/sguzman/jobflick-bridge/actions/runs/40001190037"
+            "Real pinned Jobflick native host accepted explicit cancel and returned durable cancelled state for a fixed sleep fixture; popup two-click authorization separately passes behavioral tests. Real backend CI job succeeded (overall workflow failed only on Ubuntu package mirror timeout in independent static job): https://github.com/sguzman/jobflick-bridge/actions/runs/40012206702"
           ]
         },
         {
@@ -290,10 +290,10 @@
           ]
         }
       ],
-      "verified": 8,
+      "verified": 9,
       "total": 9,
-      "percent": 88,
-      "implemented": 1
+      "percent": 100,
+      "implemented": 0
     },
     {
       "id": "M4",
@@ -469,8 +469,10 @@
         {
           "id": "M6-04",
           "title": "Manual destination mapping",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "Explicit Open chat button validates stored ChatGPT route, strips query/fragment, refuses untrusted URL and never automatically rebinds report or submits a message. Behavioral tests pass; authenticated FDE destination UX still pending: https://github.com/sguzman/jobflick-bridge/actions/runs/40012206702"
+          ]
         },
         {
           "id": "M6-05",
@@ -500,7 +502,7 @@
       "verified": 2,
       "total": 7,
       "percent": 28,
-      "implemented": 4
+      "implemented": 5
     },
     {
       "id": "M7",

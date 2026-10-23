@@ -98,3 +98,9 @@ CI's `real-jobflick` job checks out **pinned upstream Jobflick commit `cbff2a4cb
 The same job then runs the unchanged production content script and production background logic in headless **Firefox Developer Edition**, with a test-only localhost route and dedicated Gecko ID, connected to the **real** Jobflick daemon. It checks the browser's Run button, one persisted job, an opaque origin ID, successful Fish output, and the terminal-status update. This is actual Firefox-to-real-Jobflick integration but **not authenticated ChatGPT acceptance**. No report attachment or Send is activated. The `fake-native-host` acceptance remains a separate no-execution gate.
 
 Results for same-tab navigation or a composer probe interrupted by navigation become permanently **manual-only** for automatic delivery. The bridge never silently reattaches a result to a reopened/reused tab, and manual report export remains available.
+
+## Real native cancellation and manual reopening acceptance
+
+The pinned, isolated Jobflick backend CI now exercises a second harmless schema-4 job (`sleep` followed by an unreachable `printf`) and sends the real `cancel` Native Messaging action. It waits for the durable `cancelled` state and refuses to equate a native acknowledgement with completed cancellation. The popup's two-step confirmation remains independently covered by behavioral tests; privileged popup click-through in authenticated Firefox is still pending.
+
+The popup's `Open chat` control requires an explicit click and opens only a validated ChatGPT conversation URL, stripping old query/fragment parameters. It is a manual navigation helper, never an auto-delivery or provenance-rebinding mechanism. Its behavioral tests reject foreign domains, userinfo and non-conversation routes.

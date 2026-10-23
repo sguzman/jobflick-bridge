@@ -14,7 +14,7 @@ concurrency:
 jobs:
   static:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -24,8 +24,8 @@ jobs:
         run: npm run check
       - name: Fish host installer syntax
         run: |
-          sudo env DEBIAN_FRONTEND=noninteractive timeout 150s apt-get update -qq
-          sudo env DEBIAN_FRONTEND=noninteractive timeout 150s apt-get install -y fish jq
+          sudo env DEBIAN_FRONTEND=noninteractive timeout 480s apt-get update -qq
+          sudo env DEBIAN_FRONTEND=noninteractive timeout 480s apt-get install -y fish jq
           fish --no-execute scripts/install-native-host.fish
           fish --no-execute scripts/qa-firefox-developer.fish
       - name: Disposable Firefox native-host installer smoke
