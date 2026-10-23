@@ -242,3 +242,28 @@ identity. The mismatched record remains in browser storage for explicit
 recovery rather than being deleted or rewritten. Node regression tests and
 the Firefox check workflow passed.
 [Passing identity consistency CI](https://github.com/sguzman/jobflick-bridge/actions/runs/40030699492).
+
+## Asynchronous native results and revoked local authorization
+
+Jobflick's durable executor may answer after the user has forgotten a
+finished bridge record, after a native-identity contradiction quarantines it,
+or after a browser route changes. The browser bridge must compare the saved
+job ID **key**, origin, tab ID, canonical conversation and submission identity
+again before exposing a fetched report or claiming original-chat verification.
+A late `show` cannot return a report after Forget/quarantine/replacement.
+A late `inspect` cannot paint an old chat or overwrite a replacement record.
+A late accepted `cancel` does not annotate a replacement/quarantined record,
+and must be reconciled manually rather than blindly retried.
+
+The regression fixtures delay native requests and popup composer probes while
+in-process state is explicitly changed. Tests also ensure that a deliberately
+orphaned result can still be downloaded by a separate explicit manual action,
+that malformed stored IDs cannot keep tab session tokens alive or participate
+in tab cleanup, and that an active-tab read-only probe or visible scan refuses
+stale destination feedback after a SPA route change or tab switch.
+
+These are mock-native and synthetic Firefox Developer Edition acceptance
+checks, not tests of real authenticated ChatGPT attachment chips, upload
+acknowledgment, browser profile restart, or automatic Send. The production
+extension retains **no automatic attachment or Send path**.
+[Passing Firefox checks](https://github.com/sguzman/jobflick-bridge/actions/runs/40032306863).

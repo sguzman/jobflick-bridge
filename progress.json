@@ -281,7 +281,8 @@
           "title": "Cancel option",
           "status": "verified",
           "evidence": [
-            "Real pinned Jobflick native host accepted explicit cancel and returned durable cancelled state for a fixed sleep fixture; popup two-click authorization separately passes behavioral tests. Real backend CI job succeeded (overall workflow failed only on Ubuntu package mirror timeout in independent static job): https://github.com/sguzman/jobflick-bridge/actions/runs/40012206702"
+            "Real pinned Jobflick native host accepted explicit cancel and returned durable cancelled state for a fixed sleep fixture; popup two-click authorization separately passes behavioral tests. Real backend CI job succeeded (overall workflow failed only on Ubuntu package mirror timeout in independent static job): https://github.com/sguzman/jobflick-bridge/actions/runs/40012206702",
+            "Accepted native cancel after a browser record is replaced or quarantined is reported as uncertain rather than marking the new record stop-requested; tests verify exactly one native cancel and no implicit retry. https://github.com/sguzman/jobflick-bridge/actions/runs/40032306863."
           ]
         },
         {
@@ -360,7 +361,8 @@
           "title": "Multi-tab tests",
           "status": "implemented",
           "evidence": [
-            "Real FDE synthetic conversation A→B→A pushState permanently revokes old origin, plus 16-tab mocked tests. Authenticated multi-conversation upload/draft race acceptance pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40015025541"
+            "Real FDE synthetic conversation A→B→A pushState permanently revokes old origin, plus 16-tab mocked tests. Authenticated multi-conversation upload/draft race acceptance pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40015025541",
+            "Adversarial concurrent operation tests reject stale original-chat verification after Forget/quarantine and stale active-tab probe results after SPA navigation/tab switching. No payload delivery occurs; Node regressions and disposable Firefox checks passed: https://github.com/sguzman/jobflick-bridge/actions/runs/40032306863. Authenticated ChatGPT delivery/race acceptance remains outstanding."
           ]
         }
       ],
@@ -506,7 +508,8 @@
           "title": "Recovery tests",
           "status": "implemented",
           "evidence": [
-            "Node recovery tests now cover tab closure racing an in-flight session-token write, duplicate route A→B→A, no local storage writes on unrelated tabs and full reversion to manual-only. Disposable real FDE + pinned Jobflick native report-to-File route revocation passed. Actual full desktop browser restart/authenticated ChatGPT recovery remains pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40027477393 https://github.com/sguzman/jobflick-bridge/actions/runs/40027477573"
+            "Node recovery tests now cover tab closure racing an in-flight session-token write, duplicate route A→B→A, no local storage writes on unrelated tabs and full reversion to manual-only. Disposable real FDE + pinned Jobflick native report-to-File route revocation passed. Actual full desktop browser restart/authenticated ChatGPT recovery remains pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40027477393 https://github.com/sguzman/jobflick-bridge/actions/runs/40027477573",
+            "Native show, inspect and cancel now compare durable record identity again after their async responses; concurrent removal, identity replacement, quarantine and tab closure tests passed, while explicit manual orphan report retrieval remains possible. Same-key mismatched records remain inert in navigation cleanup. https://github.com/sguzman/jobflick-bridge/actions/runs/40032306863. Actual authenticated Firefox lifecycle remains pending."
           ]
         }
       ],
@@ -527,7 +530,8 @@
           "evidence": [
             "Adversarial Node tests reject reserved object-prototype job IDs, mismatched native origin/ID on submission, inspection and report retrieval, including explicitly supplied null, numeric, object and array identity metadata. Firefox and pinned real-native acceptance passing; authenticated ChatGPT security acceptance pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40028499706 https://github.com/sguzman/jobflick-bridge/actions/runs/40028499789",
             "Additional adversarial validation and file handoff tests passed: concurrent pointer/focus does not duplicate in-flight validation, edited YAML rejects late replies, and Firefox reports failure after synchronous page-side FileList clear/detach. https://github.com/sguzman/jobflick-bridge/actions/runs/40030357579",
-            "Defensive storage-record identity matching now blocks mismatched-key records from native polling, report read, preflight and Forget, while keeping their underlying data unchanged; adversarial Node and Firefox QA checks passed: https://github.com/sguzman/jobflick-bridge/actions/runs/40030699492."
+            "Defensive storage-record identity matching now blocks mismatched-key records from native polling, report read, preflight and Forget, while keeping their underlying data unchanged; adversarial Node and Firefox QA checks passed: https://github.com/sguzman/jobflick-bridge/actions/runs/40030699492.",
+            "Async origin/identity adversarial Node regressions passed for stale report return after Forget, native inspection writes after replacement/quarantine, confirmed native stop after replacement/quarantine, and read-only probe/scan navigation races. https://github.com/sguzman/jobflick-bridge/actions/runs/40032306863."
           ]
         },
         {
