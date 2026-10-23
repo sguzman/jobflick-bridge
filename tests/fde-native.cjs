@@ -37,9 +37,11 @@ async function main() {
   manifest.browser_specific_settings.gecko.id = originId;
   manifest.host_permissions = ["http://127.0.0.1/*"];
   manifest.content_scripts = [{ matches: ["http://127.0.0.1/*"],
-    js: ["content.js"], run_at: "document_idle" }];
+    js: ["qa-marker.js", "content.js"], run_at: "document_idle" }];
   manifest.action = { default_title: "Firefox Native QA" };
   fs.writeFileSync(path.join(ext, "manifest.json"), JSON.stringify(manifest));
+  fs.writeFileSync(path.join(ext,"qa-marker.js"),
+    "document.documentElement.dataset.jobflickQaMarker = \"injected\";");
   const productionContent=fs.readFileSync(path.join(production,"content.js"),"utf8");
   // QA-only read-only diagnostic: public fixture YAML, never a real command.
   // It reveals background/host failures that production intentionally hides.
@@ -148,7 +150,7 @@ async function main() {
       fs.readFileSync(logFile,"utf8").split("\n").filter(Boolean)
         .map(line=>{try{return JSON.parse(line).action;}catch{return "invalid-log";}}) : [];
     const page=driver ? await driver.executeScript(
-      "return {url:location.pathname,codes:document.querySelectorAll('main pre code').length,buttons:document.querySelectorAll('.jobflick-bridge-run').length,validation:document.documentElement.dataset.jobflickNativeQa||'no-qa-response'}"
+      "return {url:location.pathname,codes:document.querySelectorAll('main pre code').length,buttons:document.querySelectorAll('.jobflick-bridge-run').length,validation:document.documentElement.dataset.jobflickNativeQa||'no-qa-response',injected:document.documentElement.dataset.jobflickQaMarker||'not-injected'}"
     ).catch(()=>({unavailable:true})) : {unavailable:true};
     console.error("Native QA phase:",phase,"requested_actions:",JSON.stringify(actions),
       "page:",JSON.stringify(page));
