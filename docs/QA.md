@@ -156,3 +156,9 @@ Passing this probe validates Firefox cross-realm FileList transfer but does not 
 The popup's existing **Inspect composer** and per-job **Check original chat** checks now distinguish whether the site exposes multiple plausible composer elements or file inputs, and whether the discovered file inputs already have a selected `FileList`. The content script only returns booleans: no draft contents, existing attachment names or File objects are sent to the background. Known `textarea` values also count as occupied drafts without disclosing them. Legacy or missing advanced flags are shown as **unknown**, not safe.
 
 This probe remains *read-only*. It does not determine whether the ChatGPT composer already has uploaded file chips if its file input is empty, hidden or created on demand. Ambiguity, missing selectors and unrecognized states must keep any future automated attachment/Send disabled until live Firefox acceptance.
+
+## Firefox real local-report download acceptance
+
+`tests/fde-report-download.cjs` runs the actual production popup HTML, CSS and JavaScript through a disposable localhost page in headless Firefox Developer Edition. A **test-only runtime stub** supplies one synthetic finished job and bounded text report. Selenium checks that opening the panel does not download anything, the first **Save report** gesture only prepares the File, and a second separate **Download prepared report** gesture creates a local file whose bytes match the synthetic report. It checks that no submit, native action, ChatGPT message or network upload is initiated.
+
+Because Marionette cannot directly automate a privileged `moz-extension://` popup, this test covers real Firefox Blob/download behavior but **not** the production extension popup's privileged origin. That remains an unpassed acceptance gate.
