@@ -102,9 +102,14 @@ async function main() {
       const ready=Object.values(records).filter(item=>
         knownRecord(item) && FINISHED.has(item.state) && !item.orphaned);
       if(ready.length!==1)return {ok:false};
-      const response=await native({action:"show",id:ready[0].id});
+      const record=ready[0];
+      if(!await trustedTab(record.tabId,record.conversation,record.origin))
+        return {ok:false};
+      const response=await native({action:"show",id:record.id});
+      if(!await trustedTab(record.tabId,record.conversation,record.origin))
+        return {ok:false};
       return response.ok && typeof response.report==="string"
-        ? {ok:true,id:ready[0].id,report:response.report} : {ok:false};
+        ? {ok:true,id:record.id,report:response.report} : {ok:false};
     });
   }
   if(message?.type==="jobflick:qa-route"){
@@ -308,6 +313,20 @@ async function main() {
       "history.pushState({},'', '/c/test-native-1234');"
     );
     await driver.wait(async()=>await readState()==="manual_only",8000);
+
+    if(realHost){
+      phase="orphaned report cannot be handed to restored URL";
+      await driver.executeScript(
+        "document.querySelector('#qa-file-input').value='';"+
+        "document.querySelector('#qa-result').textContent='';"+
+        "document.documentElement.dataset.qaHandoff='';"
+      );
+      await (await driver.findElement(By.id("qa-export"))).click();
+      await driver.wait(async()=>await driver.executeScript(
+        "return document.documentElement.dataset.qaHandoff==='error'"
+      ),7000);
+      assert.equal(await driver.findElement(By.id("qa-result")).getText(),"");
+    }
 
     await driver.uninstallAddon(id);
     console.log(realHost ?
