@@ -1110,7 +1110,7 @@ test("search is bounded to local job metadata and never reads native reports",as
 test("duplicate native job IDs cannot overwrite existing origin or report routing",async()=>{
   const app=boot(request=>{
     if(request.action==="submit_spec")return {
-      ok:true,job:{id:"job_12345678",state:"queued",name:"New from host"}
+      ok:true,job:{id:"job_12345678",state:"succeeded",name:"New from host"}
     };
     if(request.action==="inspect")return {
       ok:true,job:{id:request.id,state:"running"}
