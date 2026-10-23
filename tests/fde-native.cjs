@@ -13,6 +13,14 @@ const { Builder, By, until } = require("selenium-webdriver");
 const firefox = require("selenium-webdriver/firefox");
 
 async function main() {
+  if (process.env.GITHUB_ACTIONS !== "true" || process.env.CI !== "true") {
+    throw Error("This Native Messaging host-registration QA is restricted to disposable GitHub Actions runners");
+  }
+  const runnerHome = process.env.HOME;
+  if (!runnerHome || !path.isAbsolute(runnerHome)) throw Error("Missing ephemeral CI runner HOME");
+  const runnerManifestDir=path.join(runnerHome,".mozilla","native-messaging-hosts");
+  const runnerManifest=path.join(runnerManifestDir,"io.github.sguzman.jobflick.json");
+  if (fs.existsSync(runnerManifest)) throw Error("QA refuses to replace an existing registered native host");
   const binary = process.env.FDE_BINARY;
   if (!binary || !path.isAbsolute(binary)) throw Error("FDE_BINARY must be absolute");
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "jobflick-fde-native-"));
@@ -49,11 +57,17 @@ async function main() {
   const fakeHost = path.join(root, "fake-native-host");
   fs.copyFileSync(fixture, fakeHost);
   fs.chmodSync(fakeHost, 0o700);
-  fs.writeFileSync(path.join(hostDir, "io.github.sguzman.jobflick.json"), JSON.stringify({
+  const nativeManifest=JSON.stringify({
     name: "io.github.sguzman.jobflick",
     description: "Disposable no-execution QA Native Messaging fixture",
     path: fakeHost, type: "stdio", allowed_extensions: [originId]
-  }), { mode: 0o600 });
+  });
+  fs.writeFileSync(path.join(hostDir, "io.github.sguzman.jobflick.json"), nativeManifest, { mode: 0o600 });
+  // Firefox resolves user-level native manifests from its OS account home on
+  // some Linux builds even when HOME is overridden for geckodriver. The GitHub
+  // runner is disposable; install only our fixture manifest there as well.
+  fs.mkdirSync(runnerManifestDir,{recursive:true});
+  fs.writeFileSync(runnerManifest,nativeManifest,{mode:0o600});
 
   const yaml = [
     "schema: 4", "name: Firefox native QA", "shell: fish",
@@ -133,6 +147,9 @@ async function main() {
     else process.env.HOME = savedHome;
     if (savedState === undefined) delete process.env.JOBFLICK_QA_STATE;
     else process.env.JOBFLICK_QA_STATE = savedState;
+    // Only our exact CI-only manifest was created; do not remove directories
+    // or files belonging to other runner jobs.
+    fs.rmSync(runnerManifest,{force:true});
     fs.rmSync(root, { recursive: true, force: true });
   }
 }
