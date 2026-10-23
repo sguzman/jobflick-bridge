@@ -260,3 +260,17 @@ test("local job search filters before pagination without retrieving reports",asy
   assert.equal(app.calls.filter(x=>x.type==="jobflick:report").length,0);
   assert.equal(app.calls.filter(x=>x.type==="jobflick:submit").length,0);
 });
+
+test("search with no matches renders a specific empty state and clearing restores saved jobs",async()=>{
+  const app=await boot([{...finished,name:"Build engine"}]);
+  assert.equal(app.named.jobs.children.length,1);
+  app.named["filter-query"].value="unmatched phrase";
+  await app.named["filter-form"].handlers.submit({preventDefault(){}});
+  assert.equal(app.named.jobs.children.length,1);
+  assert.match(app.named.jobs.children[0].textContent,/No saved jobs match/);
+  app.named["filter-query"].value="";
+  await app.named["filter-form"].handlers.submit({preventDefault(){}});
+  assert.equal(app.named.jobs.children.length,1);
+  assert.equal(app.named.jobs.children[0].tag,"section");
+  assert.equal(app.calls.filter(x=>x.type==="jobflick:report").length,0);
+});
