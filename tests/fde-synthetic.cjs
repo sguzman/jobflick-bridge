@@ -215,9 +215,14 @@ async function main(){
       return found[0] || false;
     },10000);
     await driver.executeScript("history.pushState({},'', '/other-qa-conversation');");
-    await priorRouteButton.click();
+    // With immediate background-owned History API revocation, the WebDriver
+    // element may already be stale. That is the desired security result:
+    // wait for removal instead of attempting to click a detached node.
+    await driver.wait(async()=>(
+      await driver.findElements(By.css(".jobflick-bridge-run"))
+    ).length===0,10000);
     assert.equal((await driver.findElements(By.css(".jobflick-bridge-run"))).length,0,
-      "A prior-route button must not remain actionable after SPA navigation");
+      "A prior-route button must not survive SPA navigation");
     const newRouteButton=await driver.wait(async()=>{
       await driver.executeScript(
         "document.querySelector('main pre').dispatchEvent(new Event('focusin',{bubbles:true}));"
