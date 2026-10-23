@@ -73,6 +73,7 @@ jobs:
           fish --no-execute scripts/install-native-host.fish
           fish --no-execute scripts/qa-firefox-developer.fish
           node tests/native-host-installer.test.cjs
+          node --test tests/qa.test.mjs
       - name: Compile pinned Jobflick
         working-directory: .ci-jobflick
         run: cargo build --locked --bin jobflick

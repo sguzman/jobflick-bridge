@@ -33,6 +33,7 @@ const requireCaptureAbsent = file => {
   try { readFileSync(file); return false; } catch(error) { if(error.code==="ENOENT") return true; throw error; }
 };
 const launcher = fileURLToPath(new URL("../scripts/qa-firefox-developer.fish", import.meta.url));
+const fishAvailable = spawnSync("/bin/sh", ["-c", "command -v fish >/dev/null 2>&1"]).status === 0;
 function isolatedLauncherFixture(action) {
   const dir=mkdtempSync(join(tmpdir(),"jobflick-fde-profile-"));
   const home=join(dir,"personal-home");
@@ -61,7 +62,7 @@ function isolatedLauncherFixture(action) {
   finally {rmSync(dir,{recursive:true,force:true});}
 }
 
-test("isolated FDE launcher invokes only dedicated profile and never edits personal Firefox",()=>{
+test("isolated FDE launcher invokes only dedicated profile and never edits personal Firefox",{skip:!fishAvailable},()=>{
   isolatedLauncherFixture(({home,data,capture,personalFile,nativeFile,run})=>{
     const launch=run();
     assert.equal(launch.status,0,launch.stderr);
@@ -80,7 +81,7 @@ test("isolated FDE launcher invokes only dedicated profile and never edits perso
   });
 });
 
-test("isolated FDE launcher refuses symlinked QA root and profile without following either",()=>{
+test("isolated FDE launcher refuses symlinked QA root and profile without following either",{skip:!fishAvailable},()=>{
   for(const kind of ["root","profile"]){
     isolatedLauncherFixture(({home,data,capture,personalFile,nativeFile,run})=>{
       const root=join(data,"jobflick-bridge-fde-qa");
@@ -103,7 +104,7 @@ test("isolated FDE launcher refuses symlinked QA root and profile without follow
   }
 });
 
-test("isolated FDE launcher rejects unsafe XDG_DATA_HOME overrides before filesystem writes",()=>{
+test("isolated FDE launcher rejects unsafe XDG_DATA_HOME overrides before filesystem writes",{skip:!fishAvailable},()=>{
   isolatedLauncherFixture(({data,capture,run})=>{
     for(const value of ["", ".", "../relative", "/"]){
       const result=run({XDG_DATA_HOME:value});
