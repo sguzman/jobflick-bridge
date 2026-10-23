@@ -20,7 +20,7 @@
     const site = globalThis.location;
     if (typeof site?.origin !== "string" ||
         typeof site?.pathname !== "string") return null;
-    return site.origin + (site.pathname.replace(/\\/+$/, "") || "/");
+    return site.origin + (site.pathname.replace(/\/+$/, "") || "/");
   }
   function paintStatus(state, message) {
     if (!state?.button?.isConnected || state.route !== routeIdentity()) return;
