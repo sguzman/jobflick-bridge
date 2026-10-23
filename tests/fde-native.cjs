@@ -59,7 +59,7 @@ async function main() {
     '      reply?.count===1 ? (reply.manualOnly?"manual_only":"active") : "missing";',
     '    }).catch(()=>{});',
     '});'
-  ].join("\\n"));
+  ].join("\n"));
   // Only URL identity is adapted to synthetic localhost. All native protocol,
   // job tracking and other production background logic stays unchanged.
   const originalBackground = fs.readFileSync(path.join(production, "background.js"), "utf8");
