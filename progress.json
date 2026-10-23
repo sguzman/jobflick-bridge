@@ -51,19 +51,23 @@
         {
           "id": "M0-06",
           "title": "Firefox manifest + scaffold",
-          "status": "planned",
-          "evidence": []
+          "status": "verified",
+          "evidence": [
+            "Firefox manifest committed on main; static manifest test passed: https://github.com/sguzman/jobflick-bridge/actions/runs/39993229427"
+          ]
         },
         {
           "id": "M0-07",
           "title": "Baseline CI tests",
-          "status": "planned",
-          "evidence": []
+          "status": "verified",
+          "evidence": [
+            "Node syntax and browser-invariant checks passed in GitHub Actions: https://github.com/sguzman/jobflick-bridge/actions/runs/39993229427"
+          ]
         }
       ],
-      "verified": 5,
+      "verified": 7,
       "total": 7,
-      "percent": 71
+      "percent": 100
     },
     {
       "id": "M1",
@@ -73,14 +77,18 @@
         {
           "id": "M1-01",
           "title": "Firefox event script",
-          "status": "planned",
-          "evidence": []
+          "status": "verified",
+          "evidence": [
+            "Firefox MV3 background.scripts present and Node syntax passed: https://github.com/sguzman/jobflick-bridge/actions/runs/39993229427"
+          ]
         },
         {
           "id": "M1-02",
           "title": "Scoped permissions",
-          "status": "planned",
-          "evidence": []
+          "status": "verified",
+          "evidence": [
+            "Manifest host scopes and native permission checked: https://github.com/sguzman/jobflick-bridge/actions/runs/39993229427"
+          ]
         },
         {
           "id": "M1-03",
@@ -119,9 +127,9 @@
           "evidence": []
         }
       ],
-      "verified": 0,
+      "verified": 2,
       "total": 8,
-      "percent": 0
+      "percent": 25
     },
     {
       "id": "M2",
@@ -131,8 +139,10 @@
         {
           "id": "M2-01",
           "title": "Firefox allowed_extensions",
-          "status": "planned",
-          "evidence": []
+          "status": "verified",
+          "evidence": [
+            "Firefox allowed_extensions and install target assertions passed: https://github.com/sguzman/jobflick-bridge/actions/runs/39993229427"
+          ]
         },
         {
           "id": "M2-02",
@@ -171,9 +181,9 @@
           "evidence": []
         }
       ],
-      "verified": 0,
+      "verified": 1,
       "total": 7,
-      "percent": 0
+      "percent": 14
     },
     {
       "id": "M3",
@@ -195,20 +205,26 @@
         {
           "id": "M3-03",
           "title": "Opaque origin",
-          "status": "planned",
-          "evidence": []
+          "status": "verified",
+          "evidence": [
+            "Origin token generation tested in mock background: https://github.com/sguzman/jobflick-bridge/actions/runs/39993229427"
+          ]
         },
         {
           "id": "M3-04",
           "title": "Single submit / uncertainty",
-          "status": "planned",
-          "evidence": []
+          "status": "verified",
+          "evidence": [
+            "Single submit and lost reply tests passed; no automatic retries: https://github.com/sguzman/jobflick-bridge/actions/runs/39993229427"
+          ]
         },
         {
           "id": "M3-05",
           "title": "Persist routing",
-          "status": "planned",
-          "evidence": []
+          "status": "verified",
+          "evidence": [
+            "Job ID + route + origin saved in mocked storage: https://github.com/sguzman/jobflick-bridge/actions/runs/39993229427"
+          ]
         },
         {
           "id": "M3-06",
@@ -235,9 +251,9 @@
           "evidence": []
         }
       ],
-      "verified": 0,
+      "verified": 3,
       "total": 9,
-      "percent": 0
+      "percent": 33
     },
     {
       "id": "M4",
@@ -471,5 +487,11 @@
       "total": 8,
       "percent": 0
     }
-  ]
+  ],
+  "last_ci": {
+    "result": "success",
+    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/39993229427",
+    "commit": "faad5ee3258d264edd779a59325d6838cd403558",
+    "scope": "Static syntax checks and mocked Node tests; not Firefox Developer Edition live QA."
+  }
 }
