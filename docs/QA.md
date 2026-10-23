@@ -320,3 +320,41 @@ status reporting, and terminal immutability.
 These are native-protocol and synthetic Firefox safety/scale checks, not
 live authenticated ChatGPT file delivery, real desktop memory profiling,
 or automatic Send acceptance. [Passing Firefox checks](https://github.com/sguzman/jobflick-bridge/actions/runs/40033650901).
+
+## Bounded fast checks and native-host registration integrity
+
+Short-lived post-submit status checks are limited to six attempts per job.
+Transient or persistent `browser.storage.local` errors now consume that
+finite budget instead of rescheduling a timer indefinitely; durable Firefox
+alarms remain responsible for later recovery. Jobs quarantined for a native
+identity mismatch leave the fast-check list immediately. Adversarial Node
+tests passed in [Firefox checks](https://github.com/sguzman/jobflick-bridge/actions/runs/40036931931).
+
+The optional user-invoked Fish native-host installer uses a disposable
+staged wrapper and manifest. It refuses existing conflicting or symlinked
+wrapper files, publishes new files without clobbering a concurrent
+registration, and permits reinstall after uninstall only when the retained
+wrapper exactly matches the proposed executable. Disposable HOME tests also
+verify that binary Native Messaging framing remains intact. No CI test
+changed a personal native-host manifest. The pinned Jobflick daemon plus
+Firefox native acceptance passed [real integration](https://github.com/sguzman/jobflick-bridge/actions/runs/40036931862).
+
+## Native identity metadata and bounded inbox entries
+
+Optional native `id` and `origin_tab_id` fields are treated as authoritative
+if explicitly supplied, whether on the response object or its nested
+`job` object. A conflicting field fails closed on submission, quarantines
+an inspected job, or prevents finished report export. Null and wrong-type
+values also contradict the expected identity; absence is permitted for
+older Jobflick host versions.
+
+Native/legacy job names displayed in the Firefox inbox are capped at
+160 characters and the optional color must be a valid six-digit hexadecimal
+value. Legacy URLs are canonicalized before the popup receives them; foreign
+or unsupported routes cannot become Open chat targets. Old records are not
+silently rewritten. Normalized comparisons preserve the earlier low-idle
+guarantee when optional native name and color are missing.
+[Passing Firefox checks](https://github.com/sguzman/jobflick-bridge/actions/runs/40036931931).
+
+These tests do not establish authenticated ChatGPT upload, attachment
+acknowledgment, guarded Send or production-profile idle power measurements.
