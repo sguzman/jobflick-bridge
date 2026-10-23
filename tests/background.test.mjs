@@ -12,6 +12,7 @@ function boot(nativeOverride = null, options = {}) {
   const requests = [];
   const sentTabMessages = [];
   const alarmActions = [];
+  const activeAlarms = new Map();
   const tabs = new Map([[11, { id: 11, url: "https://chatgpt.com/c/testing-1234" }]]);
   const browser = {
     runtime: {
@@ -49,8 +50,15 @@ function boot(nativeOverride = null, options = {}) {
       }
     },
     alarms: {
-      create: async (name, details) => { alarmActions.push({ type: "create", name, details }); },
-      clear: async name => { alarmActions.push({ type: "clear", name }); },
+      get: async name => activeAlarms.get(name) || null,
+      create: async (name, details) => {
+        alarmActions.push({ type: "create", name, details });
+        activeAlarms.set(name,{ name, ...details });
+      },
+      clear: async name => {
+        alarmActions.push({ type: "clear", name });
+        return activeAlarms.delete(name);
+      },
       onAlarm: { addListener: callback => { listeners.alarm = callback; } }
     },
     tabs: {
@@ -957,4 +965,42 @@ test("burst of 40 jobs has a fixed-size fast polling queue; others use alarms",a
   assert.equal(app.requests.filter(r=>r.action==="show").length,0);
   assert.equal(app.storage.jobflick_bridge_jobs_v1 &&
     Object.keys(app.storage.jobflick_bridge_jobs_v1).length,40);
+});
+
+test("frequent native status metadata writes cannot defer the existing durable alarm",async()=>{
+  const app=boot(request=>{
+    if(request.action==="submit_spec")return {
+      ok:true,job:{id:"job_12345678",state:"running"}
+    };
+    if(request.action==="inspect")return {
+      ok:true,job:{id:request.id,state:"running"}
+    };
+    return {ok:true};
+  });
+  await app.listeners.message({type:"jobflick:submit",yaml:sample},app.sender);
+  assert.equal(app.alarmActions.filter(x=>x.type==="create").length,1);
+  for(let i=0;i<20;i++)await app.listeners.message({
+    type:"jobflick:refresh"
+  },app.popupSender);
+  assert.equal(app.alarmActions.filter(x=>x.type==="create").length,1,
+    "Repeated metadata writes must not reset Firefox's next alarm deadline");
+  assert.equal(app.alarmActions.filter(x=>x.type==="clear").length,0);
+  assert.equal(app.requests.filter(x=>x.action==="submit_spec").length,1);
+});
+
+test("terminal status clears the durable alarm once no jobs remain active",async()=>{
+  const app=boot(request=>{
+    if(request.action==="submit_spec")return {
+      ok:true,job:{id:"job_12345678",state:"running"}
+    };
+    if(request.action==="inspect")return {
+      ok:true,job:{id:request.id,state:"succeeded"}
+    };
+    return {ok:true};
+  });
+  await app.listeners.message({type:"jobflick:submit",yaml:sample},app.sender);
+  await app.listeners.message({type:"jobflick:refresh"},app.popupSender);
+  assert.equal(app.storage.jobflick_bridge_jobs_v1.job_12345678.state,"succeeded");
+  assert.equal(app.alarmActions.some(x=>x.type==="clear"),true);
+  assert.equal(app.requests.filter(x=>x.action==="show").length,0);
 });
