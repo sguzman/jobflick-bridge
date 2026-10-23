@@ -6,11 +6,16 @@ const KEY = "jobflick_bridge_jobs_v1";
 const ALARM = "jobflick_bridge_pending_v1";
 const MAX_YAML_BYTES = 262144;
 const MAX_STATUS_PER_POLL = 24;
+const FAST_RECHECK_LIMIT = 6;
+const FAST_RECHECK_DELAY_MS = 1200;
+const FAST_RECHECK_BATCH = 4;
 const FINISHED = new Set(["succeeded", "failed", "cancelled", "timed_out", "interrupted"]);
 const SITES = new Set(["chatgpt.com", "chat.openai.com"]);
 
 let serializedWrite = Promise.resolve();
 let checking = null;
+const fastRechecks = new Map();
+let fastRecheckTimer = null;
 const originFlights = new Map();
 const cancelFlights = new Set();
 const RECORD_VERSION = 1;
@@ -142,7 +147,7 @@ async function reconcileOrigins() {
   }
 }
 
-async function checkJobs() {
+async function checkJobs(onlyId = null) {
   // Multiple callers (alarms, tab updates and popup Refresh) share one
   // in-flight inspection. Refresh never claims completion prematurely.
   if (checking) return checking;
@@ -154,7 +159,8 @@ async function checkJobs() {
     // unbounded number of short-lived native host processes at each alarm.
     // Oldest-checked-first ordering rotates fairly through pending jobs.
     const pending = Object.entries(await saved())
-      .filter(([, record]) => knownRecord(record) && !FINISHED.has(record.state) &&
+      .filter(([id, record]) => (onlyId === null || id === onlyId) &&
+        knownRecord(record) && !FINISHED.has(record.state) &&
         record.state !== "unknown")
       .sort((a, b) => (a[1].lastCheckedAt || 0) - (b[1].lastCheckedAt || 0))
       .slice(0, MAX_STATUS_PER_POLL);
@@ -214,6 +220,42 @@ async function checkJobs() {
   }
 }
 
+// Short-lived post-submit checks improve completion latency for quick jobs.
+// A single timer batches at most four job IDs, with six attempts each.
+// Firefox may suspend an event page at any time; durable alarms remain the
+// recovery path. With no submitted jobs there is no timer or CPU wakeup.
+function requestFastRecheck(id) {
+  if (typeof setTimeout !== "function") return;
+  fastRechecks.set(id, FAST_RECHECK_LIMIT);
+  if (fastRecheckTimer === null) {
+    fastRecheckTimer = setTimeout(drainFastRechecks, FAST_RECHECK_DELAY_MS);
+  }
+}
+
+async function drainFastRechecks() {
+  fastRecheckTimer = null;
+  const batch = [...fastRechecks.keys()].slice(0, FAST_RECHECK_BATCH);
+  for (const id of batch) {
+    const remaining = fastRechecks.get(id);
+    if (!remaining) continue;
+    fastRechecks.set(id, remaining - 1);
+    try {
+      await checkJobs(id);
+      const record = (await saved())[id];
+      if (!knownRecord(record) || FINISHED.has(record.state) ||
+          record.state === "unknown") {
+        fastRechecks.delete(id);
+      }
+    } catch {
+      // The normal one-minute alarm remains authoritative. Never resubmit.
+    }
+    if (fastRechecks.get(id) === 0) fastRechecks.delete(id);
+  }
+  if (fastRechecks.size && fastRecheckTimer === null) {
+    fastRecheckTimer = setTimeout(drainFastRechecks, FAST_RECHECK_DELAY_MS);
+  }
+}
+
 async function onBridgeMessage(message, sender) {
   const url = canonical(sender?.url);
   const tabUrl = canonical(sender?.tab?.url);
@@ -262,6 +304,7 @@ async function onBridgeMessage(message, sender) {
     };
   });
   void checkJobs();
+  requestFastRecheck(id);
   return result;
 }
 
