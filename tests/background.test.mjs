@@ -1004,3 +1004,38 @@ test("terminal status clears the durable alarm once no jobs remain active",async
   assert.equal(app.alarmActions.some(x=>x.type==="clear"),true);
   assert.equal(app.requests.filter(x=>x.action==="show").length,0);
 });
+
+test("overlapping alarm inspection does not consume a target's fast check budget",async()=>{
+  const timers=[];
+  let finishFirst=null;
+  let checks=0;
+  const app=boot(request=>{
+    if(request.action==="submit_spec")return {
+      ok:true,job:{id:"job_12345678",state:"queued"}
+    };
+    if(request.action==="inspect"){
+      checks++;
+      if(checks===1)return new Promise(resolve=>{finishFirst=resolve;});
+      return {ok:true,job:{id:request.id,state:"succeeded"}};
+    }
+    return {ok:true};
+  },{
+    setTimeout:fn=>{timers.push(fn);return timers.length;}
+  });
+  await app.listeners.message({type:"jobflick:submit",yaml:sample},app.sender);
+  for(let i=0;i<12&&!finishFirst;i++)await pause();
+  assert.equal(typeof finishFirst,"function");
+  assert.equal(timers.length,1);
+  const coincident=timers.shift()();
+  for(let i=0;i<4;i++)await pause();
+  assert.equal(checks,1,"Targeted check coalesced with in-flight inspection");
+  finishFirst({ok:true,job:{id:"job_12345678",state:"running"}});
+  await coincident;
+  assert.equal(timers.length,1,"Coalescing must preserve a future fast attempt");
+  assert.equal(checks,1);
+  await timers.shift()();
+  assert.equal(checks,2);
+  assert.equal(app.storage.jobflick_bridge_jobs_v1.job_12345678.state,"succeeded");
+  assert.equal(timers.length,0);
+  assert.equal(app.requests.filter(x=>x.action==="submit_spec").length,1);
+});
