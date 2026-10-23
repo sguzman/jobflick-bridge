@@ -1494,3 +1494,48 @@ test("closing tab during pending session token write cannot leave recycled ID to
   assert.equal(app.requests.filter(x=>x.action==="submit_spec").length,0);
   assert.equal(app.storageWrites.length,0);
 });
+
+test("native submit refuses inherited/reserved JavaScript object-key job IDs",async()=>{
+  for(const id of ["__proto__","constructor","prototype","toString",
+    "valueOf","hasOwnProperty","__defineGetter__"]){
+    const app=boot(request=>{
+      if(request.action==="submit_spec")return {
+        ok:true,job:{id,state:"queued"}
+      };
+      return {ok:true};
+    });
+    const result=await app.listeners.message({
+      type:"jobflick:submit",yaml:sample
+    },app.sender);
+    assert.equal(result.ok,false,id);
+    assert.match(result.message,/submission may have succeeded/i,id);
+    assert.equal(app.storage.jobflick_bridge_jobs_v1,undefined,id);
+    assert.equal(app.requests.filter(x=>x.action==="submit_spec").length,1,id);
+  }
+});
+
+test("reserved object-property IDs are refused by all privileged popup actions",async()=>{
+  const app=boot();
+  for(const id of ["__proto__","constructor","hasOwnProperty"]){
+    for(const type of ["jobflick:preflight","jobflick:report",
+      "jobflick:cancel","jobflick:forget"]){
+      const reply=await app.listeners.message({type,id},app.popupSender);
+      assert.equal(reply.ok,false,type+" "+id);
+    }
+  }
+  assert.equal(app.requests.length,0);
+  assert.equal(app.storageWrites.length,0);
+});
+
+test("legacy local records using reserved keys cannot be polled or exported",async()=>{
+  const malicious=JSON.parse('{"__proto__":{"id":"__proto__","state":"running"},' +
+    '"constructor":{"id":"constructor","state":"succeeded"}}');
+  const app=boot(null,{storage:{jobflick_bridge_jobs_v1:malicious}});
+  await app.listeners.message({type:"jobflick:refresh"},app.popupSender);
+  const inbox=await app.listeners.message({type:"jobflick:inbox"},app.popupSender);
+  assert.equal(inbox.ok,true);
+  assert.equal(inbox.jobs.length,0);
+  assert.equal(app.requests.length,0);
+  assert.equal(app.storageWrites.length,0);
+  assert.equal(Object.getPrototypeOf(malicious),Object.prototype);
+});
