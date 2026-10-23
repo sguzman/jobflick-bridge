@@ -32,6 +32,15 @@ function validJobId(id) {
     !Object.prototype.hasOwnProperty.call(Object.prototype, id);
 }
 
+// Optional fields from older hosts may be absent, but if a native host
+// *supplies* identity metadata it must match exactly. Reject malformed types
+// and null as contradictions rather than treating them as omissions.
+function contradictsIdentity(object, field, expected) {
+  return object && typeof object === "object" &&
+    Object.prototype.hasOwnProperty.call(object, field) &&
+    object[field] !== expected;
+}
+
 // Existing unversioned records from the Firefox pilot are v1-compatible.
 // Future unsupported records are kept untouched, not guessed or discarded.
 const knownRecord = record => record && typeof record === "object" &&
@@ -209,10 +218,9 @@ async function checkJobs(onlyId = null) {
         // this record. Conflicting origin tokens have the same severity.
         // Quarantine once to avoid repeatedly polling corrupted identity.
         // Older hosts omitting these optional fields remain supported.
-        const wrongId = typeof status.job.id === "string" &&
-          status.job.id !== id;
-        const wrongOrigin = typeof status.job.origin_tab_id === "string" &&
-          status.job.origin_tab_id !== record.origin;
+        const wrongId = contradictsIdentity(status.job, "id", id);
+        const wrongOrigin = contradictsIdentity(
+          status.job, "origin_tab_id", record.origin);
         if (wrongId || wrongOrigin) {
           await mutate(jobs => {
             if (knownRecord(jobs[id])) {
@@ -354,8 +362,7 @@ async function onBridgeMessage(message, sender) {
   if (!validJobId(id)) {
     throw new Error("Submission uncertain; inspect Jobflick before retrying");
   }
-  if (typeof result.job.origin_tab_id === "string" &&
-      result.job.origin_tab_id !== origin) {
+  if (contradictsIdentity(result.job, "origin_tab_id", origin)) {
     // The command may already be queued. Do not bind its report to a
     // contradictory native origin or attempt a new submission.
     throw new Error("Native job origin did not match this Firefox tab; inspect Jobflick");
@@ -611,10 +618,10 @@ async function onPopupMessage(message, sender) {
       // A host's optional response metadata may reveal a different record.
       // Once this happens never continue exposing reports through the
       // extension, even when the local job previously finished.
-      const wrongJobId = (typeof response.id === "string" && response.id !== id) ||
-        (typeof response.job?.id === "string" && response.job.id !== id);
-      const wrongOrigin = typeof response.job?.origin_tab_id === "string" &&
-        response.job.origin_tab_id !== record.origin;
+      const wrongJobId = contradictsIdentity(response, "id", id) ||
+        contradictsIdentity(response.job, "id", id);
+      const wrongOrigin = contradictsIdentity(
+        response.job, "origin_tab_id", record.origin);
       if (wrongJobId || wrongOrigin) {
         await mutate(jobs => {
           if (!knownRecord(jobs[id])) return;
