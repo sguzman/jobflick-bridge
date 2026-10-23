@@ -5,6 +5,7 @@ const notice = document.getElementById("notice");
 const scan = document.getElementById("scan");
 const refresh = document.getElementById("refresh");
 const diagnose = document.getElementById("diagnose");
+const probe = document.getElementById("probe-upload");
 const FINISHED = new Set(["succeeded", "failed", "cancelled", "timed_out", "interrupted"]);
 
 function say(message) {
@@ -150,6 +151,23 @@ scan.addEventListener("click", async () => {
     say(error.message);
   } finally {
     scan.disabled = false;
+  }
+});
+
+probe.addEventListener("click", async () => {
+  probe.disabled = true;
+  try {
+    const result = await ask("jobflick:probe-upload");
+    const parts = [
+      "Composer: " + (result.composerPresent ? "found" : "not found"),
+      "File picker input: " + (result.fileInputPresent ? "present" : "not exposed"),
+      "Draft: " + (result.composerOccupied ? "occupied" : "empty or unavailable")
+    ];
+    say(parts.join(" · ") + ". Read-only check: no file attached.");
+  } catch (error) {
+    say(error.message);
+  } finally {
+    probe.disabled = false;
   }
 });
 

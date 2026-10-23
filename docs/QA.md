@@ -64,3 +64,7 @@ Successful CI runs upload an unsigned `jobflick-bridge-fde-qa-unsigned` ZIP arti
 ## Read-only native host diagnostic
 
 The popup includes **Check connection**. It sends an intentionally invalid, non-executable document to Jobflick's existing `validate_spec` action and requires a structured rejection. This establishes that Firefox can reach the native host and that validation failed closed, without submitting a job. A missing host shows a clear error. **A successful diagnostic is not permission to execute arbitrary YAML** and does not establish end-to-end native execution acceptance.
+
+## Safe preliminary attachment discovery
+
+The toolbar's **Inspect composer** action is a read-only probe of the active permitted ChatGPT conversation. It reports only whether a recognized editable composer exists, whether that composer has content, and whether a file input is currently present in the DOM. It does not transmit any draft text or filenames, open an attachment menu, assign a `FileList`, dispatch file-change events, or press Send. Absence of a file input is **inconclusive**, since ChatGPT may construct one only after opening the attachment menu. This is only a first diagnostic toward the eventual verified file-upload milestone.

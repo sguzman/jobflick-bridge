@@ -116,6 +116,21 @@
   document.addEventListener("focusin", intent, { capture: true });
 
   browser.runtime.onMessage.addListener(message => {
+    if (message?.type === "jobflick:probe-upload") {
+      // Bounded, read-only inspection. We never read/return draft text or
+      // file names, click attachment controls, create File objects, or send.
+      const composer = document.querySelector(
+        '#prompt-textarea[contenteditable="true"], ' +
+        '[data-testid="composer-rich-text-input"][contenteditable="true"]'
+      );
+      const fileInput = document.querySelector('input[type="file"]');
+      return Promise.resolve({
+        ok: true,
+        composerPresent: !!composer,
+        composerOccupied: !!(composer?.textContent || "").trim(),
+        fileInputPresent: !!fileInput
+      });
+    }
     if (message?.type === "jobflick:scan") {
       for (const pre of document.querySelectorAll("main pre")) {
         const rect = pre.getBoundingClientRect();

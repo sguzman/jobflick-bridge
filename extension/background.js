@@ -219,6 +219,27 @@ async function onPopupMessage(message, sender) {
         })).sort((a, b) => b.submittedAt - a.submittedAt).slice(0, 300);
       return { ok: true, jobs: items };
     }
+    case "jobflick:probe-upload": {
+      const active = await browser.tabs.query({ active: true, currentWindow: true });
+      const tab = active[0];
+      if (!tab || !Number.isInteger(tab.id) || !canonical(tab.url)) {
+        return { ok: false, message: "Open an existing ChatGPT conversation to inspect its composer" };
+      }
+      const response = await browser.tabs.sendMessage(tab.id, { type: "jobflick:probe-upload" });
+      if (!response || response.ok !== true ||
+          typeof response.composerPresent !== "boolean" ||
+          typeof response.fileInputPresent !== "boolean" ||
+          typeof response.composerOccupied !== "boolean") {
+        return { ok: false, message: "No supported ChatGPT composer inspection response" };
+      }
+      // Report presence flags only, never the draft or attached file names.
+      return {
+        ok: true,
+        composerPresent: response.composerPresent,
+        composerOccupied: response.composerOccupied,
+        fileInputPresent: response.fileInputPresent
+      };
+    }
     case "jobflick:diagnose": {
       // Deliberately malformed schema. Validation is read-only, and any
       // structured native response proves the installed host is reachable.
@@ -287,7 +308,7 @@ async function onPopupMessage(message, sender) {
 
 browser.runtime.onMessage.addListener((message, sender) => {
   const fromPopup = typeof message?.type === "string" &&
-    ["jobflick:inbox", "jobflick:refresh", "jobflick:scan", "jobflick:report", "jobflick:forget", "jobflick:diagnose"].includes(message.type);
+    ["jobflick:inbox", "jobflick:refresh", "jobflick:scan", "jobflick:report", "jobflick:forget", "jobflick:diagnose", "jobflick:probe-upload"].includes(message.type);
   return (fromPopup ? onPopupMessage(message, sender) : onBridgeMessage(message, sender))
     .catch(error => ({
       ok: false,
