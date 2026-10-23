@@ -45,6 +45,11 @@ function contradictsIdentity(object, field, expected) {
 // Future unsupported records are kept untouched, not guessed or discarded.
 const knownRecord = record => record && typeof record === "object" &&
   (record.recordVersion === undefined || record.recordVersion === RECORD_VERSION);
+// A local storage map's key is the authority for native lookups. If an
+// imported, corrupted or future record claims another ID, never expose it
+// through the popup, poll it, or use it as an origin for report routing.
+const matchedRecord = (id, record) =>
+  validJobId(id) && knownRecord(record) && record.id === id;
 
 function canonical(value) {
   try {
@@ -88,8 +93,8 @@ async function saved() {
 }
 
 async function refreshAlarm(jobs) {
-  const hasPending = Object.values(jobs).some(record =>
-    knownRecord(record) && !record.integrityIssue &&
+  const hasPending = Object.entries(jobs).some(([id, record]) =>
+    matchedRecord(id, record) && !record.integrityIssue &&
     !FINISHED.has(record.state) && record.state !== "unknown");
   if (hasPending) {
     // Recreating an existing alarm on every metadata write moves its next
@@ -151,15 +156,15 @@ async function trustedTab(tabId, expectedUrl, token) {
 // Never infer that a restored numeric tab ID belongs to an old conversation.
 async function reconcileOrigins() {
   await serializedWrite;
-  const records = Object.values(await saved());
+  const records = Object.entries(await saved());
   const orphanIds = [];
-  for (const record of records) {
-    if (!knownRecord(record) || record.orphaned || !validJobId(record.id)) continue;
+  for (const [id, record] of records) {
+    if (!matchedRecord(id, record) || record.orphaned) continue;
     try {
       const tab = await trustedTab(record.tabId, record.conversation, record.origin);
-      if (!tab) orphanIds.push(record.id);
+      if (!tab) orphanIds.push(id);
     } catch {
-      orphanIds.push(record.id);
+      orphanIds.push(id);
     }
   }
   if (orphanIds.length) {
@@ -193,7 +198,7 @@ async function checkJobs(onlyId = null) {
     // Oldest-checked-first ordering rotates fairly through pending jobs.
     const pending = Object.entries(await saved())
       .filter(([id, record]) => (onlyId === null || id === onlyId) &&
-        validJobId(id) && knownRecord(record) && !record.integrityIssue &&
+        matchedRecord(id, record) && !record.integrityIssue &&
         !FINISHED.has(record.state) && record.state !== "unknown")
       .sort((a, b) => (a[1].lastCheckedAt || 0) - (b[1].lastCheckedAt || 0))
       .slice(0, MAX_STATUS_PER_POLL);
@@ -314,7 +319,7 @@ async function drainFastRechecks() {
     try {
       const inspected = await checkJobs(id);
       const record = (await saved())[id];
-      if (!knownRecord(record) || FINISHED.has(record.state) ||
+      if (!matchedRecord(id, record) || FINISHED.has(record.state) ||
           record.state === "unknown") {
         fastRechecks.delete(id);
       } else if (inspected) {
@@ -422,11 +427,11 @@ async function onPopupMessage(message, sender) {
         return { ok: false, message: "Invalid inbox search" };
       }
       const search = query.trim().toLocaleLowerCase();
-      const items = Object.values(jobs).filter(item =>
-        knownRecord(item) && validJobId(item.id) &&
+      const items = Object.entries(jobs).filter(([id, item]) =>
+        matchedRecord(id, item) &&
         (!search || [item.id, item.name, item.state]
           .some(value => String(value || "").toLocaleLowerCase().includes(search))))
-        .map(item => ({
+        .map(([, item]) => ({
           id: item.id,
           name: item.name || "",
           state: item.state || "unknown",
@@ -455,7 +460,7 @@ async function onPopupMessage(message, sender) {
         return { ok: false, message: "Invalid job ID" };
       }
       const record = (await saved())[id];
-      if (!knownRecord(record) || !FINISHED.has(record.state) || record.orphaned) {
+      if (!matchedRecord(id, record) || !FINISHED.has(record.state) || record.orphaned) {
         return { ok: false, message: "This job has no verified active original conversation" };
       }
       const tab = await trustedTab(record.tabId, record.conversation, record.origin);
@@ -562,7 +567,7 @@ async function onPopupMessage(message, sender) {
         return { ok: false, message: "Invalid job ID" };
       }
       const current = (await saved())[id];
-      if (!knownRecord(current) || current.integrityIssue ||
+      if (!matchedRecord(id, current) || current.integrityIssue ||
           !["queued", "running"].includes(current.state)) {
         return { ok: false, message: "Only queued or running jobs can be stopped" };
       }
@@ -594,7 +599,7 @@ async function onPopupMessage(message, sender) {
         return { ok: false, message: "Invalid job ID" };
       }
       const current = (await saved())[id];
-      if (!knownRecord(current) || !FINISHED.has(current.state)) {
+      if (!matchedRecord(id, current) || !FINISHED.has(current.state)) {
         return { ok: false, message: "Only finished bridge records may be forgotten" };
       }
       // Forget only the extension's routing metadata. No native action, no
@@ -608,7 +613,7 @@ async function onPopupMessage(message, sender) {
         return { ok: false, message: "Invalid job ID" };
       }
       const record = (await saved())[id];
-      if (!knownRecord(record) || !FINISHED.has(record.state)) {
+      if (!matchedRecord(id, record) || !FINISHED.has(record.state)) {
         return { ok: false, message: "The job is unknown or not finished" };
       }
       if (record.integrityIssue) {
