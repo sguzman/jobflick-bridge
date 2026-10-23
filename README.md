@@ -158,3 +158,14 @@ session. [Firefox CI evidence](https://github.com/sguzman/jobflick-bridge/action
 The authoritative work ledger is [progress.json](progress.json); live
 ChatGPT attachment acknowledgment, draft-safe Send and release signing remain
 required gates. Synthetic browser results never establish automatic delivery.
+
+
+## 🦊 Real Firefox toolbar popup acceptance
+
+[Firefox Developer Edition privileged popup CI](https://github.com/sguzman/jobflick-bridge/actions/runs/40042283563) now opens the
+actual `moz-extension://` action popup and verifies unmodified background
+popup authorization, a 45-record inbox/search, fake-host Native Messaging
+report retrieval, an exact local File and bridge-only Forget. The CI-only
+popup gestures are programmatic; separate disposable Firefox tests cover
+real keyboard download gestures. **Authenticated ChatGPT attachment and
+Send remain unverified and disabled.**

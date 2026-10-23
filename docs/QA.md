@@ -552,3 +552,27 @@ ChatGPT.** Privileged integration, live attachment acknowledgement, draft
 preservation and Send remain blocked on separate acceptance gates (M7-06,
 M5-01/03/05/06/07/08, M4-06/07). No delivery success is inferred from a
 local file download.
+
+## Real Firefox extension action popup and Native Messaging acceptance
+
+A disposable Firefox Developer Edition now opens the **actual toolbar action
+popup** using Firefox 149+ `browser.action.openPopup()` through a QA-only
+synthetic localhost trigger. Unlike opening an extension URL in a browser
+tab, this preserves the production popup sender identity: same extension ID,
+exact `moz-extension://…/popup/index.html` URL and **no sender.tab**.
+The production background `isPopup` guard is left intact.
+
+An isolated fake native host and 45 durable browser records verify privileged
+inbox pagination, local search, real `browser.runtime.sendMessage` permission,
+`show` through Native Messaging, exact local File download and browser-only
+Forget. The fake native request stream contains **show only**, no native
+submit/cancel; there is no ChatGPT Send. Test-only popup peer JavaScript
+initiates these clicks programmatically, so this acceptance does **not**
+prove actual Firefox-trusted user gestures inside the popup. Separate
+Firefox testing has already verified Enter/Space keyboard download gestures
+using the unmodified popup source on localhost.
+
+[Privileged Firefox acceptance](https://github.com/sguzman/jobflick-bridge/actions/runs/40042283563). The full authenticated
+ChatGPT-specific attachment, chip acknowledgement, draft preservation,
+guarded Send and post-send recovery gates are still blocked on M7-06 and M5.
+No personal browser profile or native-host manifest was accessed by CI.
