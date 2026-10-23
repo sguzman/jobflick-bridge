@@ -17,9 +17,9 @@ Before any real shell job:
 | --- | --- | --- |
 | Firefox Developer Edition extension loads | Real disposable headless Firefox add-on install/uninstall; authenticated desktop still pending | Headless CI pass (not full live QA) |
 | Missing native host | No jobs, clear failure | Not run |
-| Invalid schema/unsupported command | No Run action available | Not run |
-| Synthetic page click | No submission | Not run |
-| Valid harmless job, explicit click | Exactly one confirmed Jobflick queue entry | Not run |
+| Invalid schema/unsupported command | No Run action available | Real native validator rejects malformed YAML in disposable CI; authenticated page pending |
+| Synthetic page click | Real user click required; fake backend rejects invalid submission | Headless Firefox synthetic CI passed |
+| Valid harmless job, explicit click | Exactly one confirmed Jobflick queue entry | Headless FDE → actual daemon → Fish `printf` passed in isolated CI; authenticated page pending |
 | Lost submit reply | No blind retry | Not run |
 | Multiple chats and tab ID reuse | No wrong-chat delivery | Not run |
 | Occupied ChatGPT composer | Existing draft unchanged | Not run |
@@ -90,3 +90,11 @@ A separate CI test, `tests/fde-native.cjs`, temporarily installs a QA-only copy 
 The headless Firefox Developer Edition QA test now passes with the production content/background logic and synthetic localhost origin substitution. With a disposable, non-executing Native Messaging fixture it observes the validate → Run click → one submit → opaque origin token → inspect → terminal status path. It explicitly verifies that the report is **not** fetched automatically. The test can neither assert the real installed Jobflick daemon's Fish execution nor control Firefox's privileged `moz-extension://` popup via ordinary WebDriver. Popup controls are tested separately with behavioral mocks; authenticated Firefox Developer Edition QA remains a distinct, unpassed acceptance gate.
 
 A regression test also simulates terminal status arriving before the asynchronous submit acknowledgement, ensuring that the Run button does not regress from finished to queued.
+
+## Isolated real-daemon Firefox acceptance
+
+CI's `real-jobflick` job checks out **pinned upstream Jobflick commit `cbff2a4cb90be4487e1bbb406777cf7fe3b6cc1d`** into a temporary build directory (not this repository), compiles it with Cargo, then validates the real `jobflick native-host` protocol, a single schema-4 job, a durable browser-origin token, and a finished report. The only executed command is a hardcoded `printf` in a temporary work directory.
+
+The same job then runs the unchanged production content script and production background logic in headless **Firefox Developer Edition**, with a test-only localhost route and dedicated Gecko ID, connected to the **real** Jobflick daemon. It checks the browser's Run button, one persisted job, an opaque origin ID, successful Fish output, and the terminal-status update. This is actual Firefox-to-real-Jobflick integration but **not authenticated ChatGPT acceptance**. No report attachment or Send is activated. The `fake-native-host` acceptance remains a separate no-execution gate.
+
+Results for same-tab navigation or a composer probe interrupted by navigation become permanently **manual-only** for automatic delivery. The bridge never silently reattaches a result to a reopened/reused tab, and manual report export remains available.

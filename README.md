@@ -2,7 +2,7 @@
 
 **Firefox Developer Edition-first WebExtension** connecting ChatGPT-authored Execarium jobs to the user's local Jobflick executor. The repository is independent; [the legacy Script-Monkey extension](https://github.com/sguzman/script-monkey/tree/main/extensions/jobflick-bridge) is reference material, not the implementation baseline.
 
-**Status:** Headless Firefox Developer Edition accepts the production add-on and runs its production content script with a synthetic, non-executing QA background. Authenticated ChatGPT, native Jobflick execution and attachment/auto-send acceptance remain pending. **Safety:** test first in a dedicated Firefox Developer Edition QA profile with harmless jobs. A browser profile does **not** sandbox commands run by Jobflick.
+**Status:** Disposable headless Firefox Developer Edition now validates and queues through the actual Jobflick daemon, executes one hardcoded harmless Fish fixture, and displays successful terminal status. Authenticated ChatGPT, file attachment and auto-send remain unverified. **Safety:** test first in a dedicated Firefox Developer Edition QA profile with harmless jobs. A browser profile does **not** sandbox commands run by Jobflick.
 
 ## Intended flow
 
@@ -48,7 +48,7 @@ This is a recovery and inspection surface, **not** a claim that the future ChatG
 
 ## Verified CI gates
 
-The automated suite runs Node behavioral tests, Fish native-host installer tests in a disposable HOME, Mozilla `web-ext lint`, and a separate **real Firefox Developer Edition** WebDriver job that installs/uninstalls the production add-on in an anonymous profile. A further disposable QA-only manifest runs the unmodified content script on synthetic ChatGPT-style HTML, confirming intent-driven Run button insertion, mouse-click handling, and rejection of YAML changed after validation. It never accesses the user's machine or starts real Jobflick jobs. [Latest passing CI run](https://github.com/sguzman/jobflick-bridge/actions/runs/40008094593).
+The automated suite runs Node behavioral tests, Fish native-host installer tests in a disposable HOME, Mozilla `web-ext lint`, and a separate **real Firefox Developer Edition** WebDriver job that installs/uninstalls the production add-on in an anonymous profile. A further disposable QA-only manifest runs the unmodified content script on synthetic ChatGPT-style HTML, confirming intent-driven Run button insertion, mouse-click handling, and rejection of YAML changed after validation. It uses disposable CI directories; a separate real-daemon gate executes only a fixed harmless `printf` fixture and never accesses the user's machine. [Latest passing CI run](https://github.com/sguzman/jobflick-bridge/actions/runs/40010624085).
 
 An unsigned Firefox QA ZIP is also produced by CI (artifact `jobflick-bridge-fde-qa-unsigned`). It is intended only for **temporary installation** in the dedicated QA profile via `about:debugging`, not for a release or an automatic native-host setup.
 
@@ -66,4 +66,6 @@ Finished jobs whose original tab still matches its opaque session token and **ex
 
 ## 🦊 Current verified integration boundary
 
-In disposable headless Firefox Developer Edition, the production bridge now connects to a **fake, no-execution** Native Messaging host. It validates fixture YAML, queues exactly once on the user's browser click, checks native status, and shows a terminal result. This test uses only a localhost URL adapter and a synthetic Gecko add-on ID, never the user's authenticated browser or real Jobflick daemon. Separate Node tests exercise the popup inbox, manual report preparation, and cancellation confirmation; Firefox's privileged popup UI remains unaccepted under WebDriver. Automatic attachment and Send are not implemented.
+The full **synthetic Firefox Developer Edition → actual Jobflick native-host → durable daemon → harmless Fish execution → finished-status UI** path passes in CI. The runner compiles a pinned upstream Jobflick revision and operates on private temporary XDG paths with a separate Gecko test ID. The exact executed command is a hardcoded `printf`, and no authenticated ChatGPT session is used. A separate no-execution native fixture continues to verify that the browser does not automatically fetch reports or send messages.
+
+The **Firefox popup itself** remains covered by behavioral tests because ordinary WebDriver refuses privileged `moz-extension://` browsing contexts. Uploading a report attachment, preserving a real ChatGPT draft, and automatic Send are still unavailable and must pass authenticated FDE acceptance before activation.
