@@ -68,3 +68,7 @@ The real Jobflick native host can return an `origin_tab_id` on submission or ins
 ## Native inspection response quarantine
 
 When Jobflick supplies an `inspect` response with a different `job.id` or a conflicting `origin_tab_id`, the extension does not adopt its name, state, output or origin. It persists an explicit `integrityIssue`, irreversibly marks the record manual-only for browser delivery, and removes it from routine native status polling until a human recovers the original report in Jobflick. This avoids repeated requests against an inconsistent host. The popup surfaces the condition. Older hosts that omit optional origin metadata are not rejected solely for the absence of that field.
+
+## Attachment preflight flags are not upload authorization
+
+The content script's composer probe reports only presence, occupation, ambiguous multiple controls, and whether a discovered native HTML file input currently has files selected. It never returns draft text, file names, file bytes, or attachment chips. A missing advanced flag is represented as unknown rather than a false "safe" finding. Neither a single exposed file input nor an empty FileList is proof that ChatGPT has no preexisting attachments. Real attachment needs separate site acknowledgment and guarded user authorization.

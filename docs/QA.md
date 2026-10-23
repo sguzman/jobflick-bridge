@@ -150,3 +150,9 @@ Adversarial Node tests return an inspected native job with a different ID or ori
 CI runs `tests/fde-attachment.cjs` with a disposable Firefox Developer Edition extension and a localhost HTML file input. The probe imports the **same inert** `extension/attachment-adapter.js` that is bundled before the production content script, and checks that a plain-text Jobflick-named `File` is readable from a page-realm `change` listener. It additionally verifies that selecting a report **cannot overwrite an already-selected user file**, and that a report larger than 512 KiB is rejected before any handoff. No network upload is made; no native host, account session, or ChatGPT Send is involved.
 
 Passing this probe validates Firefox cross-realm FileList transfer but does not establish that ChatGPT's current attachment UI will ingest, display, upload, or send the file. Only real authenticated Firefox Developer Edition QA can verify that later stage.
+
+## Read-only composer ambiguity inspection
+
+The popup's existing **Inspect composer** and per-job **Check original chat** checks now distinguish whether the site exposes multiple plausible composer elements or file inputs, and whether the discovered file inputs already have a selected `FileList`. The content script only returns booleans: no draft contents, existing attachment names or File objects are sent to the background. Known `textarea` values also count as occupied drafts without disclosing them. Legacy or missing advanced flags are shown as **unknown**, not safe.
+
+This probe remains *read-only*. It does not determine whether the ChatGPT composer already has uploaded file chips if its file input is empty, hidden or created on demand. Ambiguity, missing selectors and unrecognized states must keep any future automated attachment/Send disabled until live Firefox acceptance.
