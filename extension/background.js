@@ -713,15 +713,16 @@ async function reconcileTabRoute(tabId, nextUrl) {
   if (!Number.isInteger(tabId)) return;
   const next = canonical(nextUrl);
   await serializedWrite;
-  const before = Object.values(await saved());
-  // Duplicate route notifications and unrelated tabs cannot generate full
-  // local inbox writes when no job actually needs to be orphaned.
-  if (before.some(record => knownRecord(record) &&
+  const before = Object.entries(await saved());
+  // Unrecognized/mismatched stored IDs never count as valid owners of a
+  // tab's session token or influence its navigation lifecycle.
+  if (before.some(([id, record]) => matchedRecord(id, record) &&
       record.tabId === tabId && !record.orphaned &&
       record.conversation !== next)) {
     await mutate(jobs => {
-      for (const record of Object.values(jobs)) {
-        if (!knownRecord(record) || record.tabId !== tabId || record.orphaned) continue;
+      for (const [id, record] of Object.entries(jobs)) {
+        if (!matchedRecord(id, record) ||
+            record.tabId !== tabId || record.orphaned) continue;
         if (record.conversation !== next) {
           record.orphaned = true;
           record.deliveryState = "manual_only";
@@ -731,8 +732,8 @@ async function reconcileTabRoute(tabId, nextUrl) {
   }
   // A new chat in this tab must receive a fresh token. Do not remove the
   // identity while a record for the SAME conversation is still valid.
-  const records = Object.values(await saved());
-  if (!records.some(record => knownRecord(record) &&
+  const records = Object.entries(await saved());
+  if (!records.some(([id, record]) => matchedRecord(id, record) &&
       record.tabId === tabId && !record.orphaned &&
       record.conversation === next)) {
     await browser.storage.session.remove("jobflick_origin_" + tabId);
@@ -770,12 +771,12 @@ browser.tabs.onRemoved.addListener(id => {
   // inbox. Existing records stay durable, but lose delivery eligibility.
   void (async () => {
     await serializedWrite;
-    const records = Object.values(await saved());
-    if (!records.some(record => knownRecord(record) &&
+    const records = Object.entries(await saved());
+    if (!records.some(([jobId, record]) => matchedRecord(jobId, record) &&
         record.tabId === id && !record.orphaned)) return;
     await mutate(jobs => {
-      for (const record of Object.values(jobs)) {
-        if (knownRecord(record) && record.tabId === id) {
+      for (const [jobId, record] of Object.entries(jobs)) {
+        if (matchedRecord(jobId, record) && record.tabId === id) {
           record.orphaned = true;
           record.deliveryState = "manual_only";
         }
