@@ -1149,3 +1149,59 @@ test("unsupported future record cannot be overwritten by a reused native job ID"
   assert.equal(app.storage.jobflick_bridge_jobs_v1.job_12345678.recordVersion,999);
   assert.equal(app.storage.jobflick_bridge_jobs_v1.job_12345678.origin,"protected");
 });
+
+test("native status with a conflicting browser origin is preserved as manual-only",async()=>{
+  const app=boot(request=>{
+    if(request.action==="submit_spec")return {
+      ok:true,job:{id:"job_12345678",state:"queued"}
+    };
+    if(request.action==="inspect")return {
+      ok:true,job:{id:request.id,state:"succeeded",
+        origin_tab_id:"tab-different-browser"}
+    };
+    return {ok:true};
+  });
+  await app.listeners.message({type:"jobflick:submit",yaml:sample},app.sender);
+  await app.listeners.message({type:"jobflick:refresh"},app.popupSender);
+  const record=app.storage.jobflick_bridge_jobs_v1.job_12345678;
+  assert.equal(record.orphaned,true);
+  assert.equal(record.deliveryState,"manual_only");
+  assert.equal(app.sentTabMessages.filter(x=>x.message.type==="jobflick:status").length,0);
+  assert.equal(app.requests.filter(x=>x.action==="submit_spec").length,1);
+});
+
+test("wrong native origin in accepted submission response fails without stored rebind",async()=>{
+  const app=boot(request=>{
+    if(request.action==="submit_spec")return {
+      ok:true,job:{
+        id:"job_12345678",state:"queued",
+        origin_tab_id:"tab-host-provenance-conflict"
+      }
+    };
+    return {ok:true};
+  });
+  const result=await app.listeners.message({
+    type:"jobflick:submit",yaml:sample
+  },app.sender);
+  assert.equal(result.ok,false);
+  assert.match(result.message,/origin did not match/);
+  assert.match(result.message,/submission may have succeeded/);
+  assert.equal(app.storage.jobflick_bridge_jobs_v1,undefined);
+  assert.equal(app.requests.filter(x=>x.action==="submit_spec").length,1);
+});
+
+test("matching native origin is accepted when real backend includes it",async()=>{
+  const token="tab-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+  const app=boot(request=>{
+    if(request.action==="submit_spec")return {
+      ok:true,job:{id:"job_12345678",state:"succeeded",origin_tab_id:token}
+    };
+    return {ok:true};
+  });
+  const result=await app.listeners.message({
+    type:"jobflick:submit",yaml:sample
+  },app.sender);
+  assert.equal(result.ok,true);
+  assert.equal(app.storage.jobflick_bridge_jobs_v1.job_12345678.origin,token);
+  assert.equal(app.storage.jobflick_bridge_jobs_v1.job_12345678.orphaned,false);
+});
