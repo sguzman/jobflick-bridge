@@ -143,10 +143,19 @@ async function main(){
       return items.length===1 ? items[0] : false;
     },10000);
     assert.match(await newButton.getText(),/Run Jobflick/);
+    // Ask Firefox/Marionette for the computed accessibility tree properties.
+    // Native HTML semantics must expose a correctly named actionable button,
+    // not just a clickable div with a visually styled label.
+    assert.equal(await newButton.getAriaRole(),"button");
+    assert.match(await newButton.getAccessibleName(),/Run Jobflick/);
+    assert.equal(await newButton.isEnabled(),true,
+      "Only an available, newly validated job may be activated");
     // Native button keyboard activation must be trusted and subject to
     // the same synthetic no-execution background refusal.
     await newButton.sendKeys(Key.ENTER);
     await driver.wait(async()=>/Submission uncertain/.test(await newButton.getText()),10000);
+    assert.equal(await newButton.isEnabled(),false,
+      "Uncertain submission must not permit another keyboard or pointer activation");
 
     // A second disposable page must support Space activation as well.
     // The QA background rejects submission; keyboard focus is the only
@@ -159,8 +168,12 @@ async function main(){
       const found=await driver.findElements(By.css(".jobflick-bridge-run"));
       return found[0] || false;
     },10000);
+    assert.equal(await spaceButton.getAriaRole(),"button");
+    assert.match(await spaceButton.getAccessibleName(),/Run Jobflick/);
     await spaceButton.sendKeys(Key.SPACE);
     await driver.wait(async()=>/Submission uncertain/.test(await spaceButton.getText()),10000);
+    assert.equal(await spaceButton.isEnabled(),false,
+      "Space must not authorize duplicate native execution");
 
     // Keep the same connected code node while the SPA changes the route.
     // A control validated on the previous conversation must remove itself,
