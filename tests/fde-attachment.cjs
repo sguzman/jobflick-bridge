@@ -48,6 +48,16 @@ async function main(){
       'catch(error){preserved=/must not be overwritten/.test(error.message);}',
       'document.documentElement.dataset.probePreserved=String(',
       '  preserved && occupied.files?.[0]?.name==="user-draft.txt");',
+      'const rejecting=document.getElementById("reject");',
+      'let listenerRejectionDetected=false;',
+      'try {api.handoff(rejecting,report);}',
+      'catch(error){listenerRejectionDetected=/changed during handoff/.test(error.message) && rejecting.files?.length===0;}',
+      'document.documentElement.dataset.probeRejected=String(listenerRejectionDetected);',
+      'const removed=document.getElementById("removed");',
+      'let removedDetected=false;',
+      'try {api.handoff(removed,report);}',
+      'catch(error){removedDetected=/changed during handoff/.test(error.message) && !removed.isConnected;}',
+      'document.documentElement.dataset.probeRemoved=String(removedDetected);',
       'let oversizeRejected=false;',
       'try {api.prepare("job_12345678","z".repeat(524289));}',
       'catch(error){oversizeRejected=/512 KiB/.test(error.message);}',
@@ -58,8 +68,12 @@ async function main(){
       '<!doctype html><html lang="en"><meta charset="utf-8"><body>',
       '<input id="upload" type="file" accept=".txt,text/plain">',
       '<input id="occupied" type="file" accept=".txt,text/plain">',
+      '<input id="reject" type="file" accept=".txt,text/plain">',
+      '<input id="removed" type="file" accept=".txt,text/plain">',
       '<output id="result"></output>',
       '<script>',
+      'document.querySelector("#reject").addEventListener("change",e=>{e.target.value="";});',
+      'document.querySelector("#removed").addEventListener("change",e=>{e.target.remove();});',
       'document.querySelector("#upload").addEventListener("change",async e=>{',
       '  const output=document.querySelector("#result");',
       '  try {',
@@ -105,6 +119,12 @@ async function main(){
     assert.equal(await driver.executeScript(
       "return document.documentElement.dataset.probeOversize"),"true",
       "Adapter must reject oversized report Files");
+    assert.equal(await driver.executeScript(
+      "return document.documentElement.dataset.probeRejected"),"true",
+      "Adapter must refuse a page that synchronously clears the input");
+    assert.equal(await driver.executeScript(
+      "return document.documentElement.dataset.probeRemoved"),"true",
+      "Adapter must refuse a page that detaches the input on change");
     await driver.wait(async()=>{
       const raw=await driver.findElement(By.id("result")).getText();
       return !!raw;
@@ -118,7 +138,7 @@ async function main(){
     assert.equal(report.bytes,Buffer.byteLength(report.text));
     assert.equal(report.trusted,false);
     await driver.uninstallAddon(addon);
-    console.log("Synthetic Firefox attachment adapter: page read bounded File; existing selection preserved; oversized report rejected; no network upload or Send");
+    console.log("Synthetic Firefox attachment adapter: page read bounded File; existing selection preserved; page-side clear/detach detected; oversized report rejected; no network upload or Send");
   }finally{
     if(driver)await driver.quit();
     if(server)await new Promise(resolve=>server.close(resolve));
