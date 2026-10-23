@@ -13,8 +13,17 @@
   // Retain a small bounded status cache so early completion is not lost.
   const earlyStatus = new Map();
   const MAX_EARLY_STATUSES = 32;
+  // A SPA may retain the exact same code node while changing conversations.
+  // Bind each validation/Run control to the pathname that was inspected.
+  // Query/hash changes on the same conversation do not revoke it.
+  function routeIdentity() {
+    const site = globalThis.location;
+    if (typeof site?.origin !== "string" ||
+        typeof site?.pathname !== "string") return null;
+    return site.origin + (site.pathname.replace(/\\/+$/, "") || "/");
+  }
   function paintStatus(state, message) {
-    if (!state?.button?.isConnected) return;
+    if (!state?.button?.isConnected || state.route !== routeIdentity()) return;
     state.button.textContent =
       (message.state === "succeeded" ? "✓ " : "● ") +
       message.state + " · " + message.jobId.slice(0, 8);
@@ -47,7 +56,8 @@
     validating++;
     try {
       const reply = await browser.runtime.sendMessage({ type: "jobflick:validate", yaml: state.yaml });
-      if (!reply?.ok || !pre.isConnected || states.get(pre) !== state ||
+      if (!reply?.ok || !pre.isConnected || !pre.closest("main") ||
+          states.get(pre) !== state || state.route !== routeIdentity() ||
           candidate(pre) !== state.yaml) return;
       const button = document.createElement("button");
       button.type = "button";
@@ -67,7 +77,8 @@
         if (!event.isTrusted || state.submitted || !button.isConnected) return;
         // A chat rerender may detach its code block but retain our button.
         // Remove the orphaned control lazily, without an idle DOM observer.
-        if (!pre.isConnected) {
+        if (!pre.isConnected || !pre.closest("main") ||
+            state.route !== routeIdentity()) {
           button.remove();
           return;
         }
@@ -138,14 +149,16 @@
     for (const pre of batch) {
       dirty.delete(pre);
       const yaml = candidate(pre);
-      if (!yaml) continue;
+      const route = routeIdentity();
+      if (!yaml || !route || !pre.closest("main")) continue;
       const old = states.get(pre);
-      // Avoid issuing duplicate native validation while one for this
-      // unchanged code block is still in flight.
-      if (old?.yaml === yaml && (old.button?.isConnected || old.validating)) continue;
+      // A validated button from a prior SPA route cannot authorize code
+      // under a new conversation, even if the DOM node and YAML are reused.
+      if (old?.yaml === yaml && old.route === route &&
+          (old.button?.isConnected || old.validating)) continue;
       if (old?.jobId) byJob.delete(old.jobId);
       old?.button?.remove();
-      const state = { yaml, submitted: false, button: null, jobId: null, validating: true };
+      const state = { yaml, route, submitted: false, button: null, jobId: null, validating: true };
       states.set(pre, state);
       void validate(pre, state);
     }
