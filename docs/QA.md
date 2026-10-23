@@ -488,3 +488,22 @@ Only disposable QA code injects the pending-record fixture and explicit
 recheck: production Native Messaging, storage mutation and inspector code
 are unchanged. The gate verifies safe event-script recovery, **not** actual
 browser-process restart, authenticated ChatGPT attachment, or Send.
+
+## Verified M4-08: multi-conversation, draft and origin isolation
+
+Real Firefox Developer Edition now opens 16 secondary conversation tabs
+containing identical YAML while one original-tab Jobflick job remains
+tracked. None acquires an actionable Run control merely from loading its
+code block. Two secondary tabs explicitly attempt the QA-only local report
+handoff: the exact original-tab and conversation checks reject both requests,
+leaving those tabs' file inputs and drafts untouched. Opening/closing the
+other tabs cannot orphan the original job. Subsequently navigating the
+original A→B→A irrevocably revokes delivery and remains manual-only across
+extension event-script reload. One native job is executed at most once.
+
+[Disposable Firefox pass](https://github.com/sguzman/jobflick-bridge/actions/runs/40040708422) ·
+[Pinned real Jobflick daemon pass](https://github.com/sguzman/jobflick-bridge/actions/runs/40040708421).
+This closes the isolated multi-tab and race-test matrix, **not** the
+production ChatGPT attachment or automatic Send gates. The report-handoff
+listener used for destination denial is CI-only and is not in the released
+extension.

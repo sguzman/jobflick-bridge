@@ -367,18 +367,19 @@
         {
           "id": "M4-08",
           "title": "Multi-tab tests",
-          "status": "implemented",
+          "status": "verified",
           "evidence": [
             "Real FDE synthetic conversation A→B→A pushState permanently revokes old origin, plus 16-tab mocked tests. Authenticated multi-conversation upload/draft race acceptance pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40015025541",
             "Adversarial concurrent operation tests reject stale original-chat verification after Forget/quarantine and stale active-tab probe results after SPA navigation/tab switching. No payload delivery occurs; Node regressions and disposable Firefox checks passed: https://github.com/sguzman/jobflick-bridge/actions/runs/40032306863. Authenticated ChatGPT delivery/race acceptance remains outstanding.",
-            "Production content Run control refuses a stale conversation route even if the same connected code DOM node persists across SPA navigation. Real Firefox synthetic QA and Node regression passed: https://github.com/sguzman/jobflick-bridge/actions/runs/40032659397. No authenticated same-conversation upload/Send test."
+            "Production content Run control refuses a stale conversation route even if the same connected code DOM node persists across SPA navigation. Real Firefox synthetic QA and Node regression passed: https://github.com/sguzman/jobflick-bridge/actions/runs/40032659397. No authenticated same-conversation upload/Send test.",
+            "Actual disposable Firefox Developer Edition tests 16 concurrent secondary conversations with the identical Execarium document: none gains a Run control or native-submit grant without its own intent; wrong-tab QA-only explicit report requests return errors before Native Messaging and never populate file inputs; existing synthetic drafts remain untouched; original tab stays valid when other tabs open/close; A→B→A navigation irrevocably enforces manual-only; extension reload resumes state without duplicate command execution. Both nonexecuting fixture and real pinned Jobflick Fish daemon acceptance passed: https://github.com/sguzman/jobflick-bridge/actions/runs/40040708422 https://github.com/sguzman/jobflick-bridge/actions/runs/40040708421. This verifies isolated multi-tab/race tests, not real authenticated ChatGPT attachment or Send."
           ]
         }
       ],
-      "verified": 5,
+      "verified": 6,
       "total": 8,
-      "percent": 62,
-      "implemented": 1
+      "percent": 75,
+      "implemented": 0
     },
     {
       "id": "M5",
@@ -626,10 +627,10 @@
   },
   "overall": {
     "total": 63,
-    "verified": 43,
-    "implemented": 13,
+    "verified": 44,
+    "implemented": 12,
     "planned": 7,
-    "percent": 68,
+    "percent": 69,
     "basis": "Only verified atomic tasks count toward percentage"
   }
 }
