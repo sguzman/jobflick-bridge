@@ -1,0 +1,60 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const read = path => readFileSync(new URL("../" + path, import.meta.url), "utf8");
+const manifest = JSON.parse(read("extension/manifest.json"));
+const background = read("extension/background.js");
+const content = read("extension/content.js");
+const installer = read("scripts/install-native-host.fish");
+
+test("Firefox-specific MV3 manifest, never Chrome service worker", () => {
+  assert.equal(manifest.manifest_version, 3);
+  assert.equal(manifest.browser_specific_settings.gecko.id, "jobflick-bridge@sguzman.github.io");
+  assert.deepEqual(manifest.background, { scripts: ["background.js"] });
+  assert.deepEqual(manifest.host_permissions, ["https://chatgpt.com/*", "https://chat.openai.com/*"]);
+  assert(manifest.permissions.includes("nativeMessaging"));
+});
+
+test("native host is Firefox-specific, explicit and uses correct allowlist", () => {
+  assert(installer.includes("allowed_extensions"));
+  assert(installer.includes("jobflick-bridge@sguzman.github.io"));
+  assert(installer.includes(".mozilla/native-messaging-hosts"));
+  assert(installer.includes("jobflick native-host") === false);
+  assert(installer.includes("native-host\\n"));
+  assert(!installer.includes("allowed_origins"));
+  assert(installer.includes("case --install"));
+  assert(installer.includes("case --uninstall"));
+});
+
+test("no idle transcript scanning, polling or automatic code execution", () => {
+  assert(!/MutationObserver|\.observe\(/.test(content));
+  assert(!/setInterval\s*\(/.test(content + background));
+  assert(content.includes('document.addEventListener("pointerover"'));
+  assert(content.includes('document.addEventListener("focusin"'));
+  assert(content.includes("event.isTrusted"));
+  assert(content.includes('button.addEventListener("click"'));
+  assert(background.includes('action: "validate_spec"'));
+  assert.equal((background.match(/action: "submit_spec"/g) || []).length, 1);
+});
+
+test("origin tokens are separate from YAML and browser tab IDs", () => {
+  assert(background.includes("crypto.randomUUID()"));
+  assert(background.includes("origin_tab_id: origin"));
+  assert(background.includes("canonical(tab.url) === expectedUrl"));
+  assert(background.includes('browser.storage.session.get(key)'));
+  assert(!content.includes("origin_tab_id"));
+});
+
+test("submission failures are uncertain, no retry, and orphaned jobs are preserved", () => {
+  assert(background.includes("submission may have succeeded"));
+  assert(background.includes("record.orphaned = true"));
+  assert(background.includes("browser.storage.local.set"));
+  assert(background.includes("browser.alarms.create"));
+  assert(!/jobs\[jobId\]\s*=/m.test(background));
+});
+
+test("file attachments and automated Send are not falsely claimed to be implemented", () => {
+  assert(!/\.click\(\)/.test(content));
+  assert(background.includes("NO automated ChatGPT composer injection"));
+  assert(read("docs/QA.md").includes("Not run"));
+});

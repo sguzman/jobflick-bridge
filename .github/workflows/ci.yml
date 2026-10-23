@@ -1,0 +1,18 @@
+name: Firefox Bridge Checks
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax and invariants
+        run: npm run check
+      - name: Manifest parse
+        run: node -e 'const m=require("./extension/manifest.json"); if (!m.browser_specific_settings?.gecko?.id) process.exit(1)'
