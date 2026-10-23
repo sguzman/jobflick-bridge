@@ -128,7 +128,8 @@
           "title": "DOM rerender resilience",
           "status": "implemented",
           "evidence": [
-            "Actual FDE synthetic rerender, stale Run control removal, changed YAML and pushState route revocation tested; authenticated ChatGPT React DOM acceptance pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40015025541"
+            "Actual FDE synthetic rerender, stale Run control removal, changed YAML and pushState route revocation tested; authenticated ChatGPT React DOM acceptance pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40015025541",
+            "Native validation of an unchanged YAML block is coalesced while pending; stale late responses cannot add a Run button after YAML mutation. New Node races and the complete isolated Firefox Developer Edition checks passed: https://github.com/sguzman/jobflick-bridge/actions/runs/40030357579. Authenticated ChatGPT React acceptance remains pending."
           ]
         },
         {
@@ -393,7 +394,8 @@
           "title": "True attachment",
           "status": "implemented",
           "evidence": [
-            "Partial: actual FDE transfers the real pinned Jobflick native report through the inert production File helper to a synthetic localhost input after a test-only trusted browser click; page reads exact matching ID filename/content. No production ChatGPT upload selector, server acknowledgment or authenticated site acceptance: https://github.com/sguzman/jobflick-bridge/actions/runs/40025229365"
+            "Partial: actual FDE transfers the real pinned Jobflick native report through the inert production File helper to a synthetic localhost input after a test-only trusted browser click; page reads exact matching ID filename/content. No production ChatGPT upload selector, server acknowledgment or authenticated site acceptance: https://github.com/sguzman/jobflick-bridge/actions/runs/40025229365",
+            "The inert File handoff helper now fails closed if a page change handler immediately clears or removes its file input. Actual disposable Firefox Developer Edition tests passed; site acknowledgment and authenticated ChatGPT upload are not established: https://github.com/sguzman/jobflick-bridge/actions/runs/40030357579."
           ]
         },
         {
@@ -521,7 +523,8 @@
           "title": "Adversarial security tests",
           "status": "implemented",
           "evidence": [
-            "Adversarial Node tests reject reserved object-prototype job IDs, mismatched native origin/ID on submission, inspection and report retrieval, including explicitly supplied null, numeric, object and array identity metadata. Firefox and pinned real-native acceptance passing; authenticated ChatGPT security acceptance pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40028499706 https://github.com/sguzman/jobflick-bridge/actions/runs/40028499789"
+            "Adversarial Node tests reject reserved object-prototype job IDs, mismatched native origin/ID on submission, inspection and report retrieval, including explicitly supplied null, numeric, object and array identity metadata. Firefox and pinned real-native acceptance passing; authenticated ChatGPT security acceptance pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40028499706 https://github.com/sguzman/jobflick-bridge/actions/runs/40028499789",
+            "Additional adversarial validation and file handoff tests passed: concurrent pointer/focus does not duplicate in-flight validation, edited YAML rejects late replies, and Firefox reports failure after synchronous page-side FileList clear/detach. https://github.com/sguzman/jobflick-bridge/actions/runs/40030357579"
           ]
         },
         {
