@@ -26,7 +26,7 @@ function canonical(value) {
 
 function validYaml(yaml) {
   return typeof yaml === "string" &&
-    yaml.length > 0 &&
+    yaml.length > 0 && yaml.length <= MAX_YAML_BYTES &&
     new TextEncoder().encode(yaml).byteLength <= MAX_YAML_BYTES;
 }
 
