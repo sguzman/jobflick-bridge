@@ -41,9 +41,10 @@ async function main(){
     ' }',
     '});'
   ].join("\n");
-  // Production background is unchanged, with only this QA-only trigger
-  // preceding its own event-message listener.
-  fs.writeFileSync(path.join(ext,"background.js"),original+"\n"+qaBackground);
+  // QA-only listener registers first so Firefox does not race the
+  // production unknown-message response. Production background and its
+  // Native Messaging authorization are otherwise unchanged.
+  fs.writeFileSync(path.join(ext,"background.js"),qaBackground+"\n"+original);
   fs.writeFileSync(path.join(ext,"qa-restart.js"),[
     '"use strict";',
     'document.querySelector("#seed").addEventListener("click",async event=>{',
