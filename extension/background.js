@@ -245,13 +245,18 @@ async function onBridgeMessage(message, sender) {
   if (typeof id !== "string" || !/^[a-zA-Z0-9_-]{8,128}$/.test(id)) {
     throw new Error("Submission uncertain; inspect Jobflick before retrying");
   }
-  await mutate(jobs => {
+  // A native host can take long enough that the user leaves this chat
+  // after the last pre-submit check. Never record such a job as eligible for
+  // automatic delivery, even though Jobflick accepted the command.
+  await mutate(async jobs => {
+    const stillOriginal = await trustedTab(sender.tab.id, url, origin);
+    const orphaned = !stillOriginal;
     jobs[id] = {
       id, recordVersion: RECORD_VERSION,
       tabId: sender.tab.id, origin, conversation: url,
       state: result.job.state || "queued", name: result.job.name || "",
-      color: result.job.color || "", orphaned: false,
-      deliveryState: FINISHED.has(result.job.state)
+      color: result.job.color || "", orphaned,
+      deliveryState: orphaned ? "manual_only" : FINISHED.has(result.job.state)
         ? "report_pending_manual_delivery" : "awaiting_completion",
       submittedAt: Date.now()
     };
@@ -473,8 +478,38 @@ browser.runtime.onMessage.addListener((message, sender) => {
 browser.alarms.onAlarm.addListener(alarm => {
   if (alarm.name === ALARM) void checkJobs();
 });
-browser.tabs.onUpdated.addListener((_id, change) => {
-  if (change.status === "complete" || change.url) void checkJobs();
+// SPA conversation navigation must revoke an old result's delivery identity,
+// even if the same numeric tab later returns to its former URL. A normal
+// reload of the SAME canonical route does not revoke its origin.
+async function reconcileTabRoute(tabId, nextUrl) {
+  if (!Number.isInteger(tabId)) return;
+  const next = canonical(nextUrl);
+  await mutate(jobs => {
+    for (const record of Object.values(jobs)) {
+      if (!knownRecord(record) || record.tabId !== tabId || record.orphaned) continue;
+      if (record.conversation !== next) {
+        record.orphaned = true;
+        record.deliveryState = "manual_only";
+      }
+    }
+  });
+  // A new chat in this tab must receive a fresh token. Do not remove the
+  // identity while a record for the SAME conversation is still valid.
+  const records = Object.values(await saved());
+  if (!records.some(record => knownRecord(record) &&
+      record.tabId === tabId && !record.orphaned &&
+      record.conversation === next)) {
+    await browser.storage.session.remove("jobflick_origin_" + tabId);
+  }
+}
+
+browser.tabs.onUpdated.addListener((id, change) => {
+  if (typeof change.url === "string") {
+    void reconcileTabRoute(id, change.url)
+      .then(() => checkJobs()).catch(() => {});
+  } else if (change.status === "complete") {
+    void checkJobs();
+  }
 });
 browser.tabs.onRemoved.addListener(id => {
   void browser.storage.session.remove("jobflick_origin_" + id);

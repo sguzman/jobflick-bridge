@@ -737,3 +737,70 @@ test("preflight navigation during read-only tab message cannot assert original c
   assert.equal(app.requests.filter(x => x.action === "submit_spec").length, 1);
   assert.equal(app.requests.filter(x => x.action === "show").length, 0);
 });
+
+test("conversation navigation irreversibly orphans older jobs even after returning", async () => {
+  const app=boot(request=>{
+    if(request.action==="submit_spec") return {
+      ok:true, job:{id:"job_12345678",state:"succeeded"}
+    };
+    throw new Error("Unexpected native action");
+  });
+  await app.listeners.message({type:"jobflick:submit",yaml:sample},app.sender);
+  const origin=app.storage.jobflick_bridge_jobs_v1.job_12345678.origin;
+  assert(origin);
+  await app.listeners.updated(11,{url:"https://chatgpt.com/c/new-conversation"});
+  for(let i=0;i<10;i++) await pause();
+  const record=app.storage.jobflick_bridge_jobs_v1.job_12345678;
+  assert.equal(record.orphaned,true);
+  assert.equal(record.deliveryState,"manual_only");
+  assert.equal(app.session.jobflick_origin_11,undefined);
+  await app.listeners.updated(11,{url:"https://chatgpt.com/c/testing-1234"});
+  for(let i=0;i<10;i++) await pause();
+  assert.equal(record.orphaned,true);
+  const result=await app.listeners.message({
+    type:"jobflick:preflight",id:"job_12345678"
+  },app.popupSender);
+  assert.equal(result.ok,false);
+});
+
+test("same canonical conversation reload preserves active origin token", async () => {
+  const app=boot(request=>{
+    if(request.action==="submit_spec") return {
+      ok:true,job:{id:"job_12345678",state:"succeeded"}
+    };
+    throw new Error("Unexpected native action");
+  });
+  await app.listeners.message({type:"jobflick:submit",yaml:sample},app.sender);
+  const token=app.session.jobflick_origin_11;
+  app.listeners.updated(11,{
+    url:"https://chatgpt.com/c/testing-1234?newQuery=irrelevant"
+  });
+  for(let i=0;i<10;i++)await pause();
+  assert.equal(app.session.jobflick_origin_11,token);
+  assert.equal(app.storage.jobflick_bridge_jobs_v1.job_12345678.orphaned,false);
+});
+
+test("navigation while native submission completes records job as manual-only",async()=>{
+  let app;
+  app=boot(request=>{
+    if(request.action==="submit_spec"){
+      app.tabs.set(11,{
+        id:11,url:"https://chatgpt.com/c/navigation-during-host"
+      });
+      return {ok:true,job:{id:"job_12345678",state:"queued"}};
+    }
+    return {ok:true};
+  });
+  const result=await app.listeners.message({
+    type:"jobflick:submit",yaml:sample
+  },app.sender);
+  assert.equal(result.ok,true,"The job may have been accepted by Jobflick");
+  const record=app.storage.jobflick_bridge_jobs_v1.job_12345678;
+  assert.equal(record.orphaned,true);
+  assert.equal(record.deliveryState,"manual_only");
+  const verified=await app.listeners.message({
+    type:"jobflick:preflight",id:"job_12345678"
+  },app.popupSender);
+  assert.equal(verified.ok,false);
+  assert.equal(app.requests.filter(x=>x.action==="submit_spec").length,1);
+});

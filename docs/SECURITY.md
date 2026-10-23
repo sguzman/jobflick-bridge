@@ -48,3 +48,7 @@ When status inspection discovers that the original tab identity has disappeared,
 ## Manual destination reopening
 
 The trusted Firefox popup offers `Open chat` only for exact, syntactically validated ChatGPT conversation routes. It requires a separate human click, creates a normal browser tab, and discards stale query and fragment parameters. It never attaches a report, edits a draft, rebinds an orphan's provenance token, or triggers Send. Tests reject foreign domains, URL userinfo, non-conversation routes and script URLs.
+
+## Navigation-origin invalidation
+
+The Firefox tab URL update listener revokes a job's automatic-delivery eligibility when the tab transitions away from the saved canonical conversation, even if the tab subsequently returns to that URL. The previous tab token is discarded once no non-orphaned record for that conversation remains; normal same-route reloads preserve the token. After `submit_spec` returns, the bridge also rechecks the origin **inside** its serialized record write, so a navigation while the native call is in flight records an accepted job as `manual_only`. These transitions never retry execution or discard the durable Jobflick report.
