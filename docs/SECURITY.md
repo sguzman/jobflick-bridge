@@ -40,3 +40,7 @@ The background worker validates sender and conversation URL when the user-trigge
 ## Native-host installation hardening
 
 The Fish registration script refuses existing native-host manifests (including dangling symlinks), symlinked host directories, and symlinked manifests during uninstall. CI tests verify refusal without touching an outside target, plus an actual executable-wrapper round trip with little-endian native-messaging JSON framing using an ephemeral, non-executing fake host. Real Jobflick daemon integration still requires separate acceptance.
+
+## Same-tab navigation during status or destination inspection
+
+When status inspection discovers that the original tab identity has disappeared, the bridge now sets both `orphaned` and `deliveryState: manual_only`; it does not imply a finished job can return automatically. A read-only per-job composer probe checks the exact session token and conversation **again after** receiving the probe response. If the tab navigates in between, the popup receives a failure and the record becomes manual-only. Neither action retrieves report contents, changes a draft, or initiates Send.

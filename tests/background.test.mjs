@@ -61,6 +61,7 @@ function boot(nativeOverride = null, options = {}) {
       },
       sendMessage: async (tabId, message) => {
         sentTabMessages.push({ tabId, message });
+        if (options.beforeTabMessage) await options.beforeTabMessage({ tabId, message, tabs });
         if (message?.type === "jobflick:probe-upload") {
           return { ok: true, composerPresent: true, composerOccupied: false, fileInputPresent: false };
         }
@@ -683,4 +684,56 @@ test("per-job preflight fails closed on navigation and never reroutes", async ()
   assert.equal(app.storage.jobflick_bridge_jobs_v1.job_12345678.deliveryState, "manual_only");
   assert.equal(app.sentTabMessages.filter(x =>
     x.message.type === "jobflick:probe-upload").length, 0);
+});
+
+test("finished status after same-tab navigation becomes manual-only, never deliverable", async () => {
+  let completeInspect;
+  const app = boot(request => {
+    if (request.action === "submit_spec") return {
+      ok: true, job: { id: "job_12345678", state: "queued" }
+    };
+    if (request.action === "inspect") return new Promise(resolve => {
+      completeInspect = resolve;
+    });
+    throw new Error("Unexpected action");
+  });
+  await app.listeners.message({ type: "jobflick:submit", yaml: sample }, app.sender);
+  for (let i = 0; i < 20 && !completeInspect; i++) await pause();
+  assert.equal(typeof completeInspect, "function");
+  app.tabs.set(11, { id: 11, url: "https://chatgpt.com/c/different-after-submit" });
+  completeInspect({ ok: true, job: { id: "job_12345678", state: "succeeded" } });
+  await app.listeners.message({ type: "jobflick:refresh" }, app.popupSender);
+  const record = app.storage.jobflick_bridge_jobs_v1.job_12345678;
+  assert.equal(record.state, "succeeded");
+  assert.equal(record.orphaned, true);
+  assert.equal(record.deliveryState, "manual_only");
+  assert.equal(app.sentTabMessages.length, 0);
+});
+
+test("preflight navigation during read-only tab message cannot assert original chat", async () => {
+  const app = boot(request => {
+    if (request.action === "submit_spec") {
+      return { ok: true, job: { id: "job_12345678", state: "succeeded" } };
+    }
+    throw new Error("Preflight must not make a native request");
+  }, {
+    beforeTabMessage: ({ message, tabs }) => {
+      if (message.type === "jobflick:probe-upload") {
+        tabs.set(11, { id: 11, url: "https://chatgpt.com/c/navigated-during-probe" });
+      }
+    }
+  });
+  await app.listeners.message({ type: "jobflick:submit", yaml: sample }, app.sender);
+  const result = await app.listeners.message({
+    type: "jobflick:preflight", id: "job_12345678"
+  }, app.popupSender);
+  assert.equal(result.ok, false);
+  assert.match(result.message, /navigated during inspection/);
+  const record = app.storage.jobflick_bridge_jobs_v1.job_12345678;
+  assert.equal(record.orphaned, true);
+  assert.equal(record.deliveryState, "manual_only");
+  assert.equal(app.requests.some(x => ["show", "submit_spec"].includes(x.action)), true,
+    "The only submit is the initial user-authorized job");
+  assert.equal(app.requests.filter(x => x.action === "submit_spec").length, 1);
+  assert.equal(app.requests.filter(x => x.action === "show").length, 0);
 });

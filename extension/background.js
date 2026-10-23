@@ -187,7 +187,12 @@ async function checkJobs() {
         const tab = record.orphaned ? null
           : await trustedTab(record.tabId, record.conversation, record.origin);
         if (!tab) {
-          await mutate(jobs => { if (jobs[id]) jobs[id].orphaned = true; });
+          await mutate(jobs => {
+            if (knownRecord(jobs[id])) {
+              jobs[id].orphaned = true;
+              jobs[id].deliveryState = "manual_only";
+            }
+          });
           continue;
         }
         await browser.tabs.sendMessage(record.tabId, {
@@ -315,6 +320,17 @@ async function onPopupMessage(message, sender) {
           typeof response.fileInputPresent !== "boolean" ||
           typeof response.composerOccupied !== "boolean") {
         return { ok: false, message: "Unrecognized composer probe response" };
+      }
+      // The page may navigate between the first identity check and its
+      // asynchronous response. Reverify before claiming any destination.
+      if (!await trustedTab(record.tabId, record.conversation, record.origin)) {
+        await mutate(jobs => {
+          if (knownRecord(jobs[id])) {
+            jobs[id].orphaned = true;
+            jobs[id].deliveryState = "manual_only";
+          }
+        });
+        return { ok: false, message: "Original chat navigated during inspection; use manual report delivery" };
       }
       // No report payload, draft text, file names, DOM edits or Send action.
       // Flags alone never imply an attachment can safely be inserted.
