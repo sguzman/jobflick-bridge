@@ -94,8 +94,10 @@ jobs:
           key: real-jobflick-bridge
       - name: Install Fish and native Linux build requirements
         run: |
-          sudo env DEBIAN_FRONTEND=noninteractive timeout 150s apt-get update -qq
-          sudo env DEBIAN_FRONTEND=noninteractive timeout 150s apt-get install -y fish libwayland-dev libxkbcommon-dev libx11-dev libxcb-shape0-dev libxcb-xfixes0-dev libgl1-mesa-dev pkg-config
+          # Azure-backed Ubuntu mirrors occasionally pause during downloads;
+          # the previous 150s limit expired mid-transfer (not at compilation).
+          sudo env DEBIAN_FRONTEND=noninteractive timeout 480s apt-get update -qq
+          sudo env DEBIAN_FRONTEND=noninteractive timeout 480s apt-get install -y fish libwayland-dev libxkbcommon-dev libx11-dev libxcb-shape0-dev libxcb-xfixes0-dev libgl1-mesa-dev pkg-config
       - name: Compile pinned Jobflick
         working-directory: .ci-jobflick
         run: cargo build --locked --bin jobflick
