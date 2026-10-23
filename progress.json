@@ -139,16 +139,17 @@
         {
           "id": "M1-08",
           "title": "Firefox lifecycle tests",
-          "status": "implemented",
+          "status": "verified",
           "evidence": [
-            "Real disposable FDE add-on, native-host round trip and History API route transition tests; full restart/event-page suspension in authenticated desktop QA pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40015025541"
+            "Real disposable FDE add-on, native-host round trip and History API route transition tests; full restart/event-page suspension in authenticated desktop QA pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40015025541",
+            "Real isolated Firefox Developer Edition checks with production content/background logic verify an independent second conversation tab has no automatic Run control, preserves first-tab routing, and a revoked A→B→A job remains manual-only across actual extension browser.runtime.reload() without duplicate native submit. Passed fake host and fixed harmless real pinned Jobflick integration: https://github.com/sguzman/jobflick-bridge/actions/runs/40039689984 ; https://github.com/sguzman/jobflick-bridge/actions/runs/40039686846. Full browser restart, user-profile and authenticated ChatGPT acceptance remain separate gates."
           ]
         }
       ],
-      "verified": 6,
+      "verified": 7,
       "total": 8,
-      "percent": 75,
-      "implemented": 2,
+      "percent": 87,
+      "implemented": 1,
       "planned": 0
     },
     {
@@ -621,10 +622,10 @@
   },
   "overall": {
     "total": 63,
-    "verified": 39,
-    "implemented": 17,
+    "verified": 40,
+    "implemented": 16,
     "planned": 7,
-    "percent": 61,
+    "percent": 63,
     "basis": "Only verified atomic tasks count toward percentage"
   }
 }
