@@ -151,6 +151,32 @@ test("one confirmed submit records independent origin and durable routing", asyn
   assert.equal(app.requests.find(v => v.action === "submit_spec").origin_tab_id, jobs.job_12345678.origin);
 });
 
+
+test("corrupted stored record key cannot impersonate another native job", async () => {
+  const key = "job_poison_a";
+  const claimed = "job_poison_b";
+  const storage = { jobflick_bridge_jobs_v1: {
+    [key]: { id: claimed, recordVersion: 1, state: "queued",
+      origin: "tab-test", conversation: "https://chatgpt.com/c/testing-1234",
+      tabId: 11, name: "corrupted mapping" }
+  }};
+  const app = boot(null, { storage });
+  const inbox = await app.listeners.message({ type: "jobflick:inbox" }, app.popupSender);
+  assert.equal(inbox.ok, true);
+  assert.equal(inbox.jobs.length, 0, "wrong-key record must not appear as an actionable job");
+  app.listeners.alarm({ name: "jobflick_bridge_pending_v1" });
+  for (let n = 0; n < 5; n++) await pause();
+  assert.equal(app.requests.length, 0, "wrong-key record must not be inspected");
+  storage.jobflick_bridge_jobs_v1[key].state = "succeeded";
+  for (const type of ["jobflick:report", "jobflick:preflight", "jobflick:forget"]) {
+    const response = await app.listeners.message({ type, id: key }, app.popupSender);
+    assert.equal(response.ok, false, type + " must reject a mismatched stored identity");
+  }
+  assert.equal(app.requests.length, 0, "wrong-key record must not expose native output");
+  assert.equal(storage.jobflick_bridge_jobs_v1[key].id, claimed,
+    "unrecognized data remains available for explicit recovery");
+});
+
 test("lost submit reply is uncertain and no second submission is attempted", async () => {
   const app = boot(request => {
     if (request.action === "submit_spec") throw new Error("Native transport dropped");
