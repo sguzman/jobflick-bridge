@@ -1555,6 +1555,71 @@ test("report response conflicting origin is quarantined without export",async()=
     "native_origin_mismatch");
 });
 
+test("pending native inspect cannot overwrite a replaced same-ID record",async()=>{
+  const id="job_12345678";
+  const oldToken="tab-original";
+  let finishInspect;
+  const app=boot(request=>{
+    if(request.action==="inspect")return new Promise(resolve=>{finishInspect=resolve;});
+    throw Error("Unexpected native action");
+  },{
+    storage:{jobflick_bridge_jobs_v1:{[id]:{
+      id,recordVersion:1,state:"running",tabId:11,origin:oldToken,
+      conversation:"https://chatgpt.com/c/testing-1234",submittedAt:11,
+      orphaned:false
+    }}},
+    session:{jobflick_origin_11:oldToken}
+  });
+  const pending=app.listeners.message({type:"jobflick:refresh"},app.popupSender);
+  for(let n=0;n<12&&!finishInspect;n++)await pause();
+  assert.equal(typeof finishInspect,"function");
+  app.storage.jobflick_bridge_jobs_v1[id]={
+    id,recordVersion:1,state:"running",tabId:11,origin:"tab-new-owner",
+    conversation:"https://chatgpt.com/c/another-owner",submittedAt:99,
+    orphaned:false
+  };
+  finishInspect({ok:true,job:{id,state:"succeeded",origin_tab_id:oldToken}});
+  assert.equal((await pending).ok,true);
+  const current=app.storage.jobflick_bridge_jobs_v1[id];
+  assert.equal(current.state,"running",
+    "Old inspection cannot mark a different stored identity as completed");
+  assert.equal(current.origin,"tab-new-owner");
+  assert.equal(current.integrityIssue,undefined);
+  assert.equal(app.sentTabMessages.length,0);
+});
+
+test("late wrong-origin inspect cannot quarantine replacement record",async()=>{
+  const id="job_12345678";
+  const oldToken="tab-original";
+  let finishInspect;
+  const app=boot(request=>{
+    if(request.action==="inspect")return new Promise(resolve=>{finishInspect=resolve;});
+    throw Error("Unexpected native action");
+  },{
+    storage:{jobflick_bridge_jobs_v1:{[id]:{
+      id,recordVersion:1,state:"running",tabId:11,origin:oldToken,
+      conversation:"https://chatgpt.com/c/testing-1234",submittedAt:11,
+      orphaned:false
+    }}},
+    session:{jobflick_origin_11:oldToken}
+  });
+  const pending=app.listeners.message({type:"jobflick:refresh"},app.popupSender);
+  for(let n=0;n<12&&!finishInspect;n++)await pause();
+  app.storage.jobflick_bridge_jobs_v1[id]={
+    id,recordVersion:1,state:"running",tabId:11,origin:"tab-new-owner",
+    conversation:"https://chatgpt.com/c/another-owner",submittedAt:99,
+    orphaned:false
+  };
+  finishInspect({ok:true,job:{id,state:"running",origin_tab_id:"tab-foreign"}});
+  assert.equal((await pending).ok,true);
+  const current=app.storage.jobflick_bridge_jobs_v1[id];
+  assert.equal(current.integrityIssue,undefined,
+    "Mismatched old native replies may not poison a replacement record");
+  assert.equal(current.orphaned,false);
+  assert.equal(current.origin,"tab-new-owner");
+  assert.equal(app.sentTabMessages.length,0);
+});
+
 test("native inspection finishing after record removal cannot notify old tab",async()=>{
   const id="job_12345678";
   const token="tab-valid";
