@@ -78,3 +78,9 @@ The content script's composer probe reports only presence, occupation, ambiguous
 A bridge record with an `integrityIssue` is not merely exempted from automated polling. Its identity cannot be trusted for **Cancel**, extension-provided **Save report**, or original-conversation checks. These native operations are refused before contacting Jobflick; the Firefox popup does not offer them. If a manually requested `show` response includes an ID or an origin token conflicting with the saved record, the extension discards the response, persists the mismatch and refuses subsequent extension report requests for that record. Optional metadata omitted by older Jobflick versions remains compatible.
 
 Users can still explicitly forget a *finished* corrupted browser record, which deletes only local Firefox routing metadata, or use Jobflick's separate authoritative inbox and report recovery. This prevents an inconsistent native response from supplying a different job's report to the user's browser.
+
+## Reserved JavaScript property names rejected as job IDs
+
+Although real Jobflick generates UUIDs, native responses are untrusted input. Firefox's durable job index is a plain JavaScript object; a malformed ID such as `__proto__`, `constructor`, `toString`, or `hasOwnProperty` could alias an inherited property rather than an independent job. The bridge now validates the ID's shape **and** rejects own keys of `Object.prototype` and the reserved `prototype` name before submission persistence, popup actions, polling, startup origin reconciliation and inbox rendering.
+
+An invalid confirmed native submit reply remains **submission-uncertain**, never silently retried. Existing malformed records are left intact in storage rather than reinterpreted as executable jobs; recover their associated real jobs directly in Jobflick.

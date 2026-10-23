@@ -184,3 +184,7 @@ This is a no-side-effect read-only test on localhost. It does not establish reco
 Jobflick's status loop records `lastCheckedAt` once per nonempty bounded poll batch. Unchanged native job states no longer rewrite the whole local inbox or send duplicate Firefox tab messages. The first terminal state or changed metadata is still persisted and reported. With an empty pending batch, explicit refresh and unrelated tab events perform no local storage write.
 
 Only tracked/changed ChatGPT routes can orphan existing jobs. Repeated same-conversation route events, navigation in unrelated tabs, and closing unrelated tabs do not rewrite the local inbox. Browser tab closures wait for an in-progress token mint to settle before removing the session key, preventing a delayed `storage.session.set` from restoring a closed tab's identity. Node tests measure write counts, cancellation-safe identity cleanup, and the ability of explicit Refresh to inspect pending jobs after unrelated browsing. Real long-duration desktop idle profiling is still outstanding.
+
+## Prototype-collision job ID adversarial coverage
+
+Mock native submission returns reserved JavaScript property names, including `__proto__` and `constructor`. Every case is refused before persisting or binding browser origin, with no automatic resubmission. The popup likewise rejects those IDs for preflight, report retrieval, cancellation and Forget. JSON-imported future/malformed local mappings containing such keys are not polled, exported or displayed as valid jobs. Real Jobflick-generated UUIDs are unaffected.
