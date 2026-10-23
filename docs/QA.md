@@ -68,3 +68,7 @@ The popup includes **Check connection**. It sends an intentionally invalid, non-
 ## Safe preliminary attachment discovery
 
 The toolbar's **Inspect composer** action is a read-only probe of the active permitted ChatGPT conversation. It reports only whether a recognized editable composer exists, whether that composer has content, and whether a file input is currently present in the DOM. It does not transmit any draft text or filenames, open an attachment menu, assign a `FileList`, dispatch file-change events, or press Send. Absence of a file input is **inconclusive**, since ChatGPT may construct one only after opening the attachment menu. This is only a first diagnostic toward the eventual verified file-upload milestone.
+
+## Explicit stop request
+
+For queued or running jobs, the popup offers **Request stop** and then **Confirm stop**. Only a confirmed popup action issues the existing Jobflick `cancel` native request; content scripts cannot invoke it. Once Jobflick acknowledges the request, the browser records a stop-request flag and suppresses duplicate offers while the job remains active. **Accepted is not the same as cancelled**: the job might finish concurrently or a process may take time to stop. On an uncertain native disconnect the popup does not retry automatically; inspect Jobflick before another stop. Confirm real cancellation behavior separately in FDE/local Jobflick acceptance.

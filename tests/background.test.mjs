@@ -432,3 +432,70 @@ test("simultaneous explicit submissions in one tab reuse a single origin token",
   assert.equal(jobs.job_00000001.origin, jobs.job_00000002.origin);
   assert.equal(jobs.job_00000001.conversation, jobs.job_00000002.conversation);
 });
+
+test("cancel from Firefox popup requires a tracked active job and one explicit native call", async () => {
+  const app = boot(request => {
+    if (request.action === "submit_spec") return {
+      ok: true, job: { id: "job_12345678", state: "running" }
+    };
+    if (request.action === "inspect") return {
+      ok: true, job: { id: request.id, state: "running" }
+    };
+    if (request.action === "cancel") return { ok: true, message: "Stop requested" };
+    throw new Error("Unexpected native request");
+  });
+  await app.listeners.message({ type: "jobflick:submit", yaml: sample }, app.sender);
+  assert.equal((await app.listeners.message({
+    type: "jobflick:cancel", id: "job_12345678"
+  }, app.sender)).ok, false, "Content script cannot cancel");
+  const result = await app.listeners.message({
+    type: "jobflick:cancel", id: "job_12345678"
+  }, app.popupSender);
+  assert.equal(result.ok, true);
+  assert.match(result.message, /final state is not yet confirmed/);
+  assert.equal(app.requests.filter(request => request.action === "cancel").length, 1);
+  assert.equal((await app.listeners.message({
+    type: "jobflick:cancel", id: "job_12345678"
+  }, app.popupSender)).ok, false);
+  assert.equal(app.requests.filter(request => request.action === "cancel").length, 1);
+  const inbox = await app.listeners.message({ type: "jobflick:inbox" }, app.popupSender);
+  assert.equal(inbox.jobs[0].cancelRequested, true);
+  assert.equal(inbox.jobs[0].state, "running", "Native acknowledgement is not a final state");
+});
+
+test("cancel rejects unknown, invalid and finished jobs without contacting native host", async () => {
+  const app = boot(request => {
+    if (request.action === "submit_spec") return {
+      ok: true, job: { id: "job_12345678", state: "succeeded" }
+    };
+    throw new Error("Unexpected native action");
+  });
+  await app.listeners.message({ type: "jobflick:submit", yaml: sample }, app.sender);
+  for (const id of ["x", "unknown_job_234567", "job_12345678"]) {
+    const result = await app.listeners.message({ type: "jobflick:cancel", id }, app.popupSender);
+    assert.equal(result.ok, false);
+  }
+  assert.equal(app.requests.filter(request => request.action === "cancel").length, 0);
+});
+
+test("ambiguous cancel disconnection never triggers a background retry", async () => {
+  const app = boot(request => {
+    if (request.action === "submit_spec") return {
+      ok: true, job: { id: "job_12345678", state: "running" }
+    };
+    if (request.action === "inspect") return {
+      ok: true, job: { id: request.id, state: "running" }
+    };
+    if (request.action === "cancel") throw new Error("Native host disconnected");
+    throw new Error("Unexpected native action");
+  });
+  await app.listeners.message({ type: "jobflick:submit", yaml: sample }, app.sender);
+  const result = await app.listeners.message({
+    type: "jobflick:cancel", id: "job_12345678"
+  }, app.popupSender);
+  assert.equal(result.ok, false);
+  assert.match(result.message, /Native host disconnected/);
+  await pause();
+  assert.equal(app.requests.filter(request => request.action === "cancel").length, 1);
+  assert.equal(app.requests.filter(request => request.action === "submit_spec").length, 1);
+});

@@ -227,7 +227,8 @@ async function onPopupMessage(message, sender) {
           color: item.color || "",
           conversation: item.conversation || "",
           orphaned: !!item.orphaned,
-          submittedAt: item.submittedAt || 0
+          submittedAt: item.submittedAt || 0,
+          cancelRequested: !!item.cancelRequestedAt
         })).sort((a, b) => b.submittedAt - a.submittedAt).slice(0, 300);
       return { ok: true, jobs: items };
     }
@@ -278,6 +279,32 @@ async function onPopupMessage(message, sender) {
       await browser.tabs.sendMessage(tab.id, { type: "jobflick:scan" });
       return { ok: true };
     }
+    case "jobflick:cancel": {
+      const id = message.id;
+      if (typeof id !== "string" || !/^[a-zA-Z0-9_-]{8,128}$/.test(id)) {
+        return { ok: false, message: "Invalid job ID" };
+      }
+      const current = (await saved())[id];
+      if (!current || !["queued", "running"].includes(current.state)) {
+        return { ok: false, message: "Only queued or running jobs can be stopped" };
+      }
+      if (current.cancelRequestedAt) {
+        return { ok: false, message: "Stop already requested; check Jobflick before another attempt" };
+      }
+      // An explicit popup confirmation is required. A successful native
+      // acknowledgement means the request was accepted, NOT that a running
+      // process definitely stopped before completion. Never auto-retry.
+      const response = await native({ action: "cancel", id });
+      if (!response.ok) {
+        return { ok: false, message: response.message || "Jobflick did not accept the stop request" };
+      }
+      await mutate(jobs => {
+        if (jobs[id] && !FINISHED.has(jobs[id].state)) {
+          jobs[id].cancelRequestedAt = Date.now();
+        }
+      });
+      return { ok: true, message: "Stop request accepted; final state is not yet confirmed" };
+    }
     case "jobflick:forget": {
       const id = message.id;
       if (typeof id !== "string" || !/^[a-zA-Z0-9_-]{8,128}$/.test(id)) {
@@ -320,7 +347,7 @@ async function onPopupMessage(message, sender) {
 
 browser.runtime.onMessage.addListener((message, sender) => {
   const fromPopup = typeof message?.type === "string" &&
-    ["jobflick:inbox", "jobflick:refresh", "jobflick:scan", "jobflick:report", "jobflick:forget", "jobflick:diagnose", "jobflick:probe-upload"].includes(message.type);
+    ["jobflick:inbox", "jobflick:refresh", "jobflick:scan", "jobflick:report", "jobflick:forget", "jobflick:cancel", "jobflick:diagnose", "jobflick:probe-upload"].includes(message.type);
   return (fromPopup ? onPopupMessage(message, sender) : onBridgeMessage(message, sender))
     .catch(error => ({
       ok: false,

@@ -57,3 +57,5 @@ Before testing real local work, use the toolbar popup's **Check connection** act
 ## Read-only attachment capability probe
 
 The Firefox popup's **Inspect composer** button checks only whether the active ChatGPT conversation exposes a recognized editable composer, whether it appears occupied, and whether a file input is currently present. It reads neither draft contents nor filenames. It makes no DOM mutations and cannot attach or send a report. These observations are deliberately only preliminary evidence; the actual upload path is still an unaccepted milestone.
+
+The popup also provides an explicit two-step **Request stop → Confirm stop** control for unfinished jobs. This asks Jobflick to stop the job and does not infer that the process actually stopped. No stop requests are sent automatically.

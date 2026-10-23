@@ -50,7 +50,38 @@ function renderItem(job) {
   const state = element("div", "meta state", job.state + (job.orphaned ? " · original tab unavailable" : ""));
   section.append(state);
   section.append(element("div", "meta", "Job " + job.id));
+  if (job.cancelRequested && !FINISHED.has(job.state)) {
+    section.append(element("div", "meta", "Stop requested; awaiting Jobflick's final state"));
+  }
   const controls = element("div", "controls");
+  if (["queued", "running"].includes(job.state) && !job.cancelRequested) {
+    const stop = element("button", "", "Request stop");
+    stop.type = "button";
+    let confirmed = false;
+    stop.addEventListener("click", async () => {
+      if (!confirmed) {
+        confirmed = true;
+        stop.textContent = "Confirm stop";
+        say("Jobflick may already have finished. Confirm to send one stop request.");
+        return;
+      }
+      stop.disabled = true;
+      try {
+        const reply = await ask("jobflick:cancel", { id: job.id });
+        stop.remove();
+        say(reply.message);
+        section.append(element("div", "meta", "Stop requested; final status pending"));
+      } catch (error) {
+        // Transport errors can be ambiguous. Do not automatically retry;
+        // leave explicit reconciliation to the Jobflick inbox.
+        say(error.message + ". Inspect Jobflick before any new stop request.");
+        stop.textContent = "Request stop";
+        confirmed = false;
+        stop.disabled = false;
+      }
+    });
+    controls.append(stop);
+  }
   if (FINISHED.has(job.state)) {
     const button = element("button", "", "Save report");
     button.type = "button";
