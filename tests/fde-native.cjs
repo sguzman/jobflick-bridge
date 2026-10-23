@@ -260,7 +260,7 @@ async function main() {
     if (!realHost) {
       const untrustedActions=fs.existsSync(path.join(state,"native-requests.jsonl")) ?
         fs.readFileSync(path.join(state,"native-requests.jsonl"),"utf8")
-          .split("\\n").filter(Boolean).map(JSON.parse) : [];
+          .split("\n").filter(Boolean).map(JSON.parse) : [];
       assert.equal(untrustedActions.filter(x=>x.action==="submit_spec").length,0,
         "Synthetic DOM clicks must never reach the native submit action");
     }
