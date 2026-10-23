@@ -109,11 +109,10 @@ async function main(){
       const found=await driver.findElements(By.css(".jobflick-bridge-run"));
       return found[0] || false;
     },10000);
-    const beforeDetached=await oldButton.getText();
     await driver.executeScript("document.querySelector('main pre').remove();");
     await oldButton.click();
-    assert.equal(await oldButton.getText(),beforeDetached,
-      "Detached Run control must not enter submitting state");
+    assert.equal((await driver.findElements(By.css(".jobflick-bridge-run"))).length,0,
+      "A detached Run control must remove itself rather than attempt submission");
 
     // A rerendered code block is not the same DOM node: it must explicitly
     // revalidate in Firefox before gaining a fresh Run control.
@@ -127,7 +126,7 @@ async function main(){
         "document.querySelector('main pre').dispatchEvent(new Event('focusin',{bubbles:true}));"
       );
       const items=await driver.findElements(By.css(".jobflick-bridge-run"));
-      return items.length===2 ? items[1] : false;
+      return items.length===1 ? items[0] : false;
     },10000);
     assert.match(await newButton.getText(),/Run Jobflick/);
     // Native button keyboard activation must be trusted and subject to

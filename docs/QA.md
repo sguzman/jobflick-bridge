@@ -108,3 +108,5 @@ The popup's `Open chat` control requires an explicit click and opens only a vali
 ## Native Firefox rerender and keyboard gate
 
 The synthetic FDE browser test also removes a validated code block while leaving its Run button in the DOM. A click on this detached control must be inert; a newly inserted code block is separately validated and gains its own Run button. The new button is activated with Firefox WebDriver's Enter key, which must reach the same intentionally non-executing QA background. This proves key handling and detached-node rejection in actual Firefox, not a screen-reader audit or authenticated ChatGPT React-internals compatibility.
+
+When React removes the original code block but its adjacent Run button survives, a real click removes the orphaned button without contacting the native host. Cleanup is triggered by interaction, not by any page-wide observer or idle scan.

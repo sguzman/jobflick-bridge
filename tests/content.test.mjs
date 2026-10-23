@@ -226,3 +226,15 @@ test("terminal status arriving before submit reply is never lost", async () => {
   assert.equal(app.pre.button.disabled, true);
   assert.equal(app.messages.filter(x => x.type === "jobflick:submit").length, 1);
 });
+
+test("detached Run control removes itself without native submission or DOM observer", async () => {
+  const app = simulate();
+  app.focus();
+  await app.pump();
+  const button = app.pre.button;
+  assert(button?.isConnected);
+  app.pre.isConnected = false;
+  await button.handlers.click({ isTrusted: true });
+  assert.equal(button.isConnected, false);
+  assert.equal(app.messages.filter(x => x.type === "jobflick:submit").length, 0);
+});

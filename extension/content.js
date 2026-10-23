@@ -63,7 +63,13 @@
       pre.insertAdjacentElement("afterend", button);
       button.addEventListener("click", async event => {
         // The page can call button.click(), but that is not a user grant.
-        if (!event.isTrusted || state.submitted || !pre.isConnected || !button.isConnected) return;
+        if (!event.isTrusted || state.submitted || !button.isConnected) return;
+        // A chat rerender may detach its code block but retain our button.
+        // Remove the orphaned control lazily, without an idle DOM observer.
+        if (!pre.isConnected) {
+          button.remove();
+          return;
+        }
         if (candidate(pre) !== state.yaml) {
           button.textContent = "YAML changed; hover to revalidate";
           queue(pre);
