@@ -51,3 +51,5 @@ This is a recovery and inspection surface, **not** a claim that the future ChatG
 The automated suite runs Node behavioral tests, Fish native-host installer tests in a disposable HOME, Mozilla `web-ext lint`, and a separate **real Firefox Developer Edition** WebDriver job that installs/uninstalls the temporary add-on in an anonymous profile. It never accesses the user's machine or starts real Jobflick jobs. [Latest passing CI run](https://github.com/sguzman/jobflick-bridge/actions/runs/39996913809).
 
 An unsigned Firefox QA ZIP is also produced by CI (artifact `jobflick-bridge-fde-qa-unsigned`). It is intended only for **temporary installation** in the dedicated QA profile via `about:debugging`, not for a release or an automatic native-host setup.
+
+Before testing real local work, use the toolbar popup's **Check connection** action. It invokes `validate_spec` on intentionally invalid YAML, never `submit_spec`; it helps distinguish a missing Firefox native host from a malformed Execarium document.

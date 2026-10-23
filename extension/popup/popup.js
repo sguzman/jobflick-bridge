@@ -4,6 +4,7 @@ const jobsElement = document.getElementById("jobs");
 const notice = document.getElementById("notice");
 const scan = document.getElementById("scan");
 const refresh = document.getElementById("refresh");
+const diagnose = document.getElementById("diagnose");
 const FINISHED = new Set(["succeeded", "failed", "cancelled", "timed_out", "interrupted"]);
 
 function say(message) {
@@ -142,6 +143,19 @@ scan.addEventListener("click", async () => {
     say(error.message);
   } finally {
     scan.disabled = false;
+  }
+});
+
+diagnose.addEventListener("click", async () => {
+  diagnose.disabled = true;
+  say("Checking local Jobflick native host…");
+  try {
+    const response = await ask("jobflick:diagnose");
+    say(response.message);
+  } catch (error) {
+    say("Jobflick native host unavailable: " + error.message);
+  } finally {
+    diagnose.disabled = false;
   }
 });
 

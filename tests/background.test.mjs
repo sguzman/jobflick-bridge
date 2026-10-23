@@ -316,3 +316,34 @@ test("alarm checks at most 24 pending jobs and rotates fairly through 40", async
   assert.equal(all.length, 48); // Two bounded 24-job inspection cycles.
   assert.equal(new Set(all.map(x => x.id)).size, 40); // Every job eventually checked.
 });
+
+test("connection diagnostics validate intentionally malformed YAML without execution", async () => {
+  const app = boot(request => {
+    if (request.action === "validate_spec") {
+      return { ok: false, message: "Rejected unknown YAML key" };
+    }
+    throw new Error("Only validate_spec may be called for diagnostics");
+  });
+  const reject = await app.listeners.message({ type: "jobflick:diagnose" }, app.sender);
+  assert.equal(reject.ok, false);
+  const result = await app.listeners.message({ type: "jobflick:diagnose" }, app.popupSender);
+  assert.equal(result.ok, true);
+  assert.match(result.message, /reachable/);
+  assert.deepEqual(app.requests.map(x => x.action), ["validate_spec"]);
+});
+
+test("missing host is reported as a failed connection check, not an implicit retry", async () => {
+  const app = boot(() => { throw new Error("Native messaging host not found"); });
+  const result = await app.listeners.message({ type: "jobflick:diagnose" }, app.popupSender);
+  assert.equal(result.ok, false);
+  assert.match(result.message, /Native messaging host not found/);
+  assert.equal(app.requests.length, 1);
+  assert.equal(app.requests.some(x => x.action === "submit_spec"), false);
+});
+
+test("unexpected successful validation of malformed probe fails connection check", async () => {
+  const app = boot(() => ({ ok: true }));
+  const result = await app.listeners.message({ type: "jobflick:diagnose" }, app.popupSender);
+  assert.equal(result.ok, false);
+  assert.match(result.message, /unexpectedly accepted/);
+});

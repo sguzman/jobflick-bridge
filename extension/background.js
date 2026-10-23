@@ -210,6 +210,19 @@ async function onPopupMessage(message, sender) {
         })).sort((a, b) => b.submittedAt - a.submittedAt).slice(0, 300);
       return { ok: true, jobs: items };
     }
+    case "jobflick:diagnose": {
+      // Deliberately malformed schema. Validation is read-only, and any
+      // structured native response proves the installed host is reachable.
+      // No submission or Fish execution is possible from this diagnostic.
+      const response = await native({
+        action: "validate_spec",
+        spec_yaml: "invalid: not-an-execarium-document"
+      });
+      if (response.ok) {
+        return { ok: false, message: "Native validator unexpectedly accepted an invalid document" };
+      }
+      return { ok: true, message: "Jobflick native host is reachable; validator rejected invalid YAML as expected" };
+    }
     case "jobflick:refresh": {
       await checkJobs();
       return { ok: true };
@@ -265,7 +278,7 @@ async function onPopupMessage(message, sender) {
 
 browser.runtime.onMessage.addListener((message, sender) => {
   const fromPopup = typeof message?.type === "string" &&
-    ["jobflick:inbox", "jobflick:refresh", "jobflick:scan", "jobflick:report", "jobflick:forget"].includes(message.type);
+    ["jobflick:inbox", "jobflick:refresh", "jobflick:scan", "jobflick:report", "jobflick:forget", "jobflick:diagnose"].includes(message.type);
   return (fromPopup ? onPopupMessage(message, sender) : onBridgeMessage(message, sender))
     .catch(error => ({
       ok: false,

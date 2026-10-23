@@ -60,3 +60,7 @@ CI runs a **disposable Fish installer integration test** with a fake, never-exec
 ## CI-built temporary test package
 
 Successful CI runs upload an unsigned `jobflick-bridge-fde-qa-unsigned` ZIP artifact containing **only** `extension/` sources, built with Mozilla `web-ext`. In Firefox Developer Edition's isolated `about:debugging` page, **Load Temporary Add-on** can select this ZIP instead of a local `extension/manifest.json`. Temporary installation still expires on restart. The package is **not signed, not released, and not approved for the personal browser profile**. Its availability is bounded by CI artifact retention.
+
+## Read-only native host diagnostic
+
+The popup includes **Check connection**. It sends an intentionally invalid, non-executable document to Jobflick's existing `validate_spec` action and requires a structured rejection. This establishes that Firefox can reach the native host and that validation failed closed, without submitting a job. A missing host shows a clear error. **A successful diagnostic is not permission to execute arbitrary YAML** and does not establish end-to-end native execution acceptance.
