@@ -53,7 +53,7 @@ async function main() {
       "error: " + String(error?.message || error); });
 })();
 `;
-  fs.writeFileSync(path.join(ext, "content.js"),productionContent+"\\n"+qaProbe);
+  fs.writeFileSync(path.join(ext, "content.js"),productionContent+"\n"+qaProbe);
   // Only URL identity is adapted to synthetic localhost. All native protocol,
   // job tracking and other production background logic stays unchanged.
   const originalBackground = fs.readFileSync(path.join(production, "background.js"), "utf8");
