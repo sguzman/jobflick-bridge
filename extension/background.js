@@ -309,6 +309,12 @@ async function onBridgeMessage(message, sender) {
   // after the last pre-submit check. Never record such a job as eligible for
   // automatic delivery, even though Jobflick accepted the command.
   await mutate(async jobs => {
+    // A duplicate ID would otherwise silently replace an older result's
+    // provenance. The native submit may have succeeded, so fail closed and
+    // require inspecting Jobflick rather than ever resubmitting.
+    if (Object.prototype.hasOwnProperty.call(jobs, id)) {
+      throw new Error("Native returned an existing job ID; inspect Jobflick. Earlier routing metadata is preserved");
+    }
     const stillOriginal = await trustedTab(sender.tab.id, url, origin);
     const orphaned = !stillOriginal;
     jobs[id] = {
