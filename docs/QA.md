@@ -288,3 +288,35 @@ and then obtains a newly validated control on the new route. Its synthetic
 background explicitly refuses submission. This does not establish live
 authenticated ChatGPT DOM compatibility, report attachment or Send.
 [Passing Firefox checks](https://github.com/sguzman/jobflick-bridge/actions/runs/40032659397).
+
+## Same-ID replacement, pending submission, and bounded Run status
+
+Browser-local job IDs can be deleted/replaced while an explicit **Forget**
+request or browser startup reconciliation is waiting on storage and session
+lookups. Both operations now check the original recorded tab ID, origin,
+conversation and submission identity inside the serialized mutation before
+deleting or orphaning a record. An older operation must not mutate a newer
+same-ID mapping. The tests deliberately replace storage entries between
+the first read and the final mutation.
+
+When Firefox navigation races a pending session token write, SPA route
+reconciliation waits for that in-flight write before clearing the origin
+token. A late token mint must not revive the identity of the previous
+conversation. When a native submission response arrives after navigation,
+the original content-script Run control is removed rather than painting
+a queued/failed acknowledgment into the new chat. Native submission still
+happens **exactly once**; the authoritative result remains in Jobflick.
+
+Displayed Run status is monotonic: terminal states cannot be downgraded by
+delayed queued/running or conflicting terminal events. The DOM keeps its
+terminal label but its strong JS job-to-control mapping is released. To
+avoid holding thousands of DOM buttons in a long-lived ChatGPT SPA, the
+content script retains at most 128 active job mappings. When that capacity
+is exceeded, the oldest live status mapping is evicted; the complete and
+authoritative history remains in the Jobflick daemon and the extension's
+bounded inbox. A 140-job Node stress fixture exercises eviction, newest
+status reporting, and terminal immutability.
+
+These are native-protocol and synthetic Firefox safety/scale checks, not
+live authenticated ChatGPT file delivery, real desktop memory profiling,
+or automatic Send acceptance. [Passing Firefox checks](https://github.com/sguzman/jobflick-bridge/actions/runs/40033650901).

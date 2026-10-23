@@ -131,7 +131,8 @@
           "evidence": [
             "Actual FDE synthetic rerender, stale Run control removal, changed YAML and pushState route revocation tested; authenticated ChatGPT React DOM acceptance pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40015025541",
             "Native validation of an unchanged YAML block is coalesced while pending; stale late responses cannot add a Run button after YAML mutation. New Node races and the complete isolated Firefox Developer Edition checks passed: https://github.com/sguzman/jobflick-bridge/actions/runs/40030357579. Authenticated ChatGPT React acceptance remains pending.",
-            "Validated Run controls now bind to the original SPA origin/pathname; old controls reject trusted clicks after navigation, unchanged YAML must be revalidated on the new route, and late native validators cannot revive previous-route controls. Both Node and real disposable Firefox Developer Edition synthetic History API tests passed: https://github.com/sguzman/jobflick-bridge/actions/runs/40032659397. Authenticated ChatGPT React acceptance remains pending."
+            "Validated Run controls now bind to the original SPA origin/pathname; old controls reject trusted clicks after navigation, unchanged YAML must be revalidated on the new route, and late native validators cannot revive previous-route controls. Both Node and real disposable Firefox Developer Edition synthetic History API tests passed: https://github.com/sguzman/jobflick-bridge/actions/runs/40032659397. Authenticated ChatGPT React acceptance remains pending.",
+            "Run controls dismiss themselves after an asynchronous submit response on a different SPA route; original submission remains exactly once, and stale failure/queued acknowledgments do not repaint the new chat. Node regressions and Firefox suite passed: https://github.com/sguzman/jobflick-bridge/actions/runs/40033650901. Live authenticated React acceptance pending."
           ]
         },
         {
@@ -274,7 +275,8 @@
           "status": "verified",
           "evidence": [
             "Actual Firefox Developer Edition received terminal succeeded state for a real Jobflick job after native inspect; origin ID preserved in durable backend metadata. https://github.com/sguzman/jobflick-bridge/actions/runs/40010624085",
-            "Unit regressions confirm immediate terminal native submit replies and monotonic priority against earlier terminal/running events; actual isolated real FDE/Jobflick succeeded. https://github.com/sguzman/jobflick-bridge/actions/runs/40028499706 https://github.com/sguzman/jobflick-bridge/actions/runs/40028499789"
+            "Unit regressions confirm immediate terminal native submit replies and monotonic priority against earlier terminal/running events; actual isolated real FDE/Jobflick succeeded. https://github.com/sguzman/jobflick-bridge/actions/runs/40028499706 https://github.com/sguzman/jobflick-bridge/actions/runs/40028499789",
+            "Delayed queued, running, or contradictory terminal status cannot downgrade a status already painted as terminal. The latest synthetic Firefox and Node regressions pass: https://github.com/sguzman/jobflick-bridge/actions/runs/40033650901."
           ]
         },
         {
@@ -511,7 +513,8 @@
           "status": "implemented",
           "evidence": [
             "Node recovery tests now cover tab closure racing an in-flight session-token write, duplicate route A→B→A, no local storage writes on unrelated tabs and full reversion to manual-only. Disposable real FDE + pinned Jobflick native report-to-File route revocation passed. Actual full desktop browser restart/authenticated ChatGPT recovery remains pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40027477393 https://github.com/sguzman/jobflick-bridge/actions/runs/40027477573",
-            "Native show, inspect and cancel now compare durable record identity again after their async responses; concurrent removal, identity replacement, quarantine and tab closure tests passed, while explicit manual orphan report retrieval remains possible. Same-key mismatched records remain inert in navigation cleanup. https://github.com/sguzman/jobflick-bridge/actions/runs/40032306863. Actual authenticated Firefox lifecycle remains pending."
+            "Native show, inspect and cancel now compare durable record identity again after their async responses; concurrent removal, identity replacement, quarantine and tab closure tests passed, while explicit manual orphan report retrieval remains possible. Same-key mismatched records remain inert in navigation cleanup. https://github.com/sguzman/jobflick-bridge/actions/runs/40032306863. Actual authenticated Firefox lifecycle remains pending.",
+            "Race tests for stale Forget and browser startup reconciliation preserve replacement same-ID job identities; SPA navigation waits for in-flight session token mint before revocation to prevent stale token revival. Node tests and disposable Firefox checks passed: https://github.com/sguzman/jobflick-bridge/actions/runs/40033650901. Authenticated desktop restart remains unverified."
           ]
         }
       ],
@@ -534,7 +537,8 @@
             "Additional adversarial validation and file handoff tests passed: concurrent pointer/focus does not duplicate in-flight validation, edited YAML rejects late replies, and Firefox reports failure after synchronous page-side FileList clear/detach. https://github.com/sguzman/jobflick-bridge/actions/runs/40030357579",
             "Defensive storage-record identity matching now blocks mismatched-key records from native polling, report read, preflight and Forget, while keeping their underlying data unchanged; adversarial Node and Firefox QA checks passed: https://github.com/sguzman/jobflick-bridge/actions/runs/40030699492.",
             "Async origin/identity adversarial Node regressions passed for stale report return after Forget, native inspection writes after replacement/quarantine, confirmed native stop after replacement/quarantine, and read-only probe/scan navigation races. https://github.com/sguzman/jobflick-bridge/actions/runs/40032306863.",
-            "Additional adversarial browser tests refuse moved/out-of-main code and reused Run controls after SPA route changes, including late validation replies. https://github.com/sguzman/jobflick-bridge/actions/runs/40032659397."
+            "Additional adversarial browser tests refuse moved/out-of-main code and reused Run controls after SPA route changes, including late validation replies. https://github.com/sguzman/jobflick-bridge/actions/runs/40032659397.",
+            "Additional adversarial regressions test Forget/startup same-ID replacement, navigation during pending origin token mint, delayed submit acknowledgments, and monotonic displayed terminal statuses: https://github.com/sguzman/jobflick-bridge/actions/runs/40033650901."
           ]
         },
         {
@@ -542,7 +546,8 @@
           "title": "Scale/idle QA",
           "status": "implemented",
           "evidence": [
-            "Bounded Node tests prove no storage writes on empty/unknown inbox, unrelated tabs, duplicate routes and stable long-running native state; Firefox CI also tests 8k blocks, 16 tabs, 40-job burst and 325-job paging. Long-duration idle profiling on EndeavourOS remains outstanding. https://github.com/sguzman/jobflick-bridge/actions/runs/40028499706"
+            "Bounded Node tests prove no storage writes on empty/unknown inbox, unrelated tabs, duplicate routes and stable long-running native state; Firefox CI also tests 8k blocks, 16 tabs, 40-job burst and 325-job paging. Long-duration idle profiling on EndeavourOS remains outstanding. https://github.com/sguzman/jobflick-bridge/actions/runs/40028499706",
+            "A 140-job Node fixture verifies live content-script job/status map bounded at 128, with old status controls evicted and completed statuses released; Firefox CI green. This is not long-duration EndeavourOS/Hyprland memory profiling: https://github.com/sguzman/jobflick-bridge/actions/runs/40033650901."
           ]
         },
         {
