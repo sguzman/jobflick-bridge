@@ -722,6 +722,55 @@ test("concurrent popup cancellation messages issue at most one native request", 
   assert.equal((await first).ok, true);
 });
 
+test("native stop acknowledgment never marks a replacement record as requested",async()=>{
+  const id="job_12345678", oldOrigin="tab-first-owner";
+  let acknowledgeStop;
+  const app=boot(request=>{
+    if(request.action==="cancel")return new Promise(resolve=>{acknowledgeStop=resolve;});
+    throw Error("Unexpected host action");
+  },{storage:{jobflick_bridge_jobs_v1:{[id]:{
+    id,recordVersion:1,state:"running",origin:oldOrigin,
+    tabId:11,conversation:"https://chatgpt.com/c/testing-1234",
+    submittedAt:3,orphaned:false
+  }}}});
+  const pending=app.listeners.message({type:"jobflick:cancel",id},app.popupSender);
+  for(let i=0;i<12&&!acknowledgeStop;i++)await pause();
+  assert.equal(typeof acknowledgeStop,"function");
+  app.storage.jobflick_bridge_jobs_v1[id]={
+    id,recordVersion:1,state:"running",origin:"tab-other-owner",
+    tabId:11,conversation:"https://chatgpt.com/c/other-owner",
+    submittedAt:4,orphaned:false
+  };
+  acknowledgeStop({ok:true,message:"Accepted"});
+  const result=await pending;
+  assert.equal(result.ok,false,"A successful native stop is not fresh browser consent");
+  assert.match(result.message,/accepted by Jobflick/i);
+  assert.equal(app.storage.jobflick_bridge_jobs_v1[id].cancelRequestedAt,undefined);
+  assert.equal(app.requests.filter(v=>v.action==="cancel").length,1);
+});
+
+test("native stop acknowledgment after quarantine never mutates unsafe record",async()=>{
+  const id="job_12345678";
+  let acknowledgeStop;
+  const record={id,recordVersion:1,state:"running",origin:"tab-original",
+    tabId:11,conversation:"https://chatgpt.com/c/testing-1234",
+    submittedAt:3,orphaned:false};
+  const app=boot(request=>{
+    if(request.action==="cancel")return new Promise(resolve=>{acknowledgeStop=resolve;});
+    throw Error("Unexpected host action");
+  },{storage:{jobflick_bridge_jobs_v1:{[id]:record}}});
+  const pending=app.listeners.message({type:"jobflick:cancel",id},app.popupSender);
+  for(let i=0;i<12&&!acknowledgeStop;i++)await pause();
+  record.integrityIssue="native_origin_mismatch";
+  record.orphaned=true;
+  acknowledgeStop({ok:true,message:"Accepted"});
+  const result=await pending;
+  assert.equal(result.ok,false);
+  assert.equal(record.cancelRequestedAt,undefined);
+  assert.equal(record.integrityIssue,"native_origin_mismatch");
+  assert.equal(app.requests.filter(v=>v.action==="cancel").length,1);
+});
+
 test("unknown future records do not keep the Firefox polling alarm alive", async () => {
   const unknown = { job_12345678: {
     id: "job_12345678", recordVersion: 999, state: "running",
