@@ -82,8 +82,25 @@ async function main(){
     await button.click();
     await driver.wait(async()=>/Submission uncertain/.test(await button.getText()),10000);
 
+    // A fresh synthetic chat does not gain Run controls without user intent.
+    await driver.navigate().refresh();
+    assert.equal((await driver.findElements(By.css(".jobflick-bridge-run"))).length,0);
+    await driver.wait(async()=>{
+      await driver.executeScript(
+        "document.querySelector('pre').dispatchEvent(new Event('focusin',{bubbles:true}));"
+      );
+      const matches=await driver.findElements(By.css(".jobflick-bridge-run"));
+      return matches.length>0;
+    },10000);
+    const stale=await driver.findElement(By.css(".jobflick-bridge-run"));
+    await driver.executeScript(
+      "document.querySelector('pre code').textContent += '\\n# changed after validation';"
+    );
+    await stale.click();
+    await driver.wait(async()=>/YAML changed/.test(await stale.getText()),10000);
+
     await driver.uninstallAddon(id);
-    console.log("Synthetic FDE content script: validation UI and guarded click passed; no native jobs submitted");
+    console.log("Synthetic FDE content script: idle, validated button, real click and stale-YAML guard passed; no native jobs submitted");
   }finally{
     if(driver)await driver.quit();
     await new Promise(resolve=>server.close(resolve));
