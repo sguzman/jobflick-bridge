@@ -448,6 +448,56 @@ test("composer capability check fails closed away from conversation routes", asy
   assert.equal(app.requests.length, 0);
 });
 
+test("active composer probe rejects stale flags after conversation navigation",async()=>{
+  const app=boot(null,{
+    beforeTabMessage:({message,tabs})=>{
+      if(message.type==="jobflick:probe-upload"){
+        tabs.set(11,{id:11,url:"https://chatgpt.com/c/changed-9876"});
+      }
+    }
+  });
+  const reply=await app.listeners.message({
+    type:"jobflick:probe-upload"
+  },app.popupSender);
+  assert.equal(reply.ok,false);
+  assert.equal(reply.composerPresent,undefined,
+    "A previous chat's composer flags must not be returned after navigation");
+  assert.equal(app.requests.length,0);
+});
+
+test("active composer probe rejects tab switch during asynchronous inspection",async()=>{
+  const app=boot(null,{
+    beforeTabMessage:({message,tabs})=>{
+      if(message.type==="jobflick:probe-upload"){
+        tabs.set(11,{id:11,url:"https://chatgpt.com/c/testing-1234",active:false});
+        tabs.set(22,{id:22,url:"https://chatgpt.com/c/different-active",active:true});
+      }
+    }
+  });
+  const reply=await app.listeners.message({
+    type:"jobflick:probe-upload"
+  },app.popupSender);
+  assert.equal(reply.ok,false);
+  assert.equal(reply.fileInputPresent,undefined);
+  assert.equal(app.requests.length,0);
+});
+
+test("explicit visible scan rejects stale destination after SPA navigation",async()=>{
+  const app=boot(null,{
+    beforeTabMessage:({message,tabs})=>{
+      if(message.type==="jobflick:scan"){
+        tabs.set(11,{id:11,url:"https://chatgpt.com/c/new-conversation"});
+      }
+    }
+  });
+  const reply=await app.listeners.message({
+    type:"jobflick:scan"
+  },app.popupSender);
+  assert.equal(reply.ok,false);
+  assert.equal(app.requests.length,0,
+    "Visible scan never submits or validates directly through the background");
+});
+
 test("simultaneous explicit submissions in one tab reuse a single origin token", async () => {
   let uuidCalls = 0;
   let submissions = 0;
