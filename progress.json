@@ -130,7 +130,8 @@
           "status": "implemented",
           "evidence": [
             "Actual FDE synthetic rerender, stale Run control removal, changed YAML and pushState route revocation tested; authenticated ChatGPT React DOM acceptance pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40015025541",
-            "Native validation of an unchanged YAML block is coalesced while pending; stale late responses cannot add a Run button after YAML mutation. New Node races and the complete isolated Firefox Developer Edition checks passed: https://github.com/sguzman/jobflick-bridge/actions/runs/40030357579. Authenticated ChatGPT React acceptance remains pending."
+            "Native validation of an unchanged YAML block is coalesced while pending; stale late responses cannot add a Run button after YAML mutation. New Node races and the complete isolated Firefox Developer Edition checks passed: https://github.com/sguzman/jobflick-bridge/actions/runs/40030357579. Authenticated ChatGPT React acceptance remains pending.",
+            "Validated Run controls now bind to the original SPA origin/pathname; old controls reject trusted clicks after navigation, unchanged YAML must be revalidated on the new route, and late native validators cannot revive previous-route controls. Both Node and real disposable Firefox Developer Edition synthetic History API tests passed: https://github.com/sguzman/jobflick-bridge/actions/runs/40032659397. Authenticated ChatGPT React acceptance remains pending."
           ]
         },
         {
@@ -362,7 +363,8 @@
           "status": "implemented",
           "evidence": [
             "Real FDE synthetic conversation A→B→A pushState permanently revokes old origin, plus 16-tab mocked tests. Authenticated multi-conversation upload/draft race acceptance pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40015025541",
-            "Adversarial concurrent operation tests reject stale original-chat verification after Forget/quarantine and stale active-tab probe results after SPA navigation/tab switching. No payload delivery occurs; Node regressions and disposable Firefox checks passed: https://github.com/sguzman/jobflick-bridge/actions/runs/40032306863. Authenticated ChatGPT delivery/race acceptance remains outstanding."
+            "Adversarial concurrent operation tests reject stale original-chat verification after Forget/quarantine and stale active-tab probe results after SPA navigation/tab switching. No payload delivery occurs; Node regressions and disposable Firefox checks passed: https://github.com/sguzman/jobflick-bridge/actions/runs/40032306863. Authenticated ChatGPT delivery/race acceptance remains outstanding.",
+            "Production content Run control refuses a stale conversation route even if the same connected code DOM node persists across SPA navigation. Real Firefox synthetic QA and Node regression passed: https://github.com/sguzman/jobflick-bridge/actions/runs/40032659397. No authenticated same-conversation upload/Send test."
           ]
         }
       ],
@@ -531,7 +533,8 @@
             "Adversarial Node tests reject reserved object-prototype job IDs, mismatched native origin/ID on submission, inspection and report retrieval, including explicitly supplied null, numeric, object and array identity metadata. Firefox and pinned real-native acceptance passing; authenticated ChatGPT security acceptance pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40028499706 https://github.com/sguzman/jobflick-bridge/actions/runs/40028499789",
             "Additional adversarial validation and file handoff tests passed: concurrent pointer/focus does not duplicate in-flight validation, edited YAML rejects late replies, and Firefox reports failure after synchronous page-side FileList clear/detach. https://github.com/sguzman/jobflick-bridge/actions/runs/40030357579",
             "Defensive storage-record identity matching now blocks mismatched-key records from native polling, report read, preflight and Forget, while keeping their underlying data unchanged; adversarial Node and Firefox QA checks passed: https://github.com/sguzman/jobflick-bridge/actions/runs/40030699492.",
-            "Async origin/identity adversarial Node regressions passed for stale report return after Forget, native inspection writes after replacement/quarantine, confirmed native stop after replacement/quarantine, and read-only probe/scan navigation races. https://github.com/sguzman/jobflick-bridge/actions/runs/40032306863."
+            "Async origin/identity adversarial Node regressions passed for stale report return after Forget, native inspection writes after replacement/quarantine, confirmed native stop after replacement/quarantine, and read-only probe/scan navigation races. https://github.com/sguzman/jobflick-bridge/actions/runs/40032306863.",
+            "Additional adversarial browser tests refuse moved/out-of-main code and reused Run controls after SPA route changes, including late validation replies. https://github.com/sguzman/jobflick-bridge/actions/runs/40032659397."
           ]
         },
         {

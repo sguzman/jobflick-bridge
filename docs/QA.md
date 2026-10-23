@@ -267,3 +267,24 @@ checks, not tests of real authenticated ChatGPT attachment chips, upload
 acknowledgment, browser profile restart, or automatic Send. The production
 extension retains **no automatic attachment or Send path**.
 [Passing Firefox checks](https://github.com/sguzman/jobflick-bridge/actions/runs/40032306863).
+
+## Route-bound Run controls on a Firefox SPA
+
+The production content script records the normalized origin/pathname of each
+code block when requesting native validation. A delayed `validate_spec`
+response cannot add a Run button if the code block left `main`, its YAML
+changed, or the browser has navigated to a different conversation. A trusted
+click on an earlier route's still-connected button removes the stale control
+without sending `submit_spec`. Even if a React rerender reuses exactly the
+same code DOM node and YAML on the new route, a fresh pointer/focus event must
+cause a new validation. Query parameters and fragments do not by themselves
+change the conversation route identity.
+
+Node regressions include pending validation across navigation and moving
+code outside the chat main area. A disposable Firefox Developer Edition
+integration test uses the real content script, retains the old DOM node
+through `history.pushState`, verifies that the earlier button is removed,
+and then obtains a newly validated control on the new route. Its synthetic
+background explicitly refuses submission. This does not establish live
+authenticated ChatGPT DOM compatibility, report attachment or Send.
+[Passing Firefox checks](https://github.com/sguzman/jobflick-bridge/actions/runs/40032659397).
