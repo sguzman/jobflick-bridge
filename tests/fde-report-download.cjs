@@ -130,7 +130,11 @@ async function main(){
     assert.equal(await downloadControl.getAriaRole(),"button");
     assert.match(await downloadControl.getAccessibleName(),/Download prepared report/);
     await downloadControl.sendKeys(Key.SPACE);
-    await driver.wait(()=>fs.existsSync(target),10000);
+    // Firefox may create the destination path before it finishes writing
+    // the download. Acceptance requires the complete original report,
+    // not just a transient zero-length filesystem entry.
+    await driver.wait(()=>fs.existsSync(target) &&
+      fs.readFileSync(target,"utf8")===REPORT,10000);
     assert.equal(fs.readFileSync(target,"utf8"),REPORT);
     const after=await driver.executeScript("return window.__qaRequests");
     assert.deepEqual(after,["jobflick:inbox","jobflick:report"]);
