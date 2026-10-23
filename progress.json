@@ -329,7 +329,7 @@
           "title": "Exact tab + conversation",
           "status": "verified",
           "evidence": [
-            "Navigation mismatch and tab-ID reuse tests prevent status delivery to wrong tab: https://github.com/sguzman/jobflick-bridge/actions/runs/39996306288"
+            "Exact tab instance + session token + canonical ChatGPT route, Firefox pushState A→B→A revocation, and fail-closed matching of real native origin tokens are exercised in mocks and actual synthetic FDE; authenticated attachment routing not yet tested: https://github.com/sguzman/jobflick-bridge/actions/runs/40021742503"
           ]
         },
         {
@@ -514,7 +514,7 @@
           "title": "Adversarial security tests",
           "status": "implemented",
           "evidence": [
-            "Partial implementation committed on main by ea015dfdf1e2ed2d38ec31a4fa360f3739ef0020; live Firefox Developer Edition acceptance still required"
+            "Adversarial native response tests now reject duplicate job IDs, conflicting origin tokens on submit/inspect, forged content-script privileged actions and stale tab routing. Latest passing fast Firefox QA: https://github.com/sguzman/jobflick-bridge/actions/runs/40021961943; latest real backend integration: https://github.com/sguzman/jobflick-bridge/actions/runs/40021742503. Authenticated adversarial site acceptance still pending."
           ]
         },
         {
@@ -578,11 +578,11 @@
   ],
   "last_ci": {
     "result": "success",
-    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40021007135",
-    "commit": "b4ef85e029a1dd7325b54ebd15906d59b52f87af",
-    "scope": "Fast Firefox Developer Edition and Node behavioral checks for local metadata search/pagination, native status timer discipline and safety; authenticated ChatGPT attachment and Send not tested.",
-    "native_run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40021007123",
-    "native_commit": "b4ef85e029a1dd7325b54ebd15906d59b52f87af",
-    "native_scope": "Pinned real Jobflick daemon and synthetic Firefox Developer Edition integration passed on the parent UI-test-fix revision, including harmless Fish execution, origin, terminal status and real cancellation. Automatic ChatGPT attachment/Send not tested."
+    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40021961943",
+    "commit": "b9edb237d824b330e046074d6a09a38a3054f70d",
+    "scope": "Node static/behavioral tests, signed-off headless Firefox Developer Edition synthetic add-on, native fixture and UI checks. Includes new delivery acceptance contract docs; no authenticated site attachment or Send.",
+    "native_run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40021742503",
+    "native_commit": "eec71767d885cdb1ac2aa89c34791164b5e11bb5",
+    "native_scope": "Real pinned Jobflick daemon through headless synthetic Firefox, harmless Fish execution, terminal status, cancellation and native origin provenance/ID collision hardening. Separate from authenticated ChatGPT QA."
   }
 }

@@ -48,7 +48,7 @@ This is a recovery and inspection surface, **not** a claim that the future ChatG
 
 ## Verified CI gates
 
-The automated suite runs Node behavioral tests, Fish native-host installer tests in a disposable HOME, Mozilla `web-ext lint`, and a separate **real Firefox Developer Edition** WebDriver job that installs/uninstalls the production add-on in an anonymous profile. A further disposable QA-only manifest runs the unmodified content script on synthetic ChatGPT-style HTML, confirming intent-driven Run button insertion, mouse-click handling, and rejection of YAML changed after validation. It uses disposable CI directories; a separate real-daemon gate executes only a fixed harmless `printf` fixture and never accesses the user's machine. [Latest passing CI run](https://github.com/sguzman/jobflick-bridge/actions/runs/40015713008).
+The automated suite runs Node behavioral tests, Fish native-host installer tests in a disposable HOME, Mozilla `web-ext lint`, and a separate **real Firefox Developer Edition** WebDriver job that installs/uninstalls the production add-on in an anonymous profile. A further disposable QA-only manifest runs the unmodified content script on synthetic ChatGPT-style HTML, confirming intent-driven Run button insertion, mouse-click handling, and rejection of YAML changed after validation. It uses disposable CI directories; a separate real-daemon gate executes only a fixed harmless `printf` fixture and never accesses the user's machine. [Latest passing Firefox CI run](https://github.com/sguzman/jobflick-bridge/actions/runs/40021961943).
 
 An unsigned Firefox QA ZIP is also produced by CI (artifact `jobflick-bridge-fde-qa-unsigned`). It is intended only for **temporary installation** in the dedicated QA profile via `about:debugging`, not for a release or an automatic native-host setup.
 
@@ -91,3 +91,5 @@ The popup's keyboard-accessible search form filters saved Jobflick records by jo
 ## 📎 Future automatic report delivery
 
 Automatic report attachment and Send are deliberately disabled until their real authenticated Firefox acceptance gates pass. The safety and idempotency requirements are documented in [Report attachment and Send acceptance contract](docs/DELIVERY-CONTRACT.md). The current supported workflow is explicit local Save report → Download prepared report, with Jobflick retaining the durable original.
+
+Current verified CI: [Firefox/static checks](https://github.com/sguzman/jobflick-bridge/actions/runs/40021961943) · [real Jobflick Native Messaging acceptance](https://github.com/sguzman/jobflick-bridge/actions/runs/40021742503). These runs do not establish authenticated ChatGPT file upload or automatic Send.
