@@ -251,11 +251,13 @@ async function main() {
     // tests; browser acceptance here is the real native status path.
     phase="native finished status propagation";
     await driver.wait(async()=>/succeeded/.test(await button.getText()),10000);
+    let completedJobId=null;
     if (realHost) {
       const dir=path.join(process.env.XDG_DATA_HOME,"jobflick","jobs");
       const files=fs.readdirSync(dir).filter(file=>file.endsWith(".json"));
       assert.equal(files.length,1,"Browser should queue exactly one durable Jobflick job");
       const job=JSON.parse(fs.readFileSync(path.join(dir,files[0]),"utf8"));
+      completedJobId=job.id;
       assert.equal(job.state,"succeeded");
       assert.match(job.origin_tab_id,/^tab-[a-zA-Z0-9_-]{8,128}$/);
       assert.equal(job.name,"Firefox native QA");
@@ -280,7 +282,8 @@ async function main() {
       const raw=await driver.findElement(By.id("qa-result")).getText();
       const handoff=JSON.parse(raw);
       assert.equal(handoff.valid,true,"Page could not read real Jobflick report");
-      assert.match(handoff.name,/^jobflick-job_[a-zA-Z0-9_-]{8,128}\.txt$/);
+      assert.equal(handoff.name,"jobflick-"+completedJobId+".txt",
+        "Firefox must hand the exact completed native job's File to the page");
       assert(handoff.size>0&&handoff.size<=524288);
       assert.equal(await driver.executeScript(
         "return document.documentElement.dataset.qaHandoff"),"done");
