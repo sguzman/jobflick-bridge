@@ -78,6 +78,46 @@ function readOnlyObservation(doc = document) {
   };
 }
 
+// Multiple bounded read-only samples separate page load from SPA hydration.
+// Never expose arbitrary page fields: allowlisted counts and booleans only.
+async function observeStable(driver,expected,options={}) {
+  const delay=options.delay||((ms)=>new Promise(ok=>setTimeout(ok,ms)));
+  const clock=options.clock||(()=>Date.now());
+  const timeout=options.timeoutMs??12000;
+  const interval=options.intervalMs??400;
+  const required=options.required??3;
+  if(!Number.isInteger(timeout)||timeout<0||
+     !Number.isInteger(interval)||interval<1||
+     !Number.isInteger(required)||required<2) throw Error("Invalid audit limits");
+  const start=clock();
+  let last=null,key="",repeat=0,samples=0;
+  while(true){
+    if(canonicalConversation(await driver.getCurrentUrl())!==expected)
+      throw Error("Conversation route changed");
+    const read=await driver.executeScript(readOnlyObservation);
+    if(canonicalConversation(await driver.getCurrentUrl())!==expected)
+      throw Error("Conversation route changed during inspection");
+    if(!read||!Number.isInteger(read.composerCandidates)||read.composerCandidates<0||
+      !Number.isInteger(read.fileInputCandidates)||read.fileInputCandidates<0||
+      ["composerAmbiguous","draftOccupied","fileInputAmbiguous","fileAlreadySelected"]
+        .some(k=>typeof read[k]!=="boolean"))
+      throw Error("Invalid read-only observation");
+    last={
+      composerCandidates:read.composerCandidates,composerAmbiguous:read.composerAmbiguous,
+      draftOccupied:read.draftOccupied,fileInputCandidates:read.fileInputCandidates,
+      fileInputAmbiguous:read.fileInputAmbiguous,fileAlreadySelected:read.fileAlreadySelected
+    };
+    const fingerprint=JSON.stringify(last);
+    repeat=fingerprint===key?repeat+1:1;
+    key=fingerprint;
+    samples++;
+    if(last.composerCandidates>0&&repeat>=required)
+      return {observation:last,stable:true,samples};
+    if(clock()-start>=timeout) return {observation:last,stable:false,samples};
+    await delay(interval);
+  }
+}
+
 async function main() {
   if (process.env.JOBFLICK_LIVE_READONLY_QA !== "YES")
     abort("Explicit read-only live QA opt-in required");
@@ -102,20 +142,18 @@ async function main() {
     ), 20000);
     const before = canonicalConversation(await driver.getCurrentUrl());
     if (before !== expected) abort("Not on the exact requested conversation route");
-    // Read only flags and counts. Neither drafts nor file names leave the page.
-    const observation = await driver.executeScript(readOnlyObservation);
-    const after = canonicalConversation(await driver.getCurrentUrl());
-    if (after !== expected) abort("Conversation changed during read-only discovery");
-    if (!Number.isInteger(observation.composerCandidates) ||
-        !Number.isInteger(observation.fileInputCandidates))
-      abort("Unrecognized browser inspection response");
+    // A complete document is not necessarily a hydrated React composer.
+    const result=await observeStable(driver,expected);
+    const observation=result.observation;
     // A hidden upload control might be created only after opening a menu.
     // A missing input is inconclusive, not evidence that uploads are absent.
     console.log(JSON.stringify({
       target: "exact Firefox QA conversation route",
       mode: "read-only",
       authenticatedSessionVerified: false,
-      supportedSingleComposerObserved: observation.composerCandidates === 1,
+      supportedSingleComposerObserved: result.stable && observation.composerCandidates === 1,
+      hydrationStable: result.stable,
+      observationSamples: result.samples,
       ...observation,
       fileInputAbsenceInconclusive: observation.fileInputCandidates === 0,
       attachmentConfirmed: false,
@@ -134,5 +172,5 @@ if (require.main === module) {
 }
 
 // Imported by safety tests without launching Firefox or opening any URL.
-module.exports = { canonicalConversation, dedicatedProfile, readOnlyObservation };
+module.exports = { canonicalConversation, dedicatedProfile, readOnlyObservation, observeStable };
 
