@@ -26,8 +26,17 @@ A future approved unlisted distribution can request Mozilla signing with
 record the resulting signed XPI SHA-256. The fixed Gecko ID must match the
 native-host `allowed_extensions` registration. AMO credentials must remain
 in secret storage, never in this public repository, workflow logs, test
-fixtures, issues or local CLI examples. No signing or publication has been
-performed by this project yet.
+fixtures, issues or local CLI examples. No signing or publication has been performed by this project yet.
+
+A separate **Firefox Signed XPI — explicit accepted release gate** Actions
+workflow is manual dispatch only on `main`. It refuses signing unless all
+63 machine-readable atomic tasks are verified, the manifest/package
+versions match and the stable Gecko ID is preserved. Only after those
+gates pass does it use optional `WEB_EXT_API_KEY` and
+`WEB_EXT_API_SECRET` GitHub Actions secrets to request an **unlisted** AMO
+signature, validate the resulting XPI, record its SHA-256 and retain it
+as a review artifact. It does not tag, publish a GitHub release or install
+in a personal browser. The workflow has not been dispatched or signing-tested.
 
 Temporary add-on loading in a disposable Firefox Developer Edition QA profile
 is appropriate during development; this is *not* a substitute for signed

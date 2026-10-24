@@ -1,0 +1,81 @@
+name: Firefox Signed XPI — explicit accepted release gate
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jobflick-bridge-amo-signing
+  cancel-in-progress: false
+
+jobs:
+  sign:
+    # Manual dispatch only on main. Production automation cannot sign
+    # or distribute before full live Firefox acceptance.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Refuse signing until every acceptance task is verified
+        run: |
+          node --input-type=module -e '
+            import fs from "node:fs";
+            const p=JSON.parse(fs.readFileSync("progress.json","utf8"));
+            const tasks=p.milestones.flatMap(m=>m.tasks);
+            if (p.overall.total!==63 || p.overall.verified!==63 ||
+                p.overall.implemented!==0 || p.overall.planned!==0 ||
+                tasks.length!==63 || tasks.some(t=>t.status!=="verified")) {
+              console.error("Firefox signing blocked: incomplete acceptance ledger");
+              process.exit(1);
+            }
+            const manifest=JSON.parse(fs.readFileSync("extension/manifest.json","utf8"));
+            const pkg=JSON.parse(fs.readFileSync("package.json","utf8"));
+            if (manifest.version!==pkg.version ||
+                manifest.browser_specific_settings?.gecko?.id!=="jobflick-bridge@sguzman.github.io") {
+              console.error("Firefox signing blocked: version or Gecko ID mismatch");
+              process.exit(1);
+            }
+          '
+      - name: Lint exact production extension before signing
+        run: npx --yes web-ext@10.8.0 lint --source-dir extension
+      - name: Request Mozilla unlisted XPI signature
+        env:
+          WEB_EXT_API_KEY: ${{ secrets.WEB_EXT_API_KEY }}
+          WEB_EXT_API_SECRET: ${{ secrets.WEB_EXT_API_SECRET }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${WEB_EXT_API_KEY:-}" || -z "${WEB_EXT_API_SECRET:-}" ]]; then
+            echo "Signing credentials missing; no AMO request made" >&2
+            exit 1
+          fi
+          mkdir -p dist/signed
+          npx --yes web-ext@10.8.0 sign \
+            --source-dir extension --artifacts-dir dist/signed \
+            --channel unlisted
+      - name: Inspect signed XPI and record SHA-256
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          archives=(dist/signed/*.xpi)
+          if [[ ${#archives[@]} != 1 ]]; then
+            echo "Expected exactly one signed XPI" >&2
+            exit 1
+          fi
+          unzip -tq "${archives[0]}"
+          unzip -Z1 "${archives[0]}" | grep -Fx manifest.json
+          unzip -Z1 "${archives[0]}" | grep -E "^META-INF/[^/]+"
+          sha256sum "${archives[0]}"
+      - name: Preserve signed XPI as a review artifact only
+        uses: actions/upload-artifact@v4
+        with:
+          name: jobflick-bridge-mozilla-signed-review
+          path: dist/signed/*.xpi
+          if-no-files-found: error
+          retention-days: 30
