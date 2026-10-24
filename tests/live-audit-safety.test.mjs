@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 
 const runner = fileURLToPath(new URL("./live-composer-audit.cjs", import.meta.url));
-const { canonicalConversation, dedicatedProfile, readOnlyObservation, observeStable } =
+const { canonicalConversation, dedicatedProfile, readOnlyObservation, observeStable, structuralCandidatesUnique } =
   createRequire(import.meta.url)(runner);
 const run = env => spawnSync(process.execPath, [runner], {
   env: { ...process.env, ...env }, encoding: "utf8", timeout: 6000
@@ -193,4 +193,18 @@ test("invalid browser metadata is not printed or accepted",async()=>{
     fileInputCandidates:1,fileInputAmbiguous:false,fileAlreadySelected:false
   })};
   await assert.rejects(observeStable(driver,url),/Invalid read-only observation/);
+});
+
+test("inconclusive read-only discovery cannot claim structural success",()=>{
+  const observation={composerCandidates:1,composerAmbiguous:false,
+    fileInputCandidates:1,fileInputAmbiguous:false};
+  assert.equal(structuralCandidatesUnique({stable:true,observation}),true);
+  for(const sample of [
+    {stable:false,observation},
+    {stable:true,observation:{...observation,composerCandidates:0}},
+    {stable:true,observation:{...observation,composerCandidates:2}},
+    {stable:true,observation:{...observation,fileInputCandidates:0}},
+    {stable:true,observation:{...observation,fileInputCandidates:2}},
+    {stable:true,observation:{...observation,fileInputAmbiguous:true}}
+  ]) assert.equal(structuralCandidatesUnique(sample),false);
 });

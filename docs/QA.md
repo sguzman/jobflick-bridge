@@ -649,6 +649,15 @@ menus, constructs Files, clicks Run or Send, contacts Jobflick, or alters
 extension permissions. If login, route, or browser setup fails it refuses
 without printing WebDriver error payloads. The presence/absence of a file
 input is preliminary evidence only; upload controls may appear on demand.
+Exit status is zero only when stable observations reveal exactly one
+composer and one currently exposed file input. Exit code `2` means
+**inconclusive** (missing/ambiguous/inaccessible controls), not a site
+upload failure or permission to attempt a write. Even a zero exit code
+confirms only unambiguous preliminary DOM structure: the tool explicitly
+reports authentication, attachment and Send as unverified. An input may
+remain hidden until a user-facing upload menu is opened by a separate
+authorized QA controller.
+
 The dedicated-profile live audit now waits for three matching, bounded,
 read-only composer observations rather than using the first completed document
 as hydration evidence. Route identity is rechecked before and after each DOM

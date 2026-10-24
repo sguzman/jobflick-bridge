@@ -118,6 +118,15 @@ async function observeStable(driver,expected,options={}) {
   }
 }
 
+// A structurally incomplete read-only sample is *not* live upload
+// discovery. This never implies authentication or attachment acceptance.
+function structuralCandidatesUnique(result) {
+  const o=result?.observation;
+  return result?.stable===true && o?.composerCandidates===1 &&
+    o?.fileInputCandidates===1 && o.composerAmbiguous===false &&
+    o.fileInputAmbiguous===false;
+}
+
 async function main() {
   if (process.env.JOBFLICK_LIVE_READONLY_QA !== "YES")
     abort("Explicit read-only live QA opt-in required");
@@ -153,12 +162,16 @@ async function main() {
       authenticatedSessionVerified: false,
       supportedSingleComposerObserved: result.stable && observation.composerCandidates === 1,
       hydrationStable: result.stable,
+      structuralCandidatesUnique: structuralCandidatesUnique(result),
       observationSamples: result.samples,
       ...observation,
       fileInputAbsenceInconclusive: observation.fileInputCandidates === 0,
       attachmentConfirmed: false,
       sendAttempted: false
     }));
+    // A code-0 QA observation must not mean a missing or ambiguous editor
+    // was successfully discovered. Code 2 is inconclusive, not a crash.
+    if (!structuralCandidatesUnique(result)) process.exitCode = 2;
   } finally {
     if (driver) await driver.quit();
   }
@@ -172,5 +185,5 @@ if (require.main === module) {
 }
 
 // Imported by safety tests without launching Firefox or opening any URL.
-module.exports = { canonicalConversation, dedicatedProfile, readOnlyObservation, observeStable };
+module.exports = { canonicalConversation, dedicatedProfile, readOnlyObservation, observeStable, structuralCandidatesUnique };
 

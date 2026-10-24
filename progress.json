@@ -361,7 +361,8 @@
           "title": "Draft-safe composer",
           "status": "implemented",
           "evidence": [
-            "A site-neutral, inert FileList composer handoff now requires one identified composer/input, empty draft, separately verified absence of existing attachments, and stable original route plus monotonic navigation epoch before/after the change event. Disposable real Firefox Developer Edition synthetic File acceptance passed https://github.com/sguzman/jobflick-bridge/actions/runs/40045817018. Not wired to production ChatGPT attachment, and no authenticated live-site composer preservation yet."
+            "A site-neutral, inert FileList composer handoff now requires one identified composer/input, empty draft, separately verified absence of existing attachments, and stable original route plus monotonic navigation epoch before/after the change event. Disposable real Firefox Developer Edition synthetic File acceptance passed https://github.com/sguzman/jobflick-bridge/actions/runs/40045817018. Not wired to production ChatGPT attachment, and no authenticated live-site composer preservation yet.",
+            "Partial synthetic-browser integrity only: real disposable Firefox Developer Edition rejects a page that replaces the selected report File with different bytes but identical filename, MIME and size. Exact File object identity survives the normal FileList handoff and is required after change handlers. CI: https://github.com/sguzman/jobflick-bridge/actions/runs/40051368177. No authenticated ChatGPT attachment acceptance or Send is claimed."
           ]
         },
         {
@@ -415,7 +416,8 @@
           "status": "implemented",
           "evidence": [
             "Partial: actual FDE transfers the real pinned Jobflick native report through the inert production File helper to a synthetic localhost input after a test-only trusted browser click; page reads exact matching ID filename/content. No production ChatGPT upload selector, server acknowledgment or authenticated site acceptance: https://github.com/sguzman/jobflick-bridge/actions/runs/40025229365",
-            "The inert File handoff helper now fails closed if a page change handler immediately clears or removes its file input. Actual disposable Firefox Developer Edition tests passed; site acknowledgment and authenticated ChatGPT upload are not established: https://github.com/sguzman/jobflick-bridge/actions/runs/40030357579."
+            "The inert File handoff helper now fails closed if a page change handler immediately clears or removes its file input. Actual disposable Firefox Developer Edition tests passed; site acknowledgment and authenticated ChatGPT upload are not established: https://github.com/sguzman/jobflick-bridge/actions/runs/40030357579.",
+            "Partial synthetic-browser integrity only: real disposable Firefox Developer Edition rejects a page that replaces the selected report File with different bytes but identical filename, MIME and size. Exact File object identity survives the normal FileList handoff and is required after change handlers. CI: https://github.com/sguzman/jobflick-bridge/actions/runs/40051368177. No authenticated ChatGPT attachment acceptance or Send is claimed."
           ]
         },
         {
