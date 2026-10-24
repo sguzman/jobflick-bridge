@@ -142,3 +142,36 @@ test("sixteen simultaneous origin keys cannot inherit the first conversation's g
     assert.equal(propose(record,"begin_attachment",{...own,tabId:11+(i+1)%16}).ok,false);
   }
 });
+
+test("orphaned identity cannot reauthorize attachment even with matching URL and token",()=>{
+  for(const variant of [
+    {orphaned:true}, {integrityIssue:"native_origin_mismatch"},
+    {orphaned:true,deliveryState:"attachment_confirmed"}
+  ]) {
+    const record={...base(),...variant};
+    const action=record.deliveryState==="attachment_confirmed" ?
+      "begin_send" : "begin_attachment";
+    const proof={...evidence(),optIn:action==="begin_send" ?
+      "send-this-job" : "attach-this-job"};
+    assert.equal(propose(record,action,proof).ok,false);
+  }
+  const pending=propose(base(),"origin_lost");
+  assert.equal(pending.next.orphaned,true);
+  assert.equal(pending.next.deliveryState,"manual_only");
+  const unresolved=propose({...base(),deliveryState:"delivery_uncertain"},"origin_lost");
+  assert.equal(unresolved.next.orphaned,true);
+  assert.equal(unresolved.next.deliveryState,"delivery_uncertain");
+});
+
+test("failed, cancelled, timed-out and interrupted reports are manual-only",()=>{
+  for(const state of ["failed","cancelled","timed_out","interrupted"]){
+    const record={...base(),state};
+    assert.equal(propose(record,"begin_attachment",{
+      ...evidence(),optIn:"attach-this-job"
+    }).ok,false);
+    assert.equal(propose({...record,deliveryState:"attachment_confirmed"},"begin_send",{
+      ...evidence(),optIn:"send-this-job"
+    }).ok,false);
+    assert.equal(propose(record,"origin_lost").next.deliveryState,"manual_only");
+  }
+});

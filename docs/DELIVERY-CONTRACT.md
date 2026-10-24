@@ -109,3 +109,14 @@ script is not loaded by production and has no network, DOM, Native Messaging,
 or Send side effects. Its tests are necessary negative acceptance evidence,
 not proof of a real ChatGPT site receipt or delivery. Production remains
 manual-export-only.
+
+## Failed/cancelled job report policy
+
+The inert delivery policy permits future *automatic* attachment and guarded
+Send only for Jobflick `succeeded` records. Failed, cancelled, timed-out and
+interrupted job reports remain accessible through the existing manual
+`Save report` fallback. A known-orphaned record or any record carrying a
+native-identity integrity issue is never allowed to regain automatic
+attachment or Send authorization, even if a later URL/token claim matches.
+Origin loss updates the proposed `orphaned` metadata and keeps previous
+Send uncertainty visible. These are tested policy rules, not enabled Send.

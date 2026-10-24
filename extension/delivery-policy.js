@@ -67,8 +67,8 @@
   }
 
   const refuse = reason => ({ ok: false, reason, effect: "none" });
-  const advance = (record, deliveryState) => ({
-    ok: true, next: { ...record, deliveryState },
+  const advance = (record, deliveryState, changes = {}) => ({
+    ok: true, next: { ...record, ...changes, deliveryState },
     mustPersistBeforeSideEffect: true, effect: "none"
   });
 
@@ -80,11 +80,13 @@
       return refuse("Already verified delivered; no further dispatch");
     }
     if (record.deliveryState === "delivery_uncertain") {
-      return refuse("Unknown prior outcome; no automatic retry");
+      return action === "origin_lost" ?
+        advance(record, "delivery_uncertain", { orphaned: true }) :
+        refuse("Unknown prior outcome; no automatic retry");
     }
     if (action === "origin_lost") {
       return advance(record, record.deliveryState === "send_requested"
-        ? "delivery_uncertain" : "manual_only");
+        ? "delivery_uncertain" : "manual_only", { orphaned: true });
     }
     if (action === "reconcile_uncertain") {
       if (record.deliveryState !== "send_requested" &&
@@ -92,8 +94,13 @@
         return refuse("No unresolved attempt to reconcile");
       return advance(record, "delivery_uncertain");
     }
-    if (record.deliveryState === "manual_only")
+    if (record.deliveryState === "manual_only" ||
+        record.orphaned === true || record.integrityIssue)
       return refuse("Origin permanently unavailable; manual export only");
+    // Only successful jobs can use a future automated attachment/Send path.
+    // Failed/cancelled/timed-out reports remain available as manual exports.
+    if (record.state !== "succeeded")
+      return refuse("Non-successful jobs require manual report delivery");
     if (action === "begin_attachment") {
       if (record.deliveryState !== "report_pending_manual_delivery")
         return refuse("Attachment already attempted or wrong stage");
