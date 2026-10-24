@@ -85,6 +85,7 @@ async function main(){
       'document.documentElement.dataset.probeEpoch=String(epochDenied',
       '  && currentEpoch()===1 && currentRoute()===location.origin+location.pathname',
       '  && routeInput.files?.length===0);',
+      'document.documentElement.dataset.qaEpoch="0";',
       'const replaceInput=document.getElementById("guarded-replacement");',
       'let preservedReplacement=false;',
       'try{api.handoffToEmptyComposer(guardedArgs(replaceInput));}',
