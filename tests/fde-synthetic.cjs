@@ -312,6 +312,7 @@ async function main(){
 
     await driver.executeScript(
       "document.querySelector('#qa-original').value='';"+
+      "document.querySelector('#qa-original').remove();"+
       "document.querySelector('#qa-extra').remove();"+
       "document.querySelector('#prompt-textarea').textContent='';"+
       "document.documentElement.dataset.qaProbe='';"
