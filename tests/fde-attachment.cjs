@@ -97,6 +97,7 @@ async function main(){
       '   && replaceInput.files[0].name==="user-override.txt";',
       '}',
       'document.documentElement.dataset.probeReplacement=String(preservedReplacement);',
+      'document.documentElement.dataset.qaEpoch="0";',
       'const mutating=document.getElementById("guarded-mutating");',
       'let newInputDenied=false;',
       'try{api.handoffToEmptyComposer({...guardedArgs(mutating),',
