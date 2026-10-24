@@ -58,7 +58,7 @@ end
 cd "$work"; or exit 1
 # Stable entry order, no host extra fields, unchanged binary bytes. No
 # compression avoids differences between zlib versions and is small here.
-zip -q -X -0 -- "$output" $entries
+zip -q -X -0 "$output" $entries
 set -l status $status
 cd "$repo"
 rm -rf -- "$work"
