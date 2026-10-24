@@ -128,10 +128,16 @@ async function main(){
     const afterTabs=await stats();
     assert.deepEqual(afterTabs,idleStart,
       "Sixteen additional Firefox chats must be inert without user intent");
-    await tick(15000);
-    const afterIdle=await stats();
-    assert.deepEqual(afterIdle,idleStart,
-      "A 15-second idle window must produce zero validation/submit events");
+    // One minute of real Firefox idle time, with the dense history still
+    // loaded and 16 additional tabs present. Watch periodic snapshots for
+    // covert native validation/submit work rather than merely testing one
+    // endpoint, and avoid brittle machine-dependent wattage thresholds.
+    for(let checkpoint=1;checkpoint<=6;checkpoint++){
+      await tick(10000);
+      const sample=await stats();
+      assert.deepEqual(sample,idleStart,
+        "No native validation/submit in 60s idle interval "+checkpoint+"/6");
+    }
 
     // Only explicit pointer/focus events may authorize validation.
     await driver.executeScript(
@@ -154,7 +160,7 @@ async function main(){
     assert.equal((await stats()).submissions,0);
     await driver.uninstallAddon(id);
     console.log("FDE scale: 8,000 history blocks, 200 DOM rerenders, 16 other tabs, "+
-      "15s idle, bounded 16 validations after 40 pointer events, zero native submits");
+      "60s idle (six 10s probes), bounded 16 validations after 40 pointer events, zero native submits");
   } finally {
     if(driver)await driver.quit();
     if(server)await new Promise(ok=>server.close(ok));
