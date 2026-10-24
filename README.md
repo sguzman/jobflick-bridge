@@ -17,6 +17,8 @@ Execarium defines the format. Jobflick owns validation enforcement, Fish executi
 
 ## Project navigation
 
+- [🤖 Agent contract](AGENTS.md): autonomous mainline execution, Firefox-only QA and evidence rules.
+- [🧪 Remaining acceptance dependencies](docs/LIVE-ACCEPTANCE.md): machine-readable live upload, guarded Send and release gates.
 - [🗺️ Roadmap](ROADMAP.md): milestones → phases → features → atomic tasks, with acceptance gates.
 - [📊 Machine-readable progress](progress.json): completed work is recorded only with evidence; no untested 100% claims.
 - [🏗️ Architecture](docs/ARCHITECTURE.md): Firefox event-page model, Native Messaging, durable origin mapping.
@@ -49,7 +51,7 @@ This is a recovery and inspection surface, **not** a claim that the future ChatG
 
 ## Verified CI gates
 
-The automated suite runs Node behavioral tests, Fish native-host installer tests in a disposable HOME, Mozilla `web-ext lint`, and a separate **real Firefox Developer Edition** WebDriver job that installs/uninstalls the production add-on in an anonymous profile. A further disposable QA-only manifest runs the unmodified content script on synthetic ChatGPT-style HTML, confirming intent-driven Run button insertion, mouse-click handling, and rejection of YAML changed after validation. It uses disposable CI directories; a separate real-daemon gate executes only a fixed harmless `printf` fixture and never accesses the user's machine. [Current Firefox CI](https://github.com/sguzman/jobflick-bridge/actions/runs/40033764547).
+The automated suite runs Node behavioral tests, Fish native-host installer tests in a disposable HOME, Mozilla `web-ext lint`, and a separate **real Firefox Developer Edition** WebDriver job that installs/uninstalls the production add-on in an anonymous profile. A further disposable QA-only manifest runs the unmodified content script on synthetic ChatGPT-style HTML, confirming intent-driven Run button insertion, mouse-click handling, and rejection of YAML changed after validation. It uses disposable CI directories; a separate real-daemon gate executes only a fixed harmless `printf` fixture and never accesses the user's machine. [Last fully green Firefox CI before current changes](https://github.com/sguzman/jobflick-bridge/actions/runs/40048195426).
 
 An unsigned Firefox QA ZIP is also produced by CI (artifact `jobflick-bridge-fde-qa-unsigned`). It is intended only for **temporary installation** in the dedicated QA profile via `about:debugging`, not for a release or an automatic native-host setup.
 
