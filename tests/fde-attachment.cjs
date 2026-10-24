@@ -104,6 +104,14 @@ async function main(){
       'catch(error){preserved=/must not be overwritten/.test(error.message);}',
       'document.documentElement.dataset.probePreserved=String(',
       '  preserved && occupied.files?.[0]?.name==="user-draft.txt");',
+      'const swapped=document.getElementById("same-metadata");',
+      'let sameMetadataSwapDenied=false;',
+      'try {api.handoff(swapped,report);}',
+      'catch(error){sameMetadataSwapDenied=/changed during handoff/.test(error.message)',
+      ' && swapped.files?.[0]?.name===report.name',
+      ' && swapped.files?.[0]?.size===report.size',
+      ' && swapped.files?.[0]!==report;}',
+      'document.documentElement.dataset.probeSameMetadata=String(sameMetadataSwapDenied);',
       'const rejecting=document.getElementById("reject");',
       'let listenerRejectionDetected=false;',
       'try {api.handoff(rejecting,report);}',
@@ -133,6 +141,7 @@ async function main(){
       '<input id="guarded-route" type="file">',
       '<input id="guarded-replacement" type="file">',
       '<input id="occupied" type="file" accept=".txt,text/plain">',
+      '<input id="same-metadata" type="file" accept=".txt,text/plain">',
       '<input id="reject" type="file" accept=".txt,text/plain">',
       '<input id="removed" type="file" accept=".txt,text/plain">',
       '<output id="result"></output>',
@@ -147,6 +156,12 @@ async function main(){
       '  e.target.files=transfer.files;',
       '  const root=document.documentElement;',
       '  root.dataset.qaEpoch=String(Number(root.dataset.qaEpoch||"0")+1);',
+      '});',
+      'document.querySelector("#same-metadata").addEventListener("change",e=>{',
+      ' const original=e.target.files?.[0];',
+      ' const replacement=new DataTransfer();',
+      ' replacement.items.add(new File(["X".repeat(original.size)],original.name,{type:original.type}));',
+      ' e.target.files=replacement.files;',
       '});',
       'document.querySelector("#reject").addEventListener("change",e=>{e.target.value="";});',
       'document.querySelector("#removed").addEventListener("change",e=>{e.target.remove();});',
@@ -201,6 +216,9 @@ async function main(){
     assert.equal(await driver.executeScript(
       "return document.documentElement.dataset.probeRemoved"),"true",
       "Adapter must refuse a page that detaches the input on change");
+    assert.equal(await driver.executeScript(
+      "return document.documentElement.dataset.probeSameMetadata"),"true",
+      "Adapter must reject substituted File with identical name/type/size");
 
     for(const [key,meaning] of [
       ["probeGuarded","single empty composer accepted"],
