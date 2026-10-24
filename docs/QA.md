@@ -645,6 +645,10 @@ menus, constructs Files, clicks Run or Send, contacts Jobflick, or alters
 extension permissions. If login, route, or browser setup fails it refuses
 without printing WebDriver error payloads. The presence/absence of a file
 input is preliminary evidence only; upload controls may appear on demand.
-There is **no claim of authenticated acceptance until this harness has
-actually run successfully in the dedicated profile**, and its output alone
-cannot verify upload acknowledgment or Send.
+The harness does **not** verify authentication: being on a conversation URL
+or seeing a composer is not conclusive account/session evidence. Its output
+explicitly reports `authenticatedSessionVerified: false` even when the
+requested route and composer are present. A separate authenticated acceptance
+must establish the actual identity and attachment behavior. The harness
+refuses locked QA profiles and symlinked data directories; its only output
+is bounded boolean/count metadata.

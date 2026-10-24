@@ -36,6 +36,11 @@ function dedicatedProfile() {
     process.env.XDG_DATA_HOME : path.join(home, ".local", "share");
   if (!data || !path.isAbsolute(data) || data === "/")
     abort("Unsafe XDG_DATA_HOME");
+  // Never follow an XDG_DATA_HOME link into an unrelated browser tree.
+  try {
+    if (fs.lstatSync(data).isSymbolicLink())
+      abort("Symlinked XDG_DATA_HOME is not a safe QA root");
+  } catch { abort("Dedicated QA data directory missing"); }
   const root = path.join(data, "jobflick-bridge-fde-qa");
   const profile = path.join(root, "profile");
   for (const target of [root, profile]) {
@@ -43,8 +48,34 @@ function dedicatedProfile() {
     try { entry = fs.lstatSync(target); } catch { abort("Dedicated QA profile missing"); }
     if (!entry.isDirectory() || entry.isSymbolicLink())
       abort("QA profile path must be a real directory, not a link");
+    if ((entry.mode & 0o077) !== 0)
+      abort("Dedicated QA profile must be private to its owner");
+  }
+  // Refuse a running/unclean QA profile instead of competing for its lock.
+  for (const marker of [".parentlock", "parent.lock", "lock"]) {
+    if (fs.existsSync(path.join(profile, marker)))
+      abort("QA profile is in use or has an unreconciled lock");
   }
   return profile;
+}
+
+function readOnlyObservation(doc = document) {
+  const composers = [...doc.querySelectorAll(
+    '#prompt-textarea[contenteditable="true"], ' +
+    '[data-testid="composer-rich-text-input"][contenteditable="true"], ' +
+    'textarea#prompt-textarea, textarea[data-testid="composer-textarea"]'
+  )];
+  const files = [...doc.querySelectorAll('input[type="file"]')];
+  // Never return any draft, filename, element reference or page route.
+  return {
+    composerCandidates: composers.length,
+    composerAmbiguous: composers.length !== 1,
+    draftOccupied: composers.some(node =>
+      !!String(node.value ?? node.textContent ?? "").trim()),
+    fileInputCandidates: files.length,
+    fileInputAmbiguous: files.length !== 1,
+    fileAlreadySelected: files.some(input => (input.files?.length || 0) > 0)
+  };
 }
 
 async function main() {
@@ -70,23 +101,9 @@ async function main() {
       "return document.readyState==='complete' && Boolean(document.body)"
     ), 20000);
     const before = canonicalConversation(await driver.getCurrentUrl());
-    if (before !== expected) abort("Not authenticated in the exact requested conversation");
+    if (before !== expected) abort("Not on the exact requested conversation route");
     // Read only flags and counts. Neither drafts nor file names leave the page.
-    const observation = await driver.executeScript(() => {
-      const composers = [...document.querySelectorAll(
-        '#prompt-textarea[contenteditable="true"], ' +
-        '[data-testid="composer-rich-text-input"][contenteditable="true"], ' +
-        'textarea#prompt-textarea, textarea[data-testid="composer-textarea"]'
-      )];
-      const files = [...document.querySelectorAll('input[type="file"]')];
-      return {
-        composerCandidates: composers.length,
-        draftOccupied: composers.some(node =>
-          !!String(node.value ?? node.textContent ?? "").trim()),
-        fileInputCandidates: files.length,
-        fileAlreadySelected: files.some(input => (input.files?.length || 0) > 0)
-      };
-    });
+    const observation = await driver.executeScript(readOnlyObservation);
     const after = canonicalConversation(await driver.getCurrentUrl());
     if (after !== expected) abort("Conversation changed during read-only discovery");
     if (!Number.isInteger(observation.composerCandidates) ||
@@ -95,8 +112,10 @@ async function main() {
     // A hidden upload control might be created only after opening a menu.
     // A missing input is inconclusive, not evidence that uploads are absent.
     console.log(JSON.stringify({
-      target: "exact authenticated Firefox QA conversation",
+      target: "exact Firefox QA conversation route",
       mode: "read-only",
+      authenticatedSessionVerified: false,
+      supportedSingleComposerObserved: observation.composerCandidates === 1,
       ...observation,
       fileInputAbsenceInconclusive: observation.fileInputCandidates === 0,
       attachmentConfirmed: false,
@@ -106,8 +125,14 @@ async function main() {
     if (driver) await driver.quit();
   }
 }
-main().catch(() => {
-  // Never print WebDriver errors which may contain the private conversation URL.
-  console.error("Read-only live QA refused or failed. Verify the dedicated profile, opt-in, FDE/geckodriver and exact authenticated conversation.");
-  process.exitCode = 1;
-});
+if (require.main === module) {
+  main().catch(() => {
+    // Never print WebDriver errors which may contain the private conversation URL.
+    console.error("Read-only live QA refused or failed. Verify the dedicated profile, opt-in, FDE/geckodriver and exact conversation.");
+    process.exitCode = 1;
+  });
+}
+
+// Imported by safety tests without launching Firefox or opening any URL.
+module.exports = { canonicalConversation, dedicatedProfile, readOnlyObservation };
+
