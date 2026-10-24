@@ -90,7 +90,7 @@ async function main(){
       'let preservedReplacement=false;',
       'try{api.handoffToEmptyComposer(guardedArgs(replaceInput));}',
       'catch(error){',
-      '  preservedReplacement=/conversation changed/.test(error.message)',
+      '  preservedReplacement=/conversation changed|File input changed during handoff/.test(error.message)',
       '   && replaceInput.files?.length===1',
       '   && replaceInput.files[0].name==="user-override.txt";',
       '}',
