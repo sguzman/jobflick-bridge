@@ -128,10 +128,17 @@ async function main(){
       'try {api.handoff(rejecting,report);}',
       'catch(error){listenerRejectionDetected=/changed during handoff/.test(error.message) && rejecting.files?.length===0;}',
       'document.documentElement.dataset.probeRejected=String(listenerRejectionDetected);',
+      'const disabled=document.getElementById("disabled-on-change");',
+      'let disabledRejection=false;',
+      'try{api.handoff(disabled,report);}',
+      'catch(error){disabledRejection=/changed during handoff/.test(error.message)',
+      ' && disabled.disabled===true && disabled.files?.length===0;}',
+      'document.documentElement.dataset.probeDisabled=String(disabledRejection);',
       'const removed=document.getElementById("removed");',
       'let removedDetected=false;',
       'try {api.handoff(removed,report);}',
-      'catch(error){removedDetected=/changed during handoff/.test(error.message) && !removed.isConnected;}',
+      'catch(error){removedDetected=/changed during handoff/.test(error.message)',
+      ' && !removed.isConnected && removed.files?.length===0;}',
       'document.documentElement.dataset.probeRemoved=String(removedDetected);',
       'let oversizeRejected=false;',
       'try {api.prepare("job_12345678","z".repeat(524289));}',
@@ -156,6 +163,7 @@ async function main(){
       '<input id="same-metadata" type="file" accept=".txt,text/plain">',
       '<input id="reject" type="file" accept=".txt,text/plain">',
       '<input id="removed" type="file" accept=".txt,text/plain">',
+      '<input id="disabled-on-change" type="file" accept=".txt,text/plain">',
       '<output id="result"></output>',
       '<script>',
       'document.querySelector("#guarded-route").addEventListener("change",()=>{',
@@ -180,6 +188,9 @@ async function main(){
       '});',
       'document.querySelector("#reject").addEventListener("change",e=>{e.target.value="";});',
       'document.querySelector("#removed").addEventListener("change",e=>{e.target.remove();});',
+      'document.querySelector("#disabled-on-change").addEventListener("change",e=>{',
+      '  e.target.disabled=true;',
+      '});',
       'document.querySelector("#upload").addEventListener("change",async e=>{',
       '  const output=document.querySelector("#result");',
       '  try {',
@@ -230,7 +241,10 @@ async function main(){
       "Adapter must refuse a page that synchronously clears the input");
     assert.equal(await driver.executeScript(
       "return document.documentElement.dataset.probeRemoved"),"true",
-      "Adapter must refuse a page that detaches the input on change");
+      "Adapter must revoke its File even if a page detaches the input on change");
+    assert.equal(await driver.executeScript(
+      "return document.documentElement.dataset.probeDisabled"),"true",
+      "Adapter must revoke its File when page disables the selected input");
     assert.equal(await driver.executeScript(
       "return document.documentElement.dataset.probeSameMetadata"),"true",
       "Adapter must reject substituted File with identical name/type/size");

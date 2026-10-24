@@ -20,6 +20,18 @@
     });
   }
 
+  // Best-effort cleanup is always limited to the *identical* File supplied
+  // by the bridge. Do not clear a File that the page or user substituted.
+  function clearOwnFile(input, file) {
+    try {
+      if (input?.files?.length === 1 && input.files[0] === file) {
+        input.value = "";
+      }
+    } catch {
+      // Preserve the original handoff failure; no retries or side effects.
+    }
+  }
+
   function handoff(input, file) {
     // Do not choose a ChatGPT selector here. A later, independently QA'd
     // composer adapter must identify one correct, connected file input.
@@ -38,25 +50,25 @@
     }
     const transfer = new DataTransfer();
     transfer.items.add(file);
-    input.files = transfer.files;
-    if (input.files?.length !== 1 ||
-        input.files[0] !== file) {
-      throw new Error("Firefox FileList handoff was not confirmed");
+    try {
+      input.files = transfer.files;
+      if (input.files?.length !== 1 ||
+          input.files[0] !== file) {
+        throw new Error("Firefox FileList handoff was not confirmed");
+      }
+      // A page listener can replace, disable or detach the input during
+      // change. Refuse that outcome and revoke our own staged selection,
+      // including if the input was detached but retained by page script.
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      if (!input.isConnected || input.disabled ||
+          input.files?.length !== 1 || input.files[0] !== file) {
+        throw new Error("File input changed during handoff; no attachment confirmed");
+      }
+      return { ok: true, domHandoffOnly: true, filename: file.name };
+    } catch (error) {
+      clearOwnFile(input, file);
+      throw error;
     }
-    // The File object identity, not just its reported name and byte size,
-    // is necessary. A page may substitute different bytes with the same
-    // metadata during its synchronous change handler.
-    input.dispatchEvent(new Event("change", { bubbles: true }));
-    // A page listener may synchronously clear the FileList, replace its
-    // contents, disable the control or detach the input. Do not report even
-    // DOM-level success after that has happened.
-    if (!input.isConnected || input.disabled ||
-        input.files?.length !== 1 ||
-        input.files[0] !== file) {
-      throw new Error("File input changed during handoff; no attachment confirmed");
-    }
-    // A page can still reject asynchronously. This is never proof of upload.
-    return { ok: true, domHandoffOnly: true, filename: file.name };
   }
 
 
@@ -116,20 +128,16 @@
       }
     };
     checkOriginAndDraft();
-    const receipt = handoff(input, file);
+    // Cleanup covers both exceptions thrown by the inner File handoff and
+    // subsequent route/epoch/composer ambiguity discovered after change.
     try {
+      const receipt = handoff(input, file);
       checkOriginAndDraft();
+      return receipt;
     } catch (error) {
-      // A synchronous page change handler may have navigated A->B->A or
-      // modified the draft. Revoke *only our own* pending input selection.
-      // Never clear a preexisting or page-replaced user File.
-      if (input.isConnected && input.files?.length === 1 &&
-          input.files[0] === file) {
-        input.value = "";
-      }
+      clearOwnFile(input, file);
       throw error;
     }
-    return receipt;
   }
 
   Object.defineProperty(globalThis, "__jobflickAttachmentAdapter", {

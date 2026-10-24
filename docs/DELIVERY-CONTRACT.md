@@ -148,3 +148,15 @@ the attachment target, the helper rejects the handoff and clears **only**
 the exact File it staged in the still-connected input. Existing user files
 in other inputs are untouched. Disposable Firefox Developer Edition covers
 the mutated-candidate case; this is not evidence of ChatGPT upload acceptance.
+
+## File cleanup on failed synchronous DOM handoff
+
+Both the direct File handoff and the guarded original-composer wrapper now
+clean up their own File selection after a failed assignment, a page-side
+disable/detach, or a changed route, epoch, draft or live candidate set.
+The cleanup matches **object identity**, not filename/size, so it never
+removes a page-replaced File. It also attempts to clear its File from a
+detached input still held in memory. Cleanup is best effort: a page may have
+started asynchronous upload before any synchronous failure becomes visible,
+so successful DOM cleanup is never an authenticated site acknowledgment or
+proof that bytes were not previously transmitted.
