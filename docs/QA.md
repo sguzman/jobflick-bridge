@@ -625,3 +625,26 @@ A manual-only GitHub Actions AMO signing workflow is prepared and refuses
 signing until all prerequisites except signing and final release evidence
 are verified. No Mozilla signing, approved persistent signed installation or
 release has occurred. See [release process](RELEASE.md).
+
+## Read-only authenticated upload discovery harness (manual opt-in, NOT accepted yet)
+
+`tests/live-composer-audit.cjs` is a narrowly scoped Firefox Developer
+Edition WebDriver discovery harness for later **local Codex-run QA**. It
+requires `JOBFLICK_LIVE_READONLY_QA=YES`, the absolute `FDE_BINARY`,
+and `CHATGPT_QA_URL` identifying one exact existing conversation; it
+uses only `$XDG_DATA_HOME/jobflick-bridge-fde-qa/profile`, which must already
+exist and be a real non-symlink directory. Selenium/geckodriver must be
+installed by the QA automation. This profile must not be open concurrently.
+Geckodriver may modify the **dedicated QA profile** during its session;
+it never targets a personal Firefox profile.
+
+The test opens only the specified conversation and reports composer/input
+**counts and boolean occupancy**, without logging draft text, file names,
+conversation IDs, screenshots, cookies or tokens. It never opens upload
+menus, constructs Files, clicks Run or Send, contacts Jobflick, or alters
+extension permissions. If login, route, or browser setup fails it refuses
+without printing WebDriver error payloads. The presence/absence of a file
+input is preliminary evidence only; upload controls may appear on demand.
+There is **no claim of authenticated acceptance until this harness has
+actually run successfully in the dedicated profile**, and its output alone
+cannot verify upload acknowledgment or Send.

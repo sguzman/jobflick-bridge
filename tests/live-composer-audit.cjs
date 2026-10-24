@@ -1,0 +1,113 @@
+"use strict";
+
+// Explicit, read-only LIVE discovery in the dedicated Firefox Developer Edition
+// QA profile. Not CI and never a substitute for authenticated upload acceptance.
+// No file assignments, clicks, transcript capture, native messages, or Send.
+const fs = require("node:fs");
+const path = require("node:path");
+
+function abort(message) {
+  throw new Error(message);
+}
+
+function canonicalConversation(value) {
+  try {
+    const url = new URL(value);
+    const parts = url.pathname.replace(/\/+$/, "").split("/").filter(Boolean);
+    const valid = x => typeof x === "string" && /^[a-zA-Z0-9_-]{4,256}$/.test(x);
+    const direct = parts.length === 2 && ["c","uc"].includes(parts[0]) && valid(parts[1]);
+    const nested = parts.length === 4 && parts[0] === "g" &&
+      valid(parts[1]) && parts[2] === "c" && valid(parts[3]);
+    if (url.protocol !== "https:" ||
+        !["chatgpt.com","chat.openai.com"].includes(url.hostname) ||
+        url.port || url.username || url.password || url.search || url.hash ||
+        !(direct || nested)) return null;
+    return url.origin + "/" + parts.join("/");
+  } catch {
+    return null;
+  }
+}
+
+function dedicatedProfile() {
+  const home = process.env.HOME;
+  if (!home || !path.isAbsolute(home) || home === "/")
+    abort("Missing safe absolute HOME");
+  const data = Object.prototype.hasOwnProperty.call(process.env,"XDG_DATA_HOME") ?
+    process.env.XDG_DATA_HOME : path.join(home, ".local", "share");
+  if (!data || !path.isAbsolute(data) || data === "/")
+    abort("Unsafe XDG_DATA_HOME");
+  const root = path.join(data, "jobflick-bridge-fde-qa");
+  const profile = path.join(root, "profile");
+  for (const target of [root, profile]) {
+    let entry;
+    try { entry = fs.lstatSync(target); } catch { abort("Dedicated QA profile missing"); }
+    if (!entry.isDirectory() || entry.isSymbolicLink())
+      abort("QA profile path must be a real directory, not a link");
+  }
+  return profile;
+}
+
+async function main() {
+  if (process.env.JOBFLICK_LIVE_READONLY_QA !== "YES")
+    abort("Explicit read-only live QA opt-in required");
+  const expected = canonicalConversation(process.env.CHATGPT_QA_URL);
+  if (!expected) abort("Use an exact canonical ChatGPT conversation URL");
+  const profile = dedicatedProfile();
+  const binary = process.env.FDE_BINARY;
+  if (!binary || !path.isAbsolute(binary) || !fs.statSync(binary).isFile())
+    abort("FDE_BINARY must identify the installed Firefox Developer Edition");
+  // Import WebDriver only after every scope and consent preflight succeeds.
+  const { Builder } = require("selenium-webdriver");
+  const firefox = require("selenium-webdriver/firefox");
+  const options = new firefox.Options().setBinary(binary)
+    .addArguments("-headless", "-profile", profile);
+  let driver = null;
+  try {
+    driver = await new Builder().forBrowser("firefox")
+      .setFirefoxOptions(options).build();
+    await driver.get(expected);
+    await driver.wait(async () => await driver.executeScript(
+      "return document.readyState==='complete' && Boolean(document.body)"
+    ), 20000);
+    const before = canonicalConversation(await driver.getCurrentUrl());
+    if (before !== expected) abort("Not authenticated in the exact requested conversation");
+    // Read only flags and counts. Neither drafts nor file names leave the page.
+    const observation = await driver.executeScript(() => {
+      const composers = [...document.querySelectorAll(
+        '#prompt-textarea[contenteditable="true"], ' +
+        '[data-testid="composer-rich-text-input"][contenteditable="true"], ' +
+        'textarea#prompt-textarea, textarea[data-testid="composer-textarea"]'
+      )];
+      const files = [...document.querySelectorAll('input[type="file"]')];
+      return {
+        composerCandidates: composers.length,
+        draftOccupied: composers.some(node =>
+          !!String(node.value ?? node.textContent ?? "").trim()),
+        fileInputCandidates: files.length,
+        fileAlreadySelected: files.some(input => (input.files?.length || 0) > 0)
+      };
+    });
+    const after = canonicalConversation(await driver.getCurrentUrl());
+    if (after !== expected) abort("Conversation changed during read-only discovery");
+    if (!Number.isInteger(observation.composerCandidates) ||
+        !Number.isInteger(observation.fileInputCandidates))
+      abort("Unrecognized browser inspection response");
+    // A hidden upload control might be created only after opening a menu.
+    // A missing input is inconclusive, not evidence that uploads are absent.
+    console.log(JSON.stringify({
+      target: "exact authenticated Firefox QA conversation",
+      mode: "read-only",
+      ...observation,
+      fileInputAbsenceInconclusive: observation.fileInputCandidates === 0,
+      attachmentConfirmed: false,
+      sendAttempted: false
+    }));
+  } finally {
+    if (driver) await driver.quit();
+  }
+}
+main().catch(() => {
+  // Never print WebDriver errors which may contain the private conversation URL.
+  console.error("Read-only live QA refused or failed. Verify the dedicated profile, opt-in, FDE/geckodriver and exact authenticated conversation.");
+  process.exitCode = 1;
+});
