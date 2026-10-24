@@ -2349,3 +2349,71 @@ test("orphaning a finished uncertain delivery keeps its ambiguity visible", asyn
     "Lost origin must not convert a possible prior send into a safe new pending delivery");
   assert.equal(app.requests.length, 0, "Orphan recovery never submits or fetches a report");
 });
+
+test("tab closure preserves uncertain future Send instead of rearming delivery",async()=>{
+  const id="job_12345678";
+  for(const stage of ["attachment_preparing","send_requested","attachment_confirmed"]){
+    const record={id,recordVersion:1,state:"succeeded",name:"Synthetic QA",
+      origin:"tab-qa",tabId:11,submittedAt:123,
+      conversation:"https://chatgpt.com/c/testing-1234",
+      orphaned:false,deliveryState:stage};
+    const app=boot(null,{storage:{jobflick_bridge_jobs_v1:{[id]:record}},
+      session:{jobflick_origin_11:"tab-qa"}});
+    app.listeners.removed(11);
+    await pause();
+    await pause();
+    const saved=app.storage.jobflick_bridge_jobs_v1[id];
+    assert.equal(saved.orphaned,true,"tab closure must revoke future delivery");
+    assert.equal(saved.deliveryState,
+      stage==="attachment_confirmed"?"manual_only":"delivery_uncertain",
+      "prior in-flight File/Send must never be silently reset to pending");
+    const inbox=await app.listeners.message({type:"jobflick:inbox"},app.popupSender);
+    assert.equal(inbox.jobs[0].deliveryState,saved.deliveryState);
+    assert.equal(app.requests.length,0,"tab closure never retries native execution");
+  }
+});
+
+test("browser restart invalidates in-flight delivery even if original session is restored",async()=>{
+  const id="job_12345678";
+  for(const stage of ["attachment_preparing","attachment_confirmed","send_requested"]){
+    const record={id,recordVersion:1,state:"succeeded",name:"QA restart",
+      origin:"tab-qa",tabId:11,submittedAt:123,
+      conversation:"https://chatgpt.com/c/testing-1234",
+      orphaned:false,deliveryState:stage};
+    const app=boot(null,{storage:{jobflick_bridge_jobs_v1:{[id]:record}},
+      session:{jobflick_origin_11:"tab-qa"}});
+    app.listeners.startup();
+    await pause();
+    await pause();
+    const saved=app.storage.jobflick_bridge_jobs_v1[id];
+    assert.equal(saved.orphaned,true,
+      "restored tab identity cannot resume a former upload/Send reservation");
+    assert.equal(saved.deliveryState,
+      stage==="attachment_confirmed"?"manual_only":"delivery_uncertain");
+    assert.equal(app.requests.length,0);
+  }
+});
+
+test("late terminal native inspect cannot turn persisted send_requested into retryable pending",async()=>{
+  const id="job_12345678";
+  const record={id,recordVersion:1,state:"running",name:"QA delayed terminal",
+    origin:"tab-qa",tabId:11,submittedAt:123,
+    conversation:"https://chatgpt.com/c/testing-1234",
+    orphaned:false,deliveryState:"send_requested"};
+  const app=boot(request=>{
+    assert.equal(request.action,"inspect");
+    return {ok:true,job:{id,state:"succeeded",origin_tab_id:"tab-qa"}};
+  },{storage:{jobflick_bridge_jobs_v1:{[id]:record}},
+    session:{jobflick_origin_11:"tab-qa"}});
+  await app.listeners.message({type:"jobflick:refresh"},app.popupSender);
+  const saved=app.storage.jobflick_bridge_jobs_v1[id];
+  assert.equal(saved.state,"succeeded");
+  assert.equal(saved.deliveryState,"send_requested");
+  assert.equal(saved.orphaned,false);
+  assert.equal(app.requests.length,1);
+  app.listeners.startup();
+  await pause();
+  await pause();
+  assert.equal(saved.orphaned,true);
+  assert.equal(saved.deliveryState,"delivery_uncertain");
+});
