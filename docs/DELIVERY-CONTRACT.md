@@ -120,3 +120,19 @@ native-identity integrity issue is never allowed to regain automatic
 attachment or Send authorization, even if a later URL/token claim matches.
 Origin loss updates the proposed `orphaned` metadata and keeps previous
 Send uncertainty visible. These are tested policy rules, not enabled Send.
+
+## Visibility of interrupted reservations
+
+The production inbox projects any persisted `attachment_preparing`,
+`attachment_confirmed`, or `send_requested` record as
+`delivery_uncertain`, without rewriting the underlying record. This avoids
+misleading users into treating a staged/possibly-dispatched delivery as an
+ordinary fresh manual result. The popup continues to offer explicit report
+recovery; it never automatically retries upload or Send.
+
+When the original tab is lost or a browser restart interrupts a staged
+File or Send, production changes the durable state itself to
+`delivery_uncertain` and permanently revokes the original automatic-delivery
+grant. A confirmed-but-not-sent attachment becomes `manual_only` when the
+origin is lost. Unit tests and the disposable Firefox process-restart QA cover
+these futures, but no production automatic attachment/Send has been enabled.

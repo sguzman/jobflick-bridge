@@ -2417,3 +2417,25 @@ test("late terminal native inspect cannot turn persisted send_requested into ret
   assert.equal(saved.orphaned,true);
   assert.equal(saved.deliveryState,"delivery_uncertain");
 });
+
+test("pending attachment or Send reservations display uncertainty, not safe-to-resend",async()=>{
+  const id="job_12345678";
+  for(const deliveryState of [
+    "attachment_preparing","attachment_confirmed","send_requested",
+    "delivery_uncertain"
+  ]){
+    const record={id,recordVersion:1,state:"succeeded",name:"Synthetic unfinished delivery",
+      tabId:11,origin:"tab-qa",submittedAt:1,
+      conversation:"https://chatgpt.com/c/testing-1234",orphaned:false,
+      deliveryState};
+    const app=boot(null,{storage:{jobflick_bridge_jobs_v1:{[id]:record}},
+      session:{jobflick_origin_11:"tab-qa"}});
+    const reply=await app.listeners.message({type:"jobflick:inbox"},app.popupSender);
+    assert.equal(reply.ok,true);
+    assert.equal(reply.jobs[0].deliveryState,"delivery_uncertain",
+      "An ongoing or unconfirmed delivery must never appear ready to retry");
+    assert.equal(record.deliveryState,deliveryState,
+      "A read-only inbox projection may not alter durable delivery metadata");
+    assert.equal(app.requests.length,0);
+  }
+});

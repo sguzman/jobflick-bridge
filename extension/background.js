@@ -16,7 +16,12 @@ const FINISHED = new Set(["succeeded", "failed", "cancelled", "timed_out", "inte
 function displayDeliveryState(record) {
   // Loss of the original tab revokes future delivery, but cannot undo
   // an already ambiguous past attempt. Keep the uncertainty visible.
-  if (FINISHED.has(record.state) && record.deliveryState === "delivery_uncertain")
+  // A delivery reservation is not proof of completion, nor permission
+  // to start over. The popup must show it as uncertain even *before* a
+  // tab closes or Firefox restarts.
+  if (FINISHED.has(record.state) &&
+      ["attachment_preparing", "attachment_confirmed",
+       "send_requested", "delivery_uncertain"].includes(record.deliveryState))
     return "delivery_uncertain";
   if (record.orphaned || record.integrityIssue ||
       record.deliveryState === "manual_only") return "manual_only";
