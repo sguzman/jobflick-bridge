@@ -1,0 +1,153 @@
+{
+  "schema": 1,
+  "policy": "This manifest prescribes future acceptance; it does not verify tasks or authorize automatic ChatGPT Send. Only evidence in progress.json changes verified counts.",
+  "execution_environment": "Isolated Firefox Developer Edition on Linux; local Codex automation may perform repeated QA after legitimate one-time account setup.",
+  "privacy": "Never commit credentials, conversation URLs, draft text, native reports or screenshots containing private material.",
+  "gates": [
+    {
+      "id": "M5-01",
+      "title": "Live upload control discovery",
+      "depends_on": [],
+      "evidence_class": "live_fde",
+      "acceptance": [
+        "Use a dedicated authenticated Firefox Developer Edition QA profile; do not modify the personal profile",
+        "Identify actual user-facing supported upload mechanism and verify changing application DOM rather than assuming static input[type=file] is sufficient",
+        "Record selector rationale and compatibility evidence without collecting conversation contents or credentials"
+      ]
+    },
+    {
+      "id": "M5-03",
+      "title": "Correct-conversation report attachment",
+      "depends_on": [
+        "M5-01"
+      ],
+      "evidence_class": "live_fde",
+      "acceptance": [
+        "Submit a single harmless Jobflick fixture and retrieve the actual bounded report with real Firefox Native Messaging",
+        "Prove same-tab exact-conversation File handoff and site acknowledgment of the exact report",
+        "Reject wrong tab, wrong report, changed upload target, and A-to-B-to-A origin reuse without transfer"
+      ]
+    },
+    {
+      "id": "M5-05",
+      "title": "Actual site attachment confirmation",
+      "depends_on": [
+        "M5-03"
+      ],
+      "evidence_class": "live_fde",
+      "acceptance": [
+        "Confirm the exact file is associated with the intended composer in authenticated Firefox; file-input changes alone do not qualify",
+        "Wait for authoritative UI acknowledgment and distinguish asynchronous rejection, delay and timeout",
+        "No automatic Send from attachment preparation or ambiguous acknowledgment"
+      ]
+    },
+    {
+      "id": "M5-06",
+      "title": "Preserve drafts and existing attachments",
+      "depends_on": [
+        "M5-01",
+        "M5-03"
+      ],
+      "evidence_class": "live_fde",
+      "acceptance": [
+        "Reject occupied draft and prior attachments without modifying either",
+        "Preserve user edits made during pending upload and navigation",
+        "Verify no clipboard alteration, pasted full logs or unattended Send"
+      ]
+    },
+    {
+      "id": "M4-06",
+      "title": "Draft-safe original-composer handoff",
+      "depends_on": [
+        "M5-05",
+        "M5-06"
+      ],
+      "evidence_class": "live_fde",
+      "acceptance": [
+        "Confirm original tab/session/conversation at each asynchronous boundary",
+        "Bind one unique composer and one file-input target; prove preserved draft and attachments",
+        "Prove orphaned or background-reloaded source falls back to manual delivery"
+      ]
+    },
+    {
+      "id": "M5-07",
+      "title": "Separate guarded Send",
+      "depends_on": [
+        "M5-05",
+        "M5-06"
+      ],
+      "evidence_class": "live_fde",
+      "acceptance": [
+        "Require per-job separate automatic Send consent and verified attachment receipt",
+        "Persist send_requested before dispatch; allow at most one action and no automatic retry on ambiguous outcome",
+        "Confirm exact-origin revalidation at Send boundary and reject duplicate callbacks"
+      ]
+    },
+    {
+      "id": "M4-07",
+      "title": "Guarded original-conversation routing",
+      "depends_on": [
+        "M4-06",
+        "M5-07"
+      ],
+      "evidence_class": "live_fde",
+      "acceptance": [
+        "Prove final Send targets only the originating conversation, not merely a matching URL or recycled tab ID",
+        "Exercise in-flight A-to-B-to-A, tab closure and Firefox restart",
+        "Preserve uncertain results in Jobflick for manual recovery without duplicate execution or Send"
+      ]
+    },
+    {
+      "id": "M5-08",
+      "title": "Live multi-conversation delivery QA",
+      "depends_on": [
+        "M4-07"
+      ],
+      "evidence_class": "live_fde",
+      "acceptance": [
+        "Run real signed-in Firefox Developer Edition acceptance matrix using harmless Jobflick jobs",
+        "Exercise 16 conversations, rerender, existing draft, wrong tab, offline native host and restart",
+        "Observe both attachment and Send receipts; record scrubbed evidence and negative cases"
+      ]
+    },
+    {
+      "id": "M7-06",
+      "title": "End-to-end authenticated Firefox acceptance",
+      "depends_on": [
+        "M5-08"
+      ],
+      "evidence_class": "live_fde",
+      "acceptance": [
+        "Complete non-synthetic Jobflick-to-ChatGPT report and guarded Send flow in dedicated authenticated Firefox QA profile",
+        "Verify no duplicate execution or delivery and isolated local profile safety",
+        "Record real acceptance evidence with no private conversation details in public repo"
+      ]
+    },
+    {
+      "id": "M7-07",
+      "title": "Signed and permitted Firefox installation",
+      "depends_on": [
+        "M7-06"
+      ],
+      "evidence_class": "signed_ci",
+      "acceptance": [
+        "Pass immutable pre-signing evidence gate with every prerequisite task verified",
+        "Obtain actual Mozilla unlisted signature via explicit gated workflow, not an unsigned archive",
+        "Install signed XPI persistently in disposable Firefox Developer Edition and verify restart, Gecko ID and integrity"
+      ]
+    },
+    {
+      "id": "M7-08",
+      "title": "Release provenance and SemVer",
+      "depends_on": [
+        "M7-07"
+      ],
+      "evidence_class": "release",
+      "acceptance": [
+        "Record accepted source SHA and signed XPI SHA-256 with changelog and SemVer",
+        "Review packaged contents for unexpected files, secrets and private text",
+        "Create tag/release only after every atomic task is verified and signing evidence is attached"
+      ]
+    }
+  ]
+}
