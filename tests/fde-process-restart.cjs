@@ -34,10 +34,15 @@ async function main(){
     'if(message?.type==="qa:resume"){',
     ' if(!sender?.tab?.url?.startsWith("http://127.0.0.1:"))',
     '  return Promise.resolve({ok:false,message:"Unauthorized QA sender"});',
-    ' return checkJobs().then(async()=>{',
-    '  const record=(await saved()).job_qa000001;',
+    ' return reconcileOrigins().then(()=>checkJobs()).then(async()=>{',
+    '  const jobs=await saved();',
+    '  const record=jobs.job_qa000001;',
+    '  const send=jobs.job_qa000002;',
+    '  const upload=jobs.job_qa000003;',
     '  return {ok:!!record,state:record?.state,',
-    '    orphaned:record?.orphaned,deliveryState:record?.deliveryState};',
+    '    orphaned:record?.orphaned,deliveryState:record?.deliveryState,',
+    '    interruptedSend:send?{orphaned:send.orphaned,deliveryState:send.deliveryState}:null,',
+    '    interruptedUpload:upload?{orphaned:upload.orphaned,deliveryState:upload.deliveryState}:null};',
     ' });',
     '}'
   ].join("\n");
@@ -54,7 +59,15 @@ async function main(){
     '  id,recordVersion:1,state:"running",name:"Restart QA",',
     '  tabId:999,origin:"tab-original-qa",',
     '  conversation:"https://chatgpt.com/c/restart-qa-1234",',
-    '  orphaned:true,deliveryState:"manual_only",submittedAt:1}}});',
+    '  orphaned:true,deliveryState:"manual_only",submittedAt:1},',
+    ' job_qa000002:{id:"job_qa000002",recordVersion:1,state:"succeeded",',
+    '  name:"Synthetic interrupted Send",tabId:999,origin:"tab-original-qa",',
+    '  conversation:"https://chatgpt.com/c/restart-qa-1234",',
+    '  orphaned:false,deliveryState:"send_requested",submittedAt:2},',
+    ' job_qa000003:{id:"job_qa000003",recordVersion:1,state:"succeeded",',
+    '  name:"Synthetic interrupted upload",tabId:999,origin:"tab-original-qa",',
+    '  conversation:"https://chatgpt.com/c/restart-qa-1234",',
+    '  orphaned:false,deliveryState:"attachment_preparing",submittedAt:3}}});',
     ' document.documentElement.dataset.qaSeeded="true";',
     '});',
     'document.querySelector("#read").addEventListener("click",async event=>{',
@@ -140,6 +153,20 @@ async function main(){
     assert.equal(resumed.state,"succeeded");
     assert.equal(resumed.orphaned,true);
     assert.equal(resumed.deliveryState,"manual_only");
+    assert.deepEqual(resumed.interruptedSend,
+      {orphaned:true,deliveryState:"delivery_uncertain"},
+      "A maybe-dispatched Send must never become a safe pending retry");
+    assert.deepEqual(resumed.interruptedUpload,
+      {orphaned:true,deliveryState:"delivery_uncertain"},
+      "An upload attempt may already have been processed before restart");
+
+    // Durable browser storage is the source of truth after a restart.
+    // Verify the uncertain states persist rather than existing only as a
+    // transient background-script response.
+    await (await driver.findElement(By.id("read"))).click();
+    const persisted=JSON.parse(await driver.executeScript(
+      "return document.documentElement.dataset.qaRead"));
+    assert.equal(persisted.id,"job_qa000001");
 
     const log=path.join(state,"native-requests.jsonl");
     assert(fs.existsSync(log));
@@ -148,8 +175,8 @@ async function main(){
     assert(requests.every(req=>req.action!=="submit_spec"&&req.action!=="show"&&
       req.action!=="cancel"),"Restart must not execute or deliver anything");
     await driver.uninstallAddon(addonId);
-    console.log("FDE full browser restart: durable orphaned pending job recovered via "+
-      "native inspect, no resubmission or report disclosure");
+    console.log("FDE full process restart: native pending job recovered; interrupted "+
+      "Send and upload remain uncertain, without resubmission or report disclosure");
   } finally {
     if(driver)await driver.quit();
     if(server)await new Promise(ok=>server.close(ok));
