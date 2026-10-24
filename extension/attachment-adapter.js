@@ -59,8 +59,55 @@
     return { ok: true, domHandoffOnly: true, filename: file.name };
   }
 
+
+  // A defensive, site-neutral precursor to a future authenticated adapter.
+  // The caller must establish the *one* current composer/input and prove that
+  // existing UI attachments are absent. No ChatGPT selector or Send is here.
+  // This is still only a DOM FileList handoff, never an upload acknowledgment.
+  function handoffToEmptyComposer(options) {
+    const {
+      composer, input, file, composerCandidates, fileInputCandidates,
+      expectedRoute, currentRoute, expectedEpoch, currentEpoch,
+      existingAttachmentsAbsent
+    } = options || {};
+    if (!Array.isArray(composerCandidates) || composerCandidates.length !== 1 ||
+        composerCandidates[0] !== composer ||
+        !Array.isArray(fileInputCandidates) || fileInputCandidates.length !== 1 ||
+        fileInputCandidates[0] !== input) {
+      throw new Error("Composer or file input is ambiguous");
+    }
+    if (!composer || !composer.isConnected ||
+        !(composer.tagName === "TEXTAREA" || composer.isContentEditable === true) ||
+        typeof currentRoute !== "function" ||
+        typeof expectedRoute !== "string" || !expectedRoute ||
+        typeof currentEpoch !== "function" ||
+        !Number.isSafeInteger(expectedEpoch) || expectedEpoch < 0 ||
+        typeof existingAttachmentsAbsent !== "function") {
+      throw new Error("Composer or conversation authorization is unavailable");
+    }
+    if (existingAttachmentsAbsent() !== true) {
+      throw new Error("Existing attachments cannot be ruled out");
+    }
+    const checkOriginAndDraft = () => {
+      // Checking an epoch as well as the route prevents a synchronous
+      // A -> B -> A transition from reusing stale authorization.
+      if (currentRoute() !== expectedRoute ||
+          currentEpoch() !== expectedEpoch) {
+        throw new Error("Original conversation changed during handoff");
+      }
+      if (!composer.isConnected ||
+          String(composer.value ?? composer.textContent ?? "").trim()) {
+        throw new Error("Existing draft must not be overwritten");
+      }
+    };
+    checkOriginAndDraft();
+    const receipt = handoff(input, file);
+    checkOriginAndDraft();
+    return receipt;
+  }
+
   Object.defineProperty(globalThis, "__jobflickAttachmentAdapter", {
-    value: Object.freeze({ prepare, handoff }),
+    value: Object.freeze({ prepare, handoff, handoffToEmptyComposer }),
     writable: false, configurable: false
   });
 })();

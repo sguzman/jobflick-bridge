@@ -67,6 +67,21 @@ Real Firefox Developer Edition now exercises a complete **local** path from a re
 
 Production does not register the QA-only report-read handler, and automatic attachment and Send remain disabled.
 
+## Empty-composer handoff primitive (inert; not live acceptance)
+
+The site-neutral `handoffToEmptyComposer` helper composes the bounded FileList
+handoff with fail-closed checks for exactly one identified editable composer,
+exactly one identified file input, an empty draft, verified absence of existing
+attachments, and both original conversation route and monotonic navigation
+epoch. It rechecks route, epoch and draft immediately after the page's synchronous
+change handler, catching even an A→B→A transition. The caller must supply
+these preflight observations from a separately verified site adapter; the
+helper neither discovers live ChatGPT controls nor sends a message.
+
+This helper is not invoked by the production UI. Its return value remains
+`domHandoffOnly`; a real site's attachment chip/server acknowledgment and
+authenticated Firefox Developer Edition QA are still necessary.
+
 ## Synthetic draft-preservation acceptance
 
 Disposable real Firefox now tests the production read-only probe against an occupied synthetic contenteditable draft and a preselected `File`. Both remain unchanged; the background receives only booleans, and the probe also recognizes an empty composer after a deliberate QA reset. Because no production upload is enabled, this is a negative-test building block rather than completion of the authenticated preserve-draft and Send gates.
