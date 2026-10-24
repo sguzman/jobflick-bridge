@@ -102,7 +102,18 @@
     };
     checkOriginAndDraft();
     const receipt = handoff(input, file);
-    checkOriginAndDraft();
+    try {
+      checkOriginAndDraft();
+    } catch (error) {
+      // A synchronous page change handler may have navigated A->B->A or
+      // modified the draft. Revoke *only our own* pending input selection.
+      // Never clear a preexisting or page-replaced user File.
+      if (input.isConnected && input.files?.length === 1 &&
+          input.files[0] === file) {
+        input.value = "";
+      }
+      throw error;
+    }
     return receipt;
   }
 

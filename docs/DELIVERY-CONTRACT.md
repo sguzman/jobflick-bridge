@@ -74,7 +74,11 @@ handoff with fail-closed checks for exactly one identified editable composer,
 exactly one identified file input, an empty draft, verified absence of existing
 attachments, and both original conversation route and monotonic navigation
 epoch. It rechecks route, epoch and draft immediately after the page's synchronous
-change handler, catching even an A→B→A transition. The caller must supply
+change handler, catching even an A→B→A transition. If authorization is lost
+during that handler, it clears the staged selection **only if it still points
+to the identical File supplied by the bridge**. A file replaced by the page
+is not cleared. This is best-effort DOM cleanup, not a guarantee that a page
+did not begin asynchronous upload before the check. The caller must supply
 these preflight observations from a separately verified site adapter; the
 helper neither discovers live ChatGPT controls nor sends a message.
 
