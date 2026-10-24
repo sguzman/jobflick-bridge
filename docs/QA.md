@@ -652,3 +652,14 @@ requested route and composer are present. A separate authenticated acceptance
 must establish the actual identity and attachment behavior. The harness
 refuses locked QA profiles and symlinked data directories; its only output
 is bounded boolean/count metadata.
+
+## Firefox runtime acceptance: inert future delivery policy
+
+The disposable `tests/fde-delivery-policy.cjs` suite loads the unmodified
+`extension/delivery-policy.js` into a synthetic localhost content script in
+actual Firefox Developer Edition. It proves disallowed pre-attachment Send
+requests, separated attachment/Send authorization, one-way `send_requested`,
+duplicate refusal, and conservative post-restart uncertainty without altering
+the page. This policy module remains unreferenced by the production manifest.
+It has no real send button, native execution, ChatGPT attachment, browser
+credentials or personal-profile dependencies.

@@ -71,6 +71,10 @@ jobs:
         env:
           FDE_BINARY: ${{ steps.fde.outputs.firefox-path }}
         run: node tests/fde-attachment.cjs
+      - name: Headless Firefox Developer Edition inert delivery policy transitions
+        env:
+          FDE_BINARY: ${{ steps.fde.outputs.firefox-path }}
+        run: node tests/fde-delivery-policy.cjs
       - name: Headless Firefox Developer Edition two-click local report export
         env:
           FDE_BINARY: ${{ steps.fde.outputs.firefox-path }}
