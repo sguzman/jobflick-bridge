@@ -68,6 +68,15 @@ jobs:
               -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30
             apt_install
           fi
+      - name: Verify deterministic unsigned Firefox packaging
+        run: |
+          fish --no-execute scripts/package-unsigned.fish
+          fish scripts/package-unsigned.fish "$RUNNER_TEMP/jobflick-unsigned-one.zip"
+          fish scripts/package-unsigned.fish "$RUNNER_TEMP/jobflick-unsigned-two.zip"
+          cmp "$RUNNER_TEMP/jobflick-unsigned-one.zip" "$RUNNER_TEMP/jobflick-unsigned-two.zip"
+          unzip -tq "$RUNNER_TEMP/jobflick-unsigned-one.zip"
+          unzip -Z1 "$RUNNER_TEMP/jobflick-unsigned-one.zip" | grep -Fx manifest.json
+          sha256sum "$RUNNER_TEMP/jobflick-unsigned-one.zip"
       - name: Fish launcher syntax and disposable native-host registration
         run: |
           fish --no-execute scripts/install-native-host.fish
