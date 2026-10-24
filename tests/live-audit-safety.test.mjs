@@ -10,6 +10,9 @@ import { createRequire } from "node:module";
 const runner = fileURLToPath(new URL("./live-composer-audit.cjs", import.meta.url));
 const { canonicalConversation, dedicatedProfile, readOnlyObservation, observeStable, structuralCandidatesUnique } =
   createRequire(import.meta.url)(runner);
+const uploadHints={generalUploadInputCandidates:0,generalUploadInputUsable:false,
+  composerAddButtonCandidates:0,composerAddButtonUsable:false};
+const withHints=flags=>({...uploadHints,...flags});
 const run = env => spawnSync(process.execPath, [runner], {
   env: { ...process.env, ...env }, encoding: "utf8", timeout: 6000
 });
@@ -83,12 +86,14 @@ test("read-only observer returns only safe metadata, not draft or filename",()=>
     if(selector==='input[type="file"]')return [
       {files:[{name:"private-file-name.txt",size:10}]}
     ];
+    if(selector==='button[data-testid="composer-plus-btn"]')return [];
     throw Error("Unexpected DOM selector");
   }};
   const data=readOnlyObservation(doc);
   assert.deepEqual(data,{
     composerCandidates:2,composerAmbiguous:true,draftOccupied:true,
-    fileInputCandidates:1,fileInputAmbiguous:false,fileAlreadySelected:true
+    fileInputCandidates:1,fileInputAmbiguous:false,fileAlreadySelected:true,
+    ...uploadHints
   });
   assert(!JSON.stringify(data).includes(secret));
   assert(!JSON.stringify(data).includes("private-file-name.txt"));
@@ -125,8 +130,8 @@ test("read-only audit refuses a locked QA profile and symlinked data directory",
 
 test("hydration requires stable visible composer, never accepts empty first snapshot",async()=>{
   const url="https://chatgpt.com/c/testing-1234";
-  const blank={composerCandidates:0,composerAmbiguous:true,draftOccupied:false,
-    fileInputCandidates:0,fileInputAmbiguous:true,fileAlreadySelected:false};
+  const blank=withHints({composerCandidates:0,composerAmbiguous:true,draftOccupied:false,
+    fileInputCandidates:0,fileInputAmbiguous:true,fileAlreadySelected:false});
   const ready={...blank,composerCandidates:1,composerAmbiguous:false};
   let n=0,time=0;
   const driver={getCurrentUrl:async()=>url,
@@ -147,7 +152,8 @@ test("persistent empty or unstable composer observation remains inconclusive",as
     const driver={getCurrentUrl:async()=>url,executeScript:async()=>{
       const count=unstable ? (++n%2) : 0;
       return {composerCandidates:count,composerAmbiguous:count!==1,draftOccupied:false,
-        fileInputCandidates:0,fileInputAmbiguous:true,fileAlreadySelected:false};
+        fileInputCandidates:0,fileInputAmbiguous:true,fileAlreadySelected:false,
+    ...uploadHints};
     }};
     const result=await observeStable(driver,url,{
       delay:async()=>{time+=400;},clock:()=>time,timeoutMs:2000
@@ -159,8 +165,8 @@ test("persistent empty or unstable composer observation remains inconclusive",as
 
 test("route changes before or after DOM sampling fail closed",async()=>{
   const url="https://chatgpt.com/c/testing-1234";
-  const reading={composerCandidates:1,composerAmbiguous:false,draftOccupied:false,
-    fileInputCandidates:1,fileInputAmbiguous:false,fileAlreadySelected:false};
+  const reading=withHints({composerCandidates:1,composerAmbiguous:false,draftOccupied:false,
+    fileInputCandidates:1,fileInputAmbiguous:false,fileAlreadySelected:false});
   for(const changedAt of [1,2]){
     let count=0;
     const driver={getCurrentUrl:async()=>++count===changedAt ?
@@ -175,6 +181,7 @@ test("untrusted read-only browser results are reduced to an allowlist",async()=>
   const driver={getCurrentUrl:async()=>url,executeScript:async()=>({
     composerCandidates:1,composerAmbiguous:false,draftOccupied:false,
     fileInputCandidates:1,fileInputAmbiguous:false,fileAlreadySelected:false,
+    ...uploadHints,
     privateDraft:"SECRET NEVER RETURNED",fileName:"SECRET USER FILE"
   })};
   let time=0;
@@ -190,21 +197,51 @@ test("invalid browser metadata is not printed or accepted",async()=>{
   const url="https://chatgpt.com/c/testing-1234";
   const driver={getCurrentUrl:async()=>url,executeScript:async()=>({
     composerCandidates:-1,composerAmbiguous:false,draftOccupied:false,
-    fileInputCandidates:1,fileInputAmbiguous:false,fileAlreadySelected:false
+    fileInputCandidates:1,fileInputAmbiguous:false,fileAlreadySelected:false,
+    ...uploadHints
   })};
   await assert.rejects(observeStable(driver,url),/Invalid read-only observation/);
 });
 
-test("inconclusive read-only discovery cannot claim structural success",()=>{
-  const observation={composerCandidates:1,composerAmbiguous:false,
-    fileInputCandidates:1,fileInputAmbiguous:false};
+test("live discovery recognizes the unique general-document input alongside image inputs",()=>{
+  const observation=withHints({composerCandidates:1,composerAmbiguous:false,
+    fileInputCandidates:3,fileInputAmbiguous:true,
+    generalUploadInputCandidates:1,generalUploadInputUsable:true,
+    composerAddButtonCandidates:1,composerAddButtonUsable:true});
   assert.equal(structuralCandidatesUnique({stable:true,observation}),true);
   for(const sample of [
     {stable:false,observation},
     {stable:true,observation:{...observation,composerCandidates:0}},
     {stable:true,observation:{...observation,composerCandidates:2}},
-    {stable:true,observation:{...observation,fileInputCandidates:0}},
-    {stable:true,observation:{...observation,fileInputCandidates:2}},
-    {stable:true,observation:{...observation,fileInputAmbiguous:true}}
+    {stable:true,observation:{...observation,generalUploadInputCandidates:0}},
+    {stable:true,observation:{...observation,generalUploadInputCandidates:2}},
+    {stable:true,observation:{...observation,generalUploadInputUsable:false}},
+    {stable:true,observation:{...observation,composerAddButtonCandidates:0}},
+    {stable:true,observation:{...observation,composerAddButtonCandidates:2}},
+    {stable:true,observation:{...observation,composerAddButtonUsable:false}}
   ]) assert.equal(structuralCandidatesUnique(sample),false);
+});
+
+test("authenticated audit read remains metadata-only with distinct camera and document inputs",()=>{
+  const secret="PRIVATE never print";
+  const doc={querySelectorAll(selector){
+    if(selector.includes("prompt-textarea"))return [{textContent:secret,value:undefined}];
+    if(selector==='input[type="file"]')return [
+      {id:"upload-files",type:"file",isConnected:true,disabled:false,
+        files:[{name:"SECRET-NAME.txt"}]},
+      {id:"upload-photos",type:"file",isConnected:true,disabled:false,files:[]},
+      {id:"upload-camera",type:"file",isConnected:true,disabled:false,files:[]}
+    ];
+    if(selector==='button[data-testid="composer-plus-btn"]')
+      return [{isConnected:true,disabled:false}];
+    throw Error("Unexpected selector");
+  }};
+  const result=readOnlyObservation(doc);
+  assert.equal(result.generalUploadInputCandidates,1);
+  assert.equal(result.composerAddButtonCandidates,1);
+  assert.equal(result.fileInputAmbiguous,true);
+  assert.equal(result.generalUploadInputUsable,true);
+  assert.equal(result.composerAddButtonUsable,true);
+  assert(!JSON.stringify(result).includes(secret));
+  assert(!JSON.stringify(result).includes("SECRET-NAME"));
 });

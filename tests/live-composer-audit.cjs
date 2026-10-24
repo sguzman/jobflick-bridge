@@ -66,6 +66,13 @@ function readOnlyObservation(doc = document) {
     'textarea#prompt-textarea, textarea[data-testid="composer-textarea"]'
   )];
   const files = [...doc.querySelectorAll('input[type="file"]')];
+  // Do not equate all file pickers with a general-document target:
+  // ChatGPT can separately expose photo and camera inputs.
+  const general = files.filter(input =>
+    input.id === "upload-files" && input.type === "file");
+  const addButtons = [...doc.querySelectorAll(
+    'button[data-testid="composer-plus-btn"]'
+  )];
   // Never return any draft, filename, element reference or page route.
   return {
     composerCandidates: composers.length,
@@ -74,7 +81,13 @@ function readOnlyObservation(doc = document) {
       !!String(node.value ?? node.textContent ?? "").trim()),
     fileInputCandidates: files.length,
     fileInputAmbiguous: files.length !== 1,
-    fileAlreadySelected: files.some(input => (input.files?.length || 0) > 0)
+    fileAlreadySelected: files.some(input => (input.files?.length || 0) > 0),
+    generalUploadInputCandidates: Math.min(2,general.length),
+    generalUploadInputUsable: general.length === 1 &&
+      general[0].isConnected === true && general[0].disabled !== true,
+    composerAddButtonCandidates: Math.min(2,addButtons.length),
+    composerAddButtonUsable: addButtons.length === 1 &&
+      addButtons[0].isConnected === true && addButtons[0].disabled !== true
   };
 }
 
@@ -99,13 +112,20 @@ async function observeStable(driver,expected,options={}) {
       throw Error("Conversation route changed during inspection");
     if(!read||!Number.isInteger(read.composerCandidates)||read.composerCandidates<0||
       !Number.isInteger(read.fileInputCandidates)||read.fileInputCandidates<0||
-      ["composerAmbiguous","draftOccupied","fileInputAmbiguous","fileAlreadySelected"]
-        .some(k=>typeof read[k]!=="boolean"))
+      ["composerAmbiguous","draftOccupied","fileInputAmbiguous","fileAlreadySelected",
+        "generalUploadInputUsable","composerAddButtonUsable"]
+        .some(k=>typeof read[k]!=="boolean") ||
+      ["generalUploadInputCandidates","composerAddButtonCandidates"]
+        .some(k=>!Number.isInteger(read[k])||read[k]<0||read[k]>2))
       throw Error("Invalid read-only observation");
     last={
       composerCandidates:read.composerCandidates,composerAmbiguous:read.composerAmbiguous,
       draftOccupied:read.draftOccupied,fileInputCandidates:read.fileInputCandidates,
-      fileInputAmbiguous:read.fileInputAmbiguous,fileAlreadySelected:read.fileAlreadySelected
+      fileInputAmbiguous:read.fileInputAmbiguous,fileAlreadySelected:read.fileAlreadySelected,
+      generalUploadInputCandidates:read.generalUploadInputCandidates,
+      generalUploadInputUsable:read.generalUploadInputUsable,
+      composerAddButtonCandidates:read.composerAddButtonCandidates,
+      composerAddButtonUsable:read.composerAddButtonUsable
     };
     const fingerprint=JSON.stringify(last);
     repeat=fingerprint===key?repeat+1:1;
@@ -123,8 +143,11 @@ async function observeStable(driver,expected,options={}) {
 function structuralCandidatesUnique(result) {
   const o=result?.observation;
   return result?.stable===true && o?.composerCandidates===1 &&
-    o?.fileInputCandidates===1 && o.composerAmbiguous===false &&
-    o.fileInputAmbiguous===false;
+    o.composerAmbiguous===false &&
+    o.generalUploadInputCandidates===1 &&
+    o.generalUploadInputUsable===true &&
+    o.composerAddButtonCandidates===1 &&
+    o.composerAddButtonUsable===true;
 }
 
 async function main() {
@@ -165,7 +188,7 @@ async function main() {
       structuralCandidatesUnique: structuralCandidatesUnique(result),
       observationSamples: result.samples,
       ...observation,
-      fileInputAbsenceInconclusive: observation.fileInputCandidates === 0,
+      fileInputAbsenceInconclusive: observation.generalUploadInputCandidates === 0,
       attachmentConfirmed: false,
       sendAttempted: false
     }));
