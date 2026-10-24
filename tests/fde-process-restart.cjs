@@ -28,23 +28,23 @@ async function main(){
     run_at:"document_idle"}];
   fs.writeFileSync(path.join(ext,"manifest.json"),JSON.stringify(manifest));
   const original=fs.readFileSync(path.join(production,"background.js"),"utf8");
-  const qaBackground=[
-    '"use strict";',
-    'browser.runtime.onMessage.addListener((message,sender)=>{',
-    ' if(!sender?.tab?.url?.startsWith("http://127.0.0.1:"))return;',
-    ' if(message?.type==="qa:resume"){',
-    '  return checkJobs().then(async()=>{',
-    '   const record=(await saved()).job_qa000001;',
-    '   return {ok:!!record,state:record?.state,',
-    '     orphaned:record?.orphaned,deliveryState:record?.deliveryState};',
-    '  });',
-    ' }',
-    '});'
+  const listenerAnchor='browser.runtime.onMessage.addListener((message, sender) => {';
+  assert(original.includes(listenerAnchor),"Production onMessage dispatcher changed");
+  const qaHook=[
+    'if(message?.type==="qa:resume"){',
+    ' if(!sender?.tab?.url?.startsWith("http://127.0.0.1:"))',
+    '  return Promise.resolve({ok:false,message:"Unauthorized QA sender"});',
+    ' return checkJobs().then(async()=>{',
+    '  const record=(await saved()).job_qa000001;',
+    '  return {ok:!!record,state:record?.state,',
+    '    orphaned:record?.orphaned,deliveryState:record?.deliveryState};',
+    ' });',
+    '}'
   ].join("\n");
-  // QA-only listener registers first so Firefox does not race the
-  // production unknown-message response. Production background and its
-  // Native Messaging authorization are otherwise unchanged.
-  fs.writeFileSync(path.join(ext,"background.js"),qaBackground+"\n"+original);
+  // Adapt only this disposable QA action into the existing dispatcher.
+  // All other production background logic is byte-identical.
+  fs.writeFileSync(path.join(ext,"background.js"),
+    original.replace(listenerAnchor,listenerAnchor+"\n"+qaHook));
   fs.writeFileSync(path.join(ext,"qa-restart.js"),[
     '"use strict";',
     'document.querySelector("#seed").addEventListener("click",async event=>{',
@@ -136,7 +136,7 @@ async function main(){
       "return !!document.documentElement.dataset.qaResumed"),12000);
     const resumed=JSON.parse(await driver.executeScript(
       "return document.documentElement.dataset.qaResumed"));
-    assert.equal(resumed.ok,true);
+    assert.equal(resumed.ok,true,JSON.stringify(resumed));
     assert.equal(resumed.state,"succeeded");
     assert.equal(resumed.orphaned,true);
     assert.equal(resumed.deliveryState,"manual_only");
