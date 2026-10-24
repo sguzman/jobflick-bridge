@@ -29,8 +29,15 @@ function displayDeliveryState(record) {
 // already have happened. Only future retries are forbidden by orphaning.
 function revokeAutomaticDelivery(record) {
   record.orphaned = true;
-  if (record.deliveryState !== "delivery_uncertain")
+  // If a File upload or Send may already have started, losing the route
+  // cannot make a fresh attempt safe. Preserve ambiguity across tab loss,
+  // restarts, or native-origin quarantine. Never silently retry.
+  if (["attachment_preparing", "send_requested", "delivery_uncertain"]
+      .includes(record.deliveryState)) {
+    record.deliveryState = "delivery_uncertain";
+  } else if (record.deliveryState !== "delivery_verified") {
     record.deliveryState = "manual_only";
+  }
 }
 
 const SITES = new Set(["chatgpt.com", "chat.openai.com"]);
@@ -204,6 +211,14 @@ async function reconcileOrigins() {
   const orphanIds = [];
   for (const [id, record] of records) {
     if (!matchedRecord(id, record) || record.orphaned) continue;
+    // An event-page/browser restart breaks in-flight page-action
+    // continuity even when Firefox restored the identical tab and token.
+    // Do not infer that a formerly staged file or Send is still actionable.
+    if (["attachment_preparing", "attachment_confirmed", "send_requested"]
+        .includes(record.deliveryState)) {
+      orphanIds.push([id, recordIdentity(record)]);
+      continue;
+    }
     try {
       const tab = await trustedTab(record.tabId, record.conversation, record.origin);
       if (!tab) orphanIds.push([id, recordIdentity(record)]);
@@ -307,8 +322,12 @@ async function checkJobs(onlyId = null) {
             if (!sameIdentity(id, jobs[id], recordIdentity(record)) ||
                 jobs[id].integrityIssue) return;
             jobs[id].state = state;
+            // The native job reaching terminal is *not* permission to
+            // replace a durable upload/Send reservation with a fresh
+            // pending-delivery state. That could enable duplicate Send.
             if (FINISHED.has(state) && !jobs[id].orphaned &&
-                !["manual_only", "delivery_uncertain"].includes(jobs[id].deliveryState)) {
+                (!jobs[id].deliveryState ||
+                 jobs[id].deliveryState === "awaiting_completion")) {
               jobs[id].deliveryState = "report_pending_manual_delivery";
             }
             jobs[id].name = name;
