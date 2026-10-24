@@ -52,7 +52,9 @@ async function main(){
       'const guardedArgs=(input,chosenComposer=composer)=>({',
       '  composer:chosenComposer,input,file:report,composerCandidates:[chosenComposer],',
       '  fileInputCandidates:[input],expectedRoute:currentRoute(),currentRoute,',
-      '  expectedEpoch:0,currentEpoch,existingAttachmentsAbsent:()=>true',
+      '  expectedEpoch:0,currentEpoch,existingAttachmentsAbsent:()=>true,',
+      '  currentComposerCandidates:()=>[chosenComposer],',
+      '  currentFileInputCandidates:()=>[input]',
       '});',
       'const verified=api.handoffToEmptyComposer(guardedArgs(guarded));',
       'document.documentElement.dataset.probeGuarded=String(verified.domHandoffOnly',
@@ -95,6 +97,14 @@ async function main(){
       '   && replaceInput.files[0].name==="user-override.txt";',
       '}',
       'document.documentElement.dataset.probeReplacement=String(preservedReplacement);',
+      'const mutating=document.getElementById("guarded-mutating");',
+      'let newInputDenied=false;',
+      'try{api.handoffToEmptyComposer({...guardedArgs(mutating),',
+      '  currentFileInputCandidates:()=>document.documentElement.dataset.qaExtraInput==="1"',
+      '    ? [mutating,ambiguous] : [mutating]});}',
+      'catch(error){newInputDenied=/Composer or file input changed/.test(error.message)',
+      ' && mutating.files?.length===0 && ambiguous.files?.length===0;}',
+      'document.documentElement.dataset.probeInputMutation=String(newInputDenied);',
       'const occupied=document.getElementById("occupied");',
       'const selected=new DataTransfer();',
       'selected.items.add(new File(["user draft"],"user-draft.txt",{type:"text/plain"}));',
@@ -140,6 +150,7 @@ async function main(){
       '<input id="guarded-attached" type="file">',
       '<input id="guarded-route" type="file">',
       '<input id="guarded-replacement" type="file">',
+      '<input id="guarded-mutating" type="file">',
       '<input id="occupied" type="file" accept=".txt,text/plain">',
       '<input id="same-metadata" type="file" accept=".txt,text/plain">',
       '<input id="reject" type="file" accept=".txt,text/plain">',
@@ -162,6 +173,9 @@ async function main(){
       ' const replacement=new DataTransfer();',
       ' replacement.items.add(new File(["X".repeat(original.size)],original.name,{type:original.type}));',
       ' e.target.files=replacement.files;',
+      '});',
+      'document.querySelector("#guarded-mutating").addEventListener("change",()=>{',
+      ' document.documentElement.dataset.qaExtraInput="1";',
       '});',
       'document.querySelector("#reject").addEventListener("change",e=>{e.target.value="";});',
       'document.querySelector("#removed").addEventListener("change",e=>{e.target.remove();});',
@@ -227,7 +241,8 @@ async function main(){
       ["probeAttachments","unverified preexisting attachments rejected"],
       ["probeRoute","stale route rejected before a File handoff"],
       ["probeEpoch","A-B-A navigation epoch change removes our staged File"],
-      ["probeReplacement","page-replaced File remains untouched on navigation"]
+      ["probeReplacement","page-replaced File remains untouched on navigation"],
+      ["probeInputMutation","new input after change revokes our File without touching other inputs"]
     ]) {
       assert.equal(await driver.executeScript(
         "return document.documentElement.dataset."+key),"true",meaning);

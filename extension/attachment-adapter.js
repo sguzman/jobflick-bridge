@@ -67,6 +67,7 @@
   function handoffToEmptyComposer(options) {
     const {
       composer, input, file, composerCandidates, fileInputCandidates,
+      currentComposerCandidates, currentFileInputCandidates,
       expectedRoute, currentRoute, expectedEpoch, currentEpoch,
       existingAttachmentsAbsent
     } = options || {};
@@ -82,7 +83,9 @@
         typeof expectedRoute !== "string" || !expectedRoute ||
         typeof currentEpoch !== "function" ||
         !Number.isSafeInteger(expectedEpoch) || expectedEpoch < 0 ||
-        typeof existingAttachmentsAbsent !== "function") {
+        typeof existingAttachmentsAbsent !== "function" ||
+        typeof currentComposerCandidates !== "function" ||
+        typeof currentFileInputCandidates !== "function") {
       throw new Error("Composer or conversation authorization is unavailable");
     }
     if (existingAttachmentsAbsent() !== true) {
@@ -98,6 +101,18 @@
       if (!composer.isConnected ||
           String(composer.value ?? composer.textContent ?? "").trim()) {
         throw new Error("Existing draft must not be overwritten");
+      }
+      // An attachment handler may rerender the editor, detach its input, or
+      // expose another upload control synchronously. The *original* arrays
+      // are not enough: refresh the live candidates on both sides of change.
+      // A FileList handoff is never a server upload acknowledgment.
+      const composersNow = currentComposerCandidates();
+      const inputsNow = currentFileInputCandidates();
+      if (!Array.isArray(composersNow) || composersNow.length !== 1 ||
+          composersNow[0] !== composer ||
+          !Array.isArray(inputsNow) || inputsNow.length !== 1 ||
+          inputsNow[0] !== input || !input.isConnected || input.disabled) {
+        throw new Error("Composer or file input changed during handoff");
       }
     };
     checkOriginAndDraft();

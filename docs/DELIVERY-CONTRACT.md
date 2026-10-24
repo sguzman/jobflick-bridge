@@ -136,3 +136,15 @@ File or Send, production changes the durable state itself to
 grant. A confirmed-but-not-sent attachment becomes `manual_only` when the
 origin is lost. Unit tests and the disposable Firefox process-restart QA cover
 these futures, but no production automatic attachment/Send has been enabled.
+
+## Live-candidate revalidation after File handoff
+
+The inert `handoffToEmptyComposer` helper now requires trusted callbacks
+`currentComposerCandidates()` and `currentFileInputCandidates()` in addition
+to its original unique composer/input lists. It checks the freshly resolved
+unique identity immediately before and after the synchronous File change
+event. If the page adds another input, replaces the composer or changes
+the attachment target, the helper rejects the handoff and clears **only**
+the exact File it staged in the still-connected input. Existing user files
+in other inputs are untouched. Disposable Firefox Developer Edition covers
+the mutated-candidate case; this is not evidence of ChatGPT upload acceptance.
