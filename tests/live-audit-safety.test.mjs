@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 
 const runner = fileURLToPath(new URL("./live-composer-audit.cjs", import.meta.url));
-const { canonicalConversation, dedicatedProfile, readOnlyObservation } =
+const { canonicalConversation, dedicatedProfile, readOnlyObservation, observeStable } =
   createRequire(import.meta.url)(runner);
 const run = env => spawnSync(process.execPath, [runner], {
   env: { ...process.env, ...env }, encoding: "utf8", timeout: 6000
@@ -121,4 +121,76 @@ test("read-only audit refuses a locked QA profile and symlinked data directory",
       else process.env.XDG_DATA_HOME=previousXDG;
     }
   } finally { rmSync(dir,{recursive:true,force:true}); }
+});
+
+test("hydration requires stable visible composer, never accepts empty first snapshot",async()=>{
+  const url="https://chatgpt.com/c/testing-1234";
+  const blank={composerCandidates:0,composerAmbiguous:true,draftOccupied:false,
+    fileInputCandidates:0,fileInputAmbiguous:true,fileAlreadySelected:false};
+  const ready={...blank,composerCandidates:1,composerAmbiguous:false};
+  let n=0,time=0;
+  const driver={getCurrentUrl:async()=>url,
+    executeScript:async()=>++n<3?blank:ready};
+  const result=await observeStable(driver,url,{
+    delay:async()=>{time+=400;},clock:()=>time,timeoutMs:4000
+  });
+  assert.equal(result.stable,true);
+  assert.equal(result.samples,5);
+  assert.equal(result.observation.composerCandidates,1);
+  assert.equal(result.observation.fileInputCandidates,0);
+});
+
+test("persistent empty or unstable composer observation remains inconclusive",async()=>{
+  const url="https://chatgpt.com/c/testing-1234";
+  for(const unstable of [false,true]){
+    let n=0,time=0;
+    const driver={getCurrentUrl:async()=>url,executeScript:async()=>{
+      const count=unstable ? (++n%2) : 0;
+      return {composerCandidates:count,composerAmbiguous:count!==1,draftOccupied:false,
+        fileInputCandidates:0,fileInputAmbiguous:true,fileAlreadySelected:false};
+    }};
+    const result=await observeStable(driver,url,{
+      delay:async()=>{time+=400;},clock:()=>time,timeoutMs:2000
+    });
+    assert.equal(result.stable,false);
+    assert(result.samples>=5);
+  }
+});
+
+test("route changes before or after DOM sampling fail closed",async()=>{
+  const url="https://chatgpt.com/c/testing-1234";
+  const reading={composerCandidates:1,composerAmbiguous:false,draftOccupied:false,
+    fileInputCandidates:1,fileInputAmbiguous:false,fileAlreadySelected:false};
+  for(const changedAt of [1,2]){
+    let count=0;
+    const driver={getCurrentUrl:async()=>++count===changedAt ?
+      "https://chatgpt.com/c/different-1234":url,
+      executeScript:async()=>reading};
+    await assert.rejects(observeStable(driver,url),/route changed/i);
+  }
+});
+
+test("untrusted read-only browser results are reduced to an allowlist",async()=>{
+  const url="https://chatgpt.com/c/testing-1234";
+  const driver={getCurrentUrl:async()=>url,executeScript:async()=>({
+    composerCandidates:1,composerAmbiguous:false,draftOccupied:false,
+    fileInputCandidates:1,fileInputAmbiguous:false,fileAlreadySelected:false,
+    privateDraft:"SECRET NEVER RETURNED",fileName:"SECRET USER FILE"
+  })};
+  let time=0;
+  const result=await observeStable(driver,url,{
+    delay:async()=>{time++;},clock:()=>time,timeoutMs:100
+  });
+  assert.equal(result.stable,true);
+  assert.equal(result.observation.privateDraft,undefined);
+  assert(!JSON.stringify(result).includes("SECRET"));
+});
+
+test("invalid browser metadata is not printed or accepted",async()=>{
+  const url="https://chatgpt.com/c/testing-1234";
+  const driver={getCurrentUrl:async()=>url,executeScript:async()=>({
+    composerCandidates:-1,composerAmbiguous:false,draftOccupied:false,
+    fileInputCandidates:1,fileInputAmbiguous:false,fileAlreadySelected:false
+  })};
+  await assert.rejects(observeStable(driver,url),/Invalid read-only observation/);
 });
