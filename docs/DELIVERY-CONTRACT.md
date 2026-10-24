@@ -24,7 +24,7 @@
 | `delivery_uncertain` | Upload or Send outcome not authoritative | Show manual follow-up; never silently retry |
 | `manual_only` | Origin/draft/attachment gate failed or provenance was lost | Preserve native report and local export; no auto-rebind |
 
-These future states are reserved concepts, not claims about today's code. Only existing current states appear in the active extension.
+The automated attachment and Send states are reserved concepts, not claims about today's code. The production inbox now recognizes a persisted `delivery_uncertain` outcome and protects it across orphaning/reconciliation, but it does not initiate a ChatGPT upload or Send. This is state-model acceptance, not evidence of site delivery.
 
 ## 📤 Attachment acceptance
 

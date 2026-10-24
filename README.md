@@ -2,7 +2,7 @@
 
 **Firefox Developer Edition-first WebExtension** connecting ChatGPT-authored Execarium jobs to the user's local Jobflick executor. The repository is independent; [the legacy Script-Monkey extension](https://github.com/sguzman/script-monkey/tree/main/extensions/jobflick-bridge) is reference material, not the implementation baseline.
 
-**Status:** **80% verified (51/63 atomic tasks)**. Disposable headless Firefox Developer Edition validates and queues through the actual Jobflick daemon, executes one hardcoded harmless Fish fixture, and displays successful terminal status. Firefox Run/rerender, native transport, explicit execution tracking and manual recovery have passed their isolated acceptance gates. Authenticated ChatGPT attachment, guarded Send, authenticated privileged-popup integration and release signing remain unverified. **Safety:** test first in a dedicated Firefox Developer Edition QA profile with harmless jobs. A browser profile does **not** sandbox commands run by Jobflick.
+**Status:** **82% verified (52/63 atomic tasks)**. Disposable headless Firefox Developer Edition validates and queues through the actual Jobflick daemon, executes one hardcoded harmless Fish fixture, and displays successful terminal status. Firefox Run/rerender, native transport, explicit execution tracking and manual recovery have passed their isolated acceptance gates. Authenticated ChatGPT attachment, guarded Send, authenticated privileged-popup integration and release signing remain unverified. **Safety:** test first in a dedicated Firefox Developer Edition QA profile with harmless jobs. A browser profile does **not** sandbox commands run by Jobflick.
 
 ## Intended flow
 
@@ -152,9 +152,9 @@ acceptance: the unchanged production popup HTML/JS/CSS displayed and searched
 Open chat action requested only the canonical stored conversation; two
 separate Save/Download gestures wrote a complete bounded report File; and
 two separate Forget gestures removed only browser tracking metadata.
-These popup checks ran on localhost with a synthetic runtime, **not** in a
-privileged `moz-extension:` toolbar popup or an authenticated ChatGPT
-session. [Firefox CI evidence](https://github.com/sguzman/jobflick-bridge/actions/runs/40041874551).
+These **earlier** popup checks ran on localhost with a synthetic runtime;
+the newer privileged `moz-extension:` toolbar-popup acceptance is documented
+below. Neither test accesses an authenticated ChatGPT session. [Firefox CI evidence](https://github.com/sguzman/jobflick-bridge/actions/runs/40041874551).
 
 The authoritative work ledger is [progress.json](progress.json); live
 ChatGPT attachment acknowledgment, draft-safe Send and release signing remain
@@ -181,3 +181,13 @@ unknown/untrusted persisted delivery labels never become a claim of a verified
 ChatGPT Send. The current production path cannot create an automatic upload
 or Send attempt, so this supports future outcome reconciliation rather than
 claiming an already completed delivery.
+
+## ♻️ Verified delivery-state distinctions
+
+[Actual Firefox Developer Edition popup and Node acceptance](https://github.com/sguzman/jobflick-bridge/actions/runs/40046179009)
+now distinguishes completed reports awaiting manual delivery from records whose
+delivery outcome is uncertain, including after the original tab is orphaned.
+The popup explicitly warns against automatic retries and never interprets an
+unknown saved delivery status as a verified ChatGPT Send. This closes the
+*state-model and presentation* acceptance task M6-03 only. Real authenticated
+upload, actual Send, and confirmation of delivery remain disabled and open.

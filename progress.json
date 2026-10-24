@@ -68,7 +68,8 @@
       "verified": 7,
       "total": 7,
       "percent": 100,
-      "implemented": 0
+      "implemented": 0,
+      "planned": 0
     },
     {
       "id": "M1",
@@ -219,7 +220,8 @@
       "verified": 7,
       "total": 7,
       "percent": 100,
-      "implemented": 0
+      "implemented": 0,
+      "planned": 0
     },
     {
       "id": "M3",
@@ -305,7 +307,8 @@
       "verified": 9,
       "total": 9,
       "percent": 100,
-      "implemented": 0
+      "implemented": 0,
+      "planned": 0
     },
     {
       "id": "M4",
@@ -356,8 +359,10 @@
         {
           "id": "M4-06",
           "title": "Draft-safe composer",
-          "status": "planned",
-          "evidence": []
+          "status": "implemented",
+          "evidence": [
+            "A site-neutral, inert FileList composer handoff now requires one identified composer/input, empty draft, separately verified absence of existing attachments, and stable original route plus monotonic navigation epoch before/after the change event. Disposable real Firefox Developer Edition synthetic File acceptance passed https://github.com/sguzman/jobflick-bridge/actions/runs/40045817018. Not wired to production ChatGPT attachment, and no authenticated live-site composer preservation yet."
+          ]
         },
         {
           "id": "M4-07",
@@ -380,7 +385,8 @@
       "verified": 6,
       "total": 8,
       "percent": 75,
-      "implemented": 0
+      "implemented": 1,
+      "planned": 1
     },
     {
       "id": "M5",
@@ -488,9 +494,10 @@
         {
           "id": "M6-03",
           "title": "Delivery states",
-          "status": "implemented",
+          "status": "verified",
           "evidence": [
-            "Explicit waiting/manual-ready/manual-only browser states; confirmed ChatGPT delivered state deliberately unavailable. Evidence: https://github.com/sguzman/jobflick-bridge/actions/runs/40001190037"
+            "Explicit waiting/manual-ready/manual-only browser states; confirmed ChatGPT delivered state deliberately unavailable. Evidence: https://github.com/sguzman/jobflick-bridge/actions/runs/40001190037",
+            "The production inbox explicitly distinguishes queued/running native state, finished report_pending_manual_delivery, manual_only, and persisted delivery_uncertain; unsupported/forged delivery labels do not claim success. Actual Firefox Developer Edition privileged moz-extension:// popup displays uncertainty with no automatic retries and keeps manual report export available; native terminal inspect and tab-loss/origin revocation preserve the uncertainty rather than reclassifying it as safe to retry. Node regressions, Firefox full suite, and isolated real pinned Jobflick passed https://github.com/sguzman/jobflick-bridge/actions/runs/40046179009 https://github.com/sguzman/jobflick-bridge/actions/runs/40046179004. No production Send attempt exists yet; this verifies the state model/presentation, not an authenticated ChatGPT delivery."
           ]
         },
         {
@@ -537,10 +544,11 @@
           ]
         }
       ],
-      "verified": 6,
+      "verified": 7,
       "total": 7,
-      "percent": 85,
-      "implemented": 1
+      "percent": 100,
+      "implemented": 0,
+      "planned": 0
     },
     {
       "id": "M7",
@@ -639,10 +647,10 @@
   },
   "overall": {
     "total": 63,
-    "verified": 51,
+    "verified": 52,
     "implemented": 5,
-    "planned": 7,
-    "percent": 80,
+    "planned": 6,
+    "percent": 82,
     "basis": "Only verified atomic tasks count toward percentage"
   }
 }
