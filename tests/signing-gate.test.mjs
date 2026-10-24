@@ -64,3 +64,22 @@ test("manifest/package versions and stable native host Gecko ID are required", (
   bad.browser_specific_settings.gecko.id = "another-bridge@invalid.example";
   assert.equal(signingPrerequisites(p, bad, pkg).ok, false);
 });
+
+test("AMO workflow requires signed XPI persistent Firefox acceptance before artifact retention", () => {
+  const workflow = readFileSync(new URL("../.github/workflows/amo-sign.yml", import.meta.url),"utf8");
+  const gate = workflow.indexOf("node .github/verify-signing-gate.mjs");
+  const sign = workflow.indexOf("web-ext@10.8.0 sign");
+  const acceptance = workflow.indexOf("node tests/fde-signed.cjs");
+  const preserve = workflow.indexOf("name: Preserve signed XPI as a review artifact only");
+  assert(gate >= 0 && sign > gate && acceptance > sign && preserve > acceptance);
+  assert(workflow.includes("FDE_SIGNED_XPI"));
+  assert(workflow.includes("latest-devedition"));
+  assert(workflow.includes("workflow_dispatch:"));
+  assert(!workflow.includes("secrets.GITHUB_TOKEN"));
+  const script=readFileSync(new URL("./fde-signed.cjs",import.meta.url),"utf8");
+  assert(script.includes('driver.installAddon(archive,false)'),
+    "Signed package must use persistent install, not temporary add-on");
+  assert(script.includes("await driver.quit();driver=null;"));
+  assert(script.includes("await driver.uninstallAddon(id)"));
+  assert(!script.includes("sendNativeMessage"));
+});

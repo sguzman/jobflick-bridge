@@ -54,6 +54,30 @@ jobs:
           unzip -Z1 "${archives[0]}" | grep -Fx manifest.json
           unzip -Z1 "${archives[0]}" | grep -E "^META-INF/[^/]+"
           sha256sum "${archives[0]}"
+      - id: fde
+        name: Set up disposable Firefox Developer Edition for signed XPI
+        uses: browser-actions/setup-firefox@v1
+        with:
+          firefox-version: latest-devedition
+      - uses: browser-actions/setup-geckodriver@5ef1526ed36211ab6cb531ec1cfb11f924ca2dee
+        with:
+          token: ${{ github.token }}
+      - name: Install temporary CI-only WebDriver tooling
+        run: npm install --no-save --no-package-lock selenium-webdriver@4.35.0
+      - name: Verify signed XPI survives Firefox process restart
+        env:
+          FDE_BINARY: ${{ steps.fde.outputs.firefox-path }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          archives=(dist/signed/*.xpi)
+          if [[ ${#archives[@]} != 1 ]]; then
+            echo "Expected exactly one Mozilla-signed XPI" >&2
+            exit 1
+          fi
+          export FDE_SIGNED_XPI
+          FDE_SIGNED_XPI="$(realpath -e "${archives[0]}")"
+          node tests/fde-signed.cjs
       - name: Preserve signed XPI as a review artifact only
         uses: actions/upload-artifact@v4
         with:

@@ -64,3 +64,20 @@ contain a valid root manifest and pass archive integrity verification. The
 exact archive is then temporarily installed and removed in disposable Firefox
 Developer Edition under the production Gecko ID; unauthorized hosts receive
 no injected Run control. These tests do **not** constitute Mozilla signing.
+
+## Signed-XPI persistent install acceptance (future gated workflow)
+
+After an authorized unlisted AMO signing request, the gated workflow verifies
+the signed archive structure, then launches **disposable Firefox Developer
+Edition** with a private CI profile. `tests/fde-signed.cjs` requests
+`installAddon(xpi, false)` (persistent installation), confirms the unchanged
+production Gecko ID, refuses Run controls on a foreign page, shuts the browser
+down, restarts that **same disposable profile**, and uninstalls the add-on. If
+any assertion fails the workflow stops before preserving a release-review
+artifact. No native host is installed and no personal browser is opened.
+
+This acceptance step is prepared but **not yet executed**: the workflow itself
+remains blocked until the authenticated ChatGPT attachment and guarded Send
+milestones have passed and Mozilla signing credentials are available. Neither
+a successful unsigned temporary add-on nor source ZIP inspection substitutes
+for this signed-persistent-install requirement.
