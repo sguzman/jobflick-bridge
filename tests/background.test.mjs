@@ -2324,3 +2324,28 @@ test("unknown saved delivery claims fail closed in popup projection", async () =
   assert.equal(result.jobs[0].deliveryState, "report_pending_manual_delivery",
     "Unrecognized persisted status must not claim confirmed ChatGPT delivery");
 });
+
+test("orphaning a finished uncertain delivery keeps its ambiguity visible", async () => {
+  const id = "job_12345678";
+  const record = {
+    id, recordVersion: 1, state: "succeeded", name: "Past unknown Send",
+    origin: "tab-qa", tabId: 11, submittedAt: 1,
+    conversation: "https://chatgpt.com/c/testing-1234",
+    orphaned: false, deliveryState: "delivery_uncertain"
+  };
+  const app = boot(null, {
+    storage: { jobflick_bridge_jobs_v1: { [id]: record } },
+    // A full Firefox restart loses the old session token.
+    session: {}
+  });
+  const refusal = await app.listeners.message({
+    type: "jobflick:preflight", id
+  }, app.popupSender);
+  assert.equal(refusal.ok, false);
+  assert.equal(app.storage.jobflick_bridge_jobs_v1[id].orphaned, true);
+  assert.equal(app.storage.jobflick_bridge_jobs_v1[id].deliveryState, "delivery_uncertain");
+  const inbox = await app.listeners.message({ type: "jobflick:inbox" }, app.popupSender);
+  assert.equal(inbox.jobs[0].deliveryState, "delivery_uncertain",
+    "Lost origin must not convert a possible prior send into a safe new pending delivery");
+  assert.equal(app.requests.length, 0, "Orphan recovery never submits or fetches a report");
+});

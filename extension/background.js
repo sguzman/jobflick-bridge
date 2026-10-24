@@ -14,12 +14,23 @@ const FINISHED = new Set(["succeeded", "failed", "cancelled", "timed_out", "inte
 // A stored uncertain *delivery* outcome is distinct from a terminal job that
 // merely awaits manual report export. Production has no automatic Send today.
 function displayDeliveryState(record) {
-  if (record.orphaned || record.integrityIssue ||
-      record.deliveryState === "manual_only") return "manual_only";
+  // Loss of the original tab revokes future delivery, but cannot undo
+  // an already ambiguous past attempt. Keep the uncertainty visible.
   if (FINISHED.has(record.state) && record.deliveryState === "delivery_uncertain")
     return "delivery_uncertain";
+  if (record.orphaned || record.integrityIssue ||
+      record.deliveryState === "manual_only") return "manual_only";
   return FINISHED.has(record.state) ?
     "report_pending_manual_delivery" : "awaiting_completion";
+}
+
+
+// Revoking origin identity must never erase evidence that a prior Send may
+// already have happened. Only future retries are forbidden by orphaning.
+function revokeAutomaticDelivery(record) {
+  record.orphaned = true;
+  if (record.deliveryState !== "delivery_uncertain")
+    record.deliveryState = "manual_only";
 }
 
 const SITES = new Set(["chatgpt.com", "chat.openai.com"]);
@@ -207,8 +218,7 @@ async function reconcileOrigins() {
         // ID can have been replaced or quarantined since the tab probe.
         if (sameIdentity(id, jobs[id], identity) &&
             !jobs[id].orphaned && !jobs[id].integrityIssue) {
-          jobs[id].orphaned = true;
-          jobs[id].deliveryState = "manual_only";
+          revokeAutomaticDelivery(jobs[id]);
         }
       }
     });
@@ -271,8 +281,7 @@ async function checkJobs(onlyId = null) {
           await mutate(jobs => {
             if (sameIdentity(id, jobs[id], recordIdentity(record)) &&
                 !jobs[id].integrityIssue) {
-              jobs[id].orphaned = true;
-              jobs[id].deliveryState = "manual_only";
+              revokeAutomaticDelivery(jobs[id]);
               jobs[id].integrityIssue = wrongId
                 ? "native_job_id_mismatch" : "native_origin_mismatch";
             }
@@ -322,8 +331,7 @@ async function checkJobs(onlyId = null) {
             await mutate(jobs => {
               if (sameIdentity(id, jobs[id], recordIdentity(record)) &&
                   !jobs[id].orphaned) {
-                jobs[id].orphaned = true;
-                jobs[id].deliveryState = "manual_only";
+                revokeAutomaticDelivery(jobs[id]);
               }
             });
           }
@@ -528,8 +536,7 @@ async function onPopupMessage(message, sender) {
       if (!tab) {
         await mutate(jobs => {
           if (sameIdentity(id, jobs[id], identity)) {
-            jobs[id].orphaned = true;
-            jobs[id].deliveryState = "manual_only";
+            revokeAutomaticDelivery(jobs[id]);
           }
         });
         return { ok: false, message: "Original tab changed or closed; use manual report delivery" };
@@ -548,8 +555,7 @@ async function onPopupMessage(message, sender) {
       if (!await trustedTab(record.tabId, record.conversation, record.origin)) {
         await mutate(jobs => {
           if (sameIdentity(id, jobs[id], identity)) {
-            jobs[id].orphaned = true;
-            jobs[id].deliveryState = "manual_only";
+            revokeAutomaticDelivery(jobs[id]);
           }
         });
         return { ok: false, message: "Original chat navigated during inspection; use manual report delivery" };
@@ -751,8 +757,7 @@ async function onPopupMessage(message, sender) {
       if (wrongJobId || wrongOrigin) {
         await mutate(jobs => {
           if (!sameIdentity(id, jobs[id], identity)) return;
-          jobs[id].orphaned = true;
-          jobs[id].deliveryState = "manual_only";
+          revokeAutomaticDelivery(jobs[id]);
           jobs[id].integrityIssue = wrongJobId
             ? "native_job_id_mismatch" : "native_origin_mismatch";
         });
@@ -806,8 +811,7 @@ async function reconcileTabRoute(tabId, nextUrl) {
         if (!matchedRecord(id, record) ||
             record.tabId !== tabId || record.orphaned) continue;
         if (record.conversation !== next) {
-          record.orphaned = true;
-          record.deliveryState = "manual_only";
+          revokeAutomaticDelivery(record);
         }
       }
     });
@@ -870,8 +874,7 @@ browser.tabs.onRemoved.addListener(id => {
     await mutate(jobs => {
       for (const [jobId, record] of Object.entries(jobs)) {
         if (matchedRecord(jobId, record) && record.tabId === id) {
-          record.orphaned = true;
-          record.deliveryState = "manual_only";
+          revokeAutomaticDelivery(record);
         }
       }
     });
