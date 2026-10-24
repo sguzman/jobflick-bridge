@@ -565,11 +565,12 @@
         {
           "id": "M7-02",
           "title": "Scale/idle QA",
-          "status": "implemented",
+          "status": "verified",
           "evidence": [
             "Bounded Node tests prove no storage writes on empty/unknown inbox, unrelated tabs, duplicate routes and stable long-running native state; Firefox CI also tests 8k blocks, 16 tabs, 40-job burst and 325-job paging. Long-duration idle profiling on EndeavourOS remains outstanding. https://github.com/sguzman/jobflick-bridge/actions/runs/40028499706",
             "A 140-job Node fixture verifies live content-script job/status map bounded at 128, with old status controls evicted and completed statuses released; Firefox CI green. This is not long-duration EndeavourOS/Hyprland memory profiling: https://github.com/sguzman/jobflick-bridge/actions/runs/40033650901.",
-            "Fast status checks consume bounded attempts even during persistent browser storage exceptions and stop early for integrity-quarantined jobs. No perpetual 1.2-second timer loop in Node tests and passing FDE CI: https://github.com/sguzman/jobflick-bridge/actions/runs/40036931931. Long-duration desktop power profiling outstanding."
+            "Fast status checks consume bounded attempts even during persistent browser storage exceptions and stop early for integrity-quarantined jobs. No perpetual 1.2-second timer loop in Node tests and passing FDE CI: https://github.com/sguzman/jobflick-bridge/actions/runs/40036931931. Long-duration desktop power profiling outstanding.",
+            "Production content script in actual disposable headless Firefox Developer Edition accepted an 8,000-block dense chat, 200 unrelated DOM rerenders and 16 other Firefox tabs with no implicit validation or native submit. With all tabs present, six real 10-second idle checkpoints reported zero validation/submit calls. A 40-element pointer burst admitted only the bounded 16 candidates, with no further calls after settling. CI passed: https://github.com/sguzman/jobflick-bridge/actions/runs/40043989474. Separate Node stress tests bound live status refs at 128, fast polling at six attempts and saved inbox at 40 records/page. This is browser operation/idle-traffic acceptance, NOT direct EndeavourOS energy/wattage or long-duration memory-growth profiling."
           ]
         },
         {
@@ -619,10 +620,10 @@
           "evidence": []
         }
       ],
-      "verified": 4,
+      "verified": 5,
       "total": 8,
-      "percent": 50,
-      "implemented": 2,
+      "percent": 62,
+      "implemented": 1,
       "planned": 2
     }
   ],
@@ -637,10 +638,10 @@
   },
   "overall": {
     "total": 63,
-    "verified": 50,
-    "implemented": 6,
+    "verified": 51,
+    "implemented": 5,
     "planned": 7,
-    "percent": 79,
+    "percent": 80,
     "basis": "Only verified atomic tasks count toward percentage"
   }
 }

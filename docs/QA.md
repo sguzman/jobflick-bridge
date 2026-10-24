@@ -595,3 +595,21 @@ already includes actual Firefox event-script reload, 16-tab isolation,
 stale-tab/identity-replacement tests, and no blind retry on native transport
 failure. No real user profile, personal job or authenticated ChatGPT
 conversation participates in this acceptance.
+
+## Verified M7-02: Firefox large-history and sampled idle activity
+
+The production content script in actual disposable Firefox Developer Edition
+passed an [8,000-code-block scale test](https://github.com/sguzman/jobflick-bridge/actions/runs/40043989474) under 200 unrelated
+chat DOM rerenders and 16 simultaneously open secondary tabs. No Run control,
+native validation or submission was created without explicit intent. Six
+consecutive 10-second idle checkpoints while all 17 tabs were open reported
+no native validation/submit traffic. After an explicit burst of 40 pointer
+events, the existing bounded candidate queue admitted only 16 validations;
+subsequent idle time did not repeat them. The already-verified Node stress
+regressions cap live Run references, rapid native retries and inbox paging.
+
+This closes the scoped M7-02 browser activity and scale acceptance. It does
+**not** measure energy usage in watts or prove arbitrary-duration Firefox
+memory stability on an EndeavourOS/Hyprland desktop. A genuine desktop
+profile and authenticated ChatGPT acceptance remain outside these isolated
+CI measurements.
