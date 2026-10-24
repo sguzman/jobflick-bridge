@@ -23,32 +23,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Refuse signing until every acceptance task is verified
-        run: |
-          node --input-type=module -e '
-            import fs from "node:fs";
-            const p=JSON.parse(fs.readFileSync("progress.json","utf8"));
-            const tasks=p.milestones.flatMap(m=>m.tasks);
-            const allowedOpen=new Set(["M7-07","M7-08"]);
-            const verified=tasks.filter(t=>t.status==="verified");
-            const implemented=tasks.filter(t=>t.status==="implemented");
-            const planned=tasks.filter(t=>t.status==="planned");
-            if (p.overall.total!==63 || tasks.length!==63 ||
-                p.overall.verified!==verified.length ||
-                p.overall.implemented!==implemented.length ||
-                p.overall.planned!==planned.length ||
-                tasks.some(t=>t.status!=="verified"&&!allowedOpen.has(t.id))) {
-              console.error("Mozilla signing blocked: prerequisite acceptance incomplete");
-              process.exit(1);
-            }
-            const manifest=JSON.parse(fs.readFileSync("extension/manifest.json","utf8"));
-            const pkg=JSON.parse(fs.readFileSync("package.json","utf8"));
-            if (manifest.version!==pkg.version ||
-                manifest.browser_specific_settings?.gecko?.id!=="jobflick-bridge@sguzman.github.io") {
-              console.error("Firefox signing blocked: version or Gecko ID mismatch");
-              process.exit(1);
-            }
-          '
+      - name: Verify all prerequisite acceptance evidence
+        run: node .github/verify-signing-gate.mjs
       - name: Lint exact production extension before signing
         run: npx --yes web-ext@10.8.0 lint --source-dir extension
       - name: Request Mozilla unlisted XPI signature
