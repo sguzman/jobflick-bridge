@@ -59,10 +59,10 @@ cd "$work"; or exit 1
 # Stable entry order, no host extra fields, unchanged binary bytes. No
 # compression avoids differences between zlib versions and is small here.
 zip -q -X -0 "$output" $entries
-set -l status $status
+set -l zip_status $status
 cd "$repo"
 rm -rf -- "$work"
-if test $status -ne 0
-    exit $status
+if test $zip_status -ne 0
+    exit $zip_status
 end
 echo "Unsigned deterministic QA ZIP created: $output"
