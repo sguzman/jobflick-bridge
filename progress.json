@@ -528,18 +528,19 @@
         {
           "id": "M6-07",
           "title": "Recovery tests",
-          "status": "implemented",
+          "status": "verified",
           "evidence": [
             "Node recovery tests now cover tab closure racing an in-flight session-token write, duplicate route A→B→A, no local storage writes on unrelated tabs and full reversion to manual-only. Disposable real FDE + pinned Jobflick native report-to-File route revocation passed. Actual full desktop browser restart/authenticated ChatGPT recovery remains pending. https://github.com/sguzman/jobflick-bridge/actions/runs/40027477393 https://github.com/sguzman/jobflick-bridge/actions/runs/40027477573",
             "Native show, inspect and cancel now compare durable record identity again after their async responses; concurrent removal, identity replacement, quarantine and tab closure tests passed, while explicit manual orphan report retrieval remains possible. Same-key mismatched records remain inert in navigation cleanup. https://github.com/sguzman/jobflick-bridge/actions/runs/40032306863. Actual authenticated Firefox lifecycle remains pending.",
-            "Race tests for stale Forget and browser startup reconciliation preserve replacement same-ID job identities; SPA navigation waits for in-flight session token mint before revocation to prevent stale token revival. Node tests and disposable Firefox checks passed: https://github.com/sguzman/jobflick-bridge/actions/runs/40033650901. Authenticated desktop restart remains unverified."
+            "Race tests for stale Forget and browser startup reconciliation preserve replacement same-ID job identities; SPA navigation waits for in-flight session token mint before revocation to prevent stale token revival. Node tests and disposable Firefox checks passed: https://github.com/sguzman/jobflick-bridge/actions/runs/40033650901. Authenticated desktop restart remains unverified.",
+            "Actual disposable Firefox Developer Edition tests a FULL browser-process stop/start with the same private QA profile. A synthetic orphaned pending bridge record persisted through shutdown and temporary add-on reinstall; a fake native host was unavailable in the first session and restored in the second. Production background checkJobs recovered the durable original native ID as succeeded, preserved orphaned=true and deliveryState=manual_only, and emitted inspect only, never submit_spec/show/cancel. Full FDE CI passed https://github.com/sguzman/jobflick-bridge/actions/runs/40042774159. Earlier real pinned native event-script reload, stale-tab reuse, same-ID replacement and offline transport regressions also pass (https://github.com/sguzman/jobflick-bridge/actions/runs/40040484745). This is isolated Firefox recovery, not an authenticated live ChatGPT session."
           ]
         }
       ],
-      "verified": 5,
+      "verified": 6,
       "total": 7,
-      "percent": 71,
-      "implemented": 2
+      "percent": 85,
+      "implemented": 1
     },
     {
       "id": "M7",
@@ -636,10 +637,10 @@
   },
   "overall": {
     "total": 63,
-    "verified": 49,
-    "implemented": 7,
+    "verified": 50,
+    "implemented": 6,
     "planned": 7,
-    "percent": 77,
+    "percent": 79,
     "basis": "Only verified atomic tasks count toward percentage"
   }
 }

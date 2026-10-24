@@ -576,3 +576,22 @@ using the unmodified popup source on localhost.
 ChatGPT-specific attachment, chip acknowledgement, draft preservation,
 guarded Send and post-send recovery gates are still blocked on M7-06 and M5.
 No personal browser profile or native-host manifest was accessed by CI.
+
+## Verified M6-07: real Firefox process-restart and offline recovery
+
+[Passing actual Firefox Developer Edition process-restart CI](https://github.com/sguzman/jobflick-bridge/actions/runs/40042774159)
+uses two separate Firefox browser processes with one dedicated, temporary
+profile. The first browser persists an orphaned `running` bridge record
+while Native Messaging is unavailable and shuts down. After the runner
+registers an isolated nonexecuting fake Jobflick native host, the second
+Firefox process reopens the same QA profile and temporarily reinstalls the
+addon under the same Gecko ID. The durable pending record survives.
+
+The production `checkJobs` inspector recovers the authoritative native
+terminal state `succeeded` while retaining `orphaned=true` and
+`deliveryState=manual_only`. The native fixture's request log contains
+inspection only, never another submit, report read or cancellation. CI also
+already includes actual Firefox event-script reload, 16-tab isolation,
+stale-tab/identity-replacement tests, and no blind retry on native transport
+failure. No real user profile, personal job or authenticated ChatGPT
+conversation participates in this acceptance.
