@@ -40,19 +40,19 @@
     transfer.items.add(file);
     input.files = transfer.files;
     if (input.files?.length !== 1 ||
-        input.files[0]?.name !== file.name ||
-        input.files[0]?.size !== file.size) {
+        input.files[0] !== file) {
       throw new Error("Firefox FileList handoff was not confirmed");
     }
+    // The File object identity, not just its reported name and byte size,
+    // is necessary. A page may substitute different bytes with the same
+    // metadata during its synchronous change handler.
     input.dispatchEvent(new Event("change", { bubbles: true }));
     // A page listener may synchronously clear the FileList, replace its
     // contents, disable the control or detach the input. Do not report even
     // DOM-level success after that has happened.
     if (!input.isConnected || input.disabled ||
         input.files?.length !== 1 ||
-        input.files[0]?.name !== file.name ||
-        input.files[0]?.size !== file.size ||
-        input.files[0]?.type !== file.type) {
+        input.files[0] !== file) {
       throw new Error("File input changed during handoff; no attachment confirmed");
     }
     // A page can still reject asynchronously. This is never proof of upload.
