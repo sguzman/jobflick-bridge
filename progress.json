@@ -399,7 +399,8 @@
           "title": "Live upload discovery",
           "status": "implemented",
           "evidence": [
-            "Read-only per-job/composer probe now flags multiple candidate composers, multiple file inputs and selected file input without exposing drafts or filenames; Node and headless FDE synthetic tests, not authenticated site DOM acceptance: https://github.com/sguzman/jobflick-bridge/actions/runs/40024074527"
+            "Read-only per-job/composer probe now flags multiple candidate composers, multiple file inputs and selected file input without exposing drafts or filenames; Node and headless FDE synthetic tests, not authenticated site DOM acceptance: https://github.com/sguzman/jobflick-bridge/actions/runs/40024074527",
+            "Implementation-only evidence: the read-only production and dedicated Firefox QA probes now distinguish the general-file #upload-files candidate from unrelated photo/camera inputs and separately identify the composer add-files control, with bounded metadata and no draft/file/name disclosure. Actual disposable Firefox Developer Edition tests, Node regressions and static checks passed at source 5c91327e633941e3e8496c103554c5d4a268b859: https://github.com/sguzman/jobflick-bridge/actions/runs/40054693936 ; pinned real Jobflick integration passed at earlier source 1d17a9052099d0e9e56f73261fd0e59544d49a72: https://github.com/sguzman/jobflick-bridge/actions/runs/40054616035. These publicly documented selectors are hypotheses, not authenticated live Firefox site discovery; M5-01 remains implemented, not verified."
           ]
         },
         {
@@ -640,12 +641,12 @@
   ],
   "last_ci": {
     "result": "success",
-    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40028499706",
-    "commit": "45e9921287bd54ed41c6624f475fcbe1766a240e",
-    "scope": "Node regressions and real disposable Firefox Developer Edition: read-only synthetic composer and file-selection preservation, status ordering for fast native jobs, idle/no-write resilience, strict native identity types, Mozilla lint, unsigned QA package. No authenticated ChatGPT.",
-    "native_run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40028499789",
-    "native_commit": "45e9921287bd54ed41c6624f475fcbe1766a240e",
-    "native_scope": "Pinned real Jobflick daemon plus actual FDE: harmless Fish submission and terminal state; explicit QA-only report handoff into bounded File and localhost page; A→B→A revocation; improved apt install path succeeded. No real ChatGPT attachment or Send."
+    "run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40054693936",
+    "commit": "5c91327e633941e3e8496c103554c5d4a268b859",
+    "scope": "Node regression suite, Firefox Developer Edition synthetic add-on, Native Messaging, document-input discovery (one general input alongside photo/camera), privileged popup, full browser restart and idle/scale QA. No authenticated ChatGPT, upload, Send or signed release.",
+    "native_run_url": "https://github.com/sguzman/jobflick-bridge/actions/runs/40054616035",
+    "native_commit": "1d17a9052099d0e9e56f73261fd0e59544d49a72",
+    "native_scope": "Pinned real Jobflick daemon and disposable actual Firefox Developer Edition succeeded; not authenticated ChatGPT upload."
   },
   "overall": {
     "total": 63,
