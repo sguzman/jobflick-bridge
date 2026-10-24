@@ -87,3 +87,7 @@ jobs:
         env:
           FDE_BINARY: ${{ steps.fde.outputs.firefox-path }}
         run: node tests/fde-process-restart.cjs
+      - name: Headless Firefox Developer Edition scale and idle-activity acceptance
+        env:
+          FDE_BINARY: ${{ steps.fde.outputs.firefox-path }}
+        run: node tests/fde-scale.cjs
