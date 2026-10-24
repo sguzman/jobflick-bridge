@@ -14,7 +14,10 @@ on:
       - "tests/native-frame.test.mjs"
       - "tests/native-host-installer.test.cjs"
       - "tests/fixtures/**"
-      - "scripts/**"
+      # Deliberately exclude local QA/acceptance helper scripts: they must
+      # not cause an unrelated pinned Rust backend build.
+      - "scripts/install-native-host.fish"
+      - "scripts/package-unsigned.fish"
       - "package.json"
       - ".github/workflows/real-integration.yml"
   workflow_dispatch:

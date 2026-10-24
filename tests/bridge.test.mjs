@@ -90,3 +90,13 @@ test("read-only attachment probe is not an upload or automatic send", () => {
   assert(!content.includes("new File("));
   assert(!content.includes("send-button"));
 });
+
+test("costly pinned Jobflick integration only runs on native-facing script changes",()=>{
+  const workflow=read(".github/workflows/real-integration.yml");
+  assert(workflow.includes('"scripts/install-native-host.fish"'));
+  assert(workflow.includes('"scripts/package-unsigned.fish"'));
+  assert(!workflow.includes('"scripts/**"'));
+  assert(workflow.includes('"extension/background.js"'));
+  assert(workflow.includes('"extension/content.js"'));
+  assert(workflow.includes('"tests/fde-native.cjs"'));
+});

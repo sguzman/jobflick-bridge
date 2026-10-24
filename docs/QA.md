@@ -131,7 +131,11 @@ Background inbox pagination accepts at most 128 characters of search text and fi
 
 ## CI change scoping
 
-The lightweight workflow runs on every push to `main` and on explicit dispatch. The separate real-backend workflow runs automatically only for changes to the native-facing background/content/manifest, real-host tests and fixtures, native-host installer, package manifest, or integration workflow. It can still be dispatched manually. A passing lightweight run is **not** evidence of newly rerun real Jobflick integration; both statuses must be reported separately, using the latest native run relevant to the changed code. No release or authenticated ChatGPT automation is inferred from either.
+The lightweight workflow runs on every push to `main` and on explicit dispatch. The native
+trigger is deliberately restricted to the installer, reproducible package
+builder, native-facing source/tests, manifest and its own workflow. Read-only
+QA aids such as `scripts/qa-next.mjs` do not trigger a fresh pinned Rust
+backend build; they still receive the complete fast Firefox checks. The separate real-backend workflow runs automatically only for changes to the native-facing background/content/manifest, real-host tests and fixtures, native-host installer, package manifest, or integration workflow. It can still be dispatched manually. A passing lightweight run is **not** evidence of newly rerun real Jobflick integration; both statuses must be reported separately, using the latest native run relevant to the changed code. No release or authenticated ChatGPT automation is inferred from either.
 
 ## Duplicate host job ID regression
 
