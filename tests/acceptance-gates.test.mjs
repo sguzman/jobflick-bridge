@@ -15,8 +15,10 @@ const gates = new Map(plan.gates.map(g=>[g.id,g]));
 test("every unfinished atomic roadmap task has exactly one specific future acceptance plan",()=>{
   assert.equal(plan.schema,1);
   assert.equal(gates.size,plan.gates.length);
-  assert.deepEqual([...gates.keys()].sort(),
-    all.filter(t=>t.status!=="verified").map(t=>t.id).sort());
+  // Closed gates may remain in the historical plan. Every open task must
+  // still be covered; promoting a task must not make the contract fail.
+  assert(all.filter(t=>t.status!=="verified")
+    .every(t=>gates.has(t.id)),"An unfinished roadmap task lacks acceptance criteria");
   for(const gate of gates.values()){
     assert(byId.has(gate.id));
     assert(gate.acceptance.length>=3);
@@ -49,17 +51,23 @@ test("dependency graph is complete, acyclic and release depends on authentic acc
 
 test("next-ready selection only shows unresolved prerequisites, never inventing acceptance",()=>{
   const ready=nextReady(plan,progress);
-  assert.deepEqual(ready.map(g=>g.id),["M5-01"]);
-  assert.equal(progress.overall.verified,52);
-  assert.equal(progress.overall.total,63);
+  const statuses=new Map(all.map(t=>[t.id,t.status]));
+  const expected=plan.gates.filter(g=>statuses.get(g.id)!=="verified" &&
+    g.depends_on.every(id=>statuses.get(id)==="verified"));
+  assert.deepEqual(ready.map(g=>g.id),expected.map(g=>g.id));
+  assert.equal(progress.overall.verified,all.filter(t=>t.status==="verified").length);
+  assert.equal(progress.overall.total,all.length);
 });
 
 test("local status CLI prints only currently ready gates and evidence policy",()=>{
   const script=fileURLToPath(new URL("../scripts/qa-next.mjs",import.meta.url));
   const result=spawnSync(process.execPath,[script],{encoding:"utf8",timeout:10000});
   assert.equal(result.status,0,result.stderr);
-  assert.match(result.stdout,/52\/63 verified \(82%\)/);
-  assert.match(result.stdout,/Ready acceptance gates \(1\)/);
-  assert.match(result.stdout,/M5-01/);
-  assert(!result.stdout.includes("M7-08"));
+  assert(result.stdout.includes(progress.overall.verified+"/"+
+    progress.overall.total+" verified ("+progress.overall.percent+"%)."));
+  const ready=nextReady(plan,progress);
+  assert(result.stdout.includes("Ready acceptance gates ("+ready.length+"):"));
+  for (const gate of ready) assert(result.stdout.includes(gate.id));
+  for (const gate of plan.gates.filter(g=>!ready.includes(g)))
+    assert(!result.stdout.includes("  "+gate.id+" —"));
 });
