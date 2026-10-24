@@ -649,6 +649,16 @@ menus, constructs Files, clicks Run or Send, contacts Jobflick, or alters
 extension permissions. If login, route, or browser setup fails it refuses
 without printing WebDriver error payloads. The presence/absence of a file
 input is preliminary evidence only; upload controls may appear on demand.
+The dedicated-profile live audit now waits for three matching, bounded,
+read-only composer observations rather than using the first completed document
+as hydration evidence. Route identity is rechecked before and after each DOM
+sample. An absent or unstable composer produces `hydrationStable: false`, an
+**inconclusive** observation rather than a verified upload failure. Output is
+restricted to explicitly allowlisted boolean/count fields and the number of
+samples; no draft, filename, route identifier, arbitrary DOM property or
+conversation content is printed. The audit still never opens an attachment
+menu, uploads a File, or Sends.
+
 The harness does **not** verify authentication: being on a conversation URL
 or seeing a composer is not conclusive account/session evidence. Its output
 explicitly reports `authenticatedSessionVerified: false` even when the
