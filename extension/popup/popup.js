@@ -176,6 +176,14 @@ function renderItem(job) {
             flags.fileInputAmbiguous ? "yes" : "no") +
           " · input selection: " + (typeof flags.selectedFilePresent !== "boolean" ? "unknown" :
             flags.selectedFilePresent ? "present" : "none detected") +
+          " · general file target: " +
+          (flags.generalUploadInputCandidates === 1 ?
+            (flags.generalUploadInputUsable ? "candidate found" : "disabled/unusable") :
+            flags.generalUploadInputCandidates === 0 ? "not exposed" : "ambiguous/unknown") +
+          " · add-files control: " +
+          (flags.composerAddButtonCandidates === 1 ?
+            (flags.composerAddButtonUsable ? "candidate found" : "disabled/unusable") :
+            flags.composerAddButtonCandidates === 0 ? "not exposed" : "ambiguous/unknown") +
           ". Read-only: nothing attached or sent.");
       } catch (error) {
         say(error.message);
@@ -292,7 +300,15 @@ probe.addEventListener("click", async () => {
       "Multiple file inputs: " + (typeof result.fileInputAmbiguous !== "boolean" ? "unknown" :
         result.fileInputAmbiguous ? "yes" : "no"),
       "Selected input file: " + (typeof result.selectedFilePresent !== "boolean" ? "unknown" :
-        result.selectedFilePresent ? "yes" : "none detected")
+        result.selectedFilePresent ? "yes" : "none detected"),
+      "General file upload candidate: " +
+        (result.generalUploadInputCandidates === 1 ?
+          (result.generalUploadInputUsable ? "unique" : "unusable") :
+          result.generalUploadInputCandidates === 0 ? "not exposed" : "ambiguous/unknown"),
+      "Composer add-files candidate: " +
+        (result.composerAddButtonCandidates === 1 ?
+          (result.composerAddButtonUsable ? "unique" : "unusable") :
+          result.composerAddButtonCandidates === 0 ? "not exposed" : "ambiguous/unknown")
     ];
     say(parts.join(" · ") + ". Read-only check: no file attached.");
   } catch (error) {

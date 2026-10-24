@@ -235,6 +235,15 @@
         'textarea#prompt-textarea, textarea[data-testid="composer-textarea"]'
       )];
       const fileInputs = [...document.querySelectorAll('input[type="file"]')];
+      // A generic input[type=file] is not a supported general-document
+      // destination. ChatGPT may expose distinct photo/camera controls.
+      // These fixed selectors are discovery *candidates*, NOT live-accepted
+      // selectors or proof that a synthetic change event triggers upload.
+      const generalFileInputs = fileInputs.filter(input =>
+        input.id === "upload-files" && input.type === "file");
+      const addButtons = [...document.querySelectorAll(
+        'button[data-testid="composer-plus-btn"]'
+      )];
       // No draft text, file names, or input references leave this content
       // script. A selected FileList is not proof of existing ChatGPT chips,
       // so future uploads must separately confirm the application's state.
@@ -247,7 +256,15 @@
         fileInputPresent: fileInputs.length > 0,
         fileInputAmbiguous: fileInputs.length > 1,
         selectedFilePresent: fileInputs.some(input =>
-          Number.isInteger(input.files?.length) && input.files.length > 0)
+          Number.isInteger(input.files?.length) && input.files.length > 0),
+        // Saturate counts at 2 (2 means ambiguous); never return UI labels,
+        // transcript text, filenames, IDs, DOM elements or current page URL.
+        generalUploadInputCandidates: Math.min(2, generalFileInputs.length),
+        generalUploadInputUsable: generalFileInputs.length === 1 &&
+          generalFileInputs[0].isConnected && !generalFileInputs[0].disabled,
+        composerAddButtonCandidates: Math.min(2, addButtons.length),
+        composerAddButtonUsable: addButtons.length === 1 &&
+          addButtons[0].isConnected && !addButtons[0].disabled
       });
     }
     if (message?.type === "jobflick:scan") {

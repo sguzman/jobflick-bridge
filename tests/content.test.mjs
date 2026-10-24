@@ -78,10 +78,18 @@ function simulate(initialYaml = yaml, validateOK = true, probeOptions = {}) {
           textContent: probeOptions.composerText || ""
         }));
       }
+      if (selector === 'button[data-testid="composer-plus-btn"]') {
+        return Array.from({ length: probeOptions.addButtonCount || 0 }, () => ({
+          isConnected: true, disabled: !!probeOptions.addButtonDisabled
+        }));
+      }
       if (selector === 'input[type="file"]') {
         const count = probeOptions.fileInputCount ??
           (probeOptions.fileInputPresent ? 1 : 0);
-        return Array.from({ length: count }, () => ({
+        return Array.from({ length: count }, (_, index) => ({
+          id: probeOptions.generalFileInputIndex === undefined
+            ? "" : (index === probeOptions.generalFileInputIndex ? "upload-files" : ""),
+          type: "file", isConnected: true, disabled: !!probeOptions.inputDisabled,
           files: probeOptions.fileSelected ? [{ name: "not disclosed" }] : []
         }));
       }
@@ -362,7 +370,9 @@ test("read-only attachment capability probe returns only booleans", async () => 
   const result = await app.runtimeListener({ type: "jobflick:probe-upload" });
   assert.deepEqual(Object.keys(result).sort(), [
     "composerOccupied", "composerPresent", "fileInputPresent", "ok",
-    "composerAmbiguous", "fileInputAmbiguous", "selectedFilePresent"
+    "composerAmbiguous", "fileInputAmbiguous", "selectedFilePresent",
+    "generalUploadInputCandidates", "generalUploadInputUsable",
+    "composerAddButtonCandidates", "composerAddButtonUsable"
   ].sort());
   assert.equal(result.composerPresent, true);
   assert.equal(result.composerOccupied, true);
@@ -558,4 +568,32 @@ test("early running status outranks an older queued submit reply",async()=>{
   await app.pre.button.handlers.click({isTrusted:true});
   assert.match(app.pre.button.textContent,/running/);
   assert.doesNotMatch(app.pre.button.textContent,/Queued/);
+});
+
+test("specific general document upload target is distinguishable from photo inputs",async()=>{
+  const app=simulate(yaml,true,{composerPresent:true,fileInputCount:3,
+    generalFileInputIndex:0,addButtonCount:1});
+  const flags=await app.runtimeListener({type:"jobflick:probe-upload"});
+  assert.equal(flags.fileInputAmbiguous,true,
+    "Multiple inputs alone must not suggest multiple document targets");
+  assert.equal(flags.generalUploadInputCandidates,1);
+  assert.equal(flags.generalUploadInputUsable,true);
+  assert.equal(flags.composerAddButtonCandidates,1);
+  assert.equal(flags.composerAddButtonUsable,true);
+  assert.equal(app.messages.length,0,"Discovery never invokes native host");
+});
+
+test("missing or ambiguous general upload control never claims a usable document target",async()=>{
+  for(const opts of [
+    {fileInputCount:3},
+    {fileInputCount:1,generalFileInputIndex:0,inputDisabled:true},
+    {fileInputCount:2,generalFileInputIndex:0,addButtonCount:2}
+  ]){
+    const app=simulate(yaml,true,opts);
+    const flags=await app.runtimeListener({type:"jobflick:probe-upload"});
+    assert(!flags.generalUploadInputUsable || opts.addButtonCount===2);
+    assert(flags.composerAddButtonCandidates<=2);
+    assert(!JSON.stringify(flags).includes("filename"));
+    assert.equal(app.messages.length,0);
+  }
 });

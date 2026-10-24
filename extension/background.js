@@ -605,7 +605,19 @@ async function onPopupMessage(message, sender) {
         fileInputAmbiguous: typeof response.fileInputAmbiguous === "boolean"
           ? response.fileInputAmbiguous : null,
         selectedFilePresent: typeof response.selectedFilePresent === "boolean"
-          ? response.selectedFilePresent : null
+          ? response.selectedFilePresent : null,
+        generalUploadInputCandidates: Number.isInteger(response.generalUploadInputCandidates) &&
+          response.generalUploadInputCandidates >= 0 &&
+          response.generalUploadInputCandidates <= 2
+          ? response.generalUploadInputCandidates : null,
+        generalUploadInputUsable: typeof response.generalUploadInputUsable === "boolean"
+          ? response.generalUploadInputUsable : null,
+        composerAddButtonCandidates: Number.isInteger(response.composerAddButtonCandidates) &&
+          response.composerAddButtonCandidates >= 0 &&
+          response.composerAddButtonCandidates <= 2
+          ? response.composerAddButtonCandidates : null,
+        composerAddButtonUsable: typeof response.composerAddButtonUsable === "boolean"
+          ? response.composerAddButtonUsable : null
       };
     }
     case "jobflick:probe-upload": {
@@ -641,7 +653,19 @@ async function onPopupMessage(message, sender) {
         fileInputAmbiguous: typeof response.fileInputAmbiguous === "boolean"
           ? response.fileInputAmbiguous : null,
         selectedFilePresent: typeof response.selectedFilePresent === "boolean"
-          ? response.selectedFilePresent : null
+          ? response.selectedFilePresent : null,
+        generalUploadInputCandidates: Number.isInteger(response.generalUploadInputCandidates) &&
+          response.generalUploadInputCandidates >= 0 &&
+          response.generalUploadInputCandidates <= 2
+          ? response.generalUploadInputCandidates : null,
+        generalUploadInputUsable: typeof response.generalUploadInputUsable === "boolean"
+          ? response.generalUploadInputUsable : null,
+        composerAddButtonCandidates: Number.isInteger(response.composerAddButtonCandidates) &&
+          response.composerAddButtonCandidates >= 0 &&
+          response.composerAddButtonCandidates <= 2
+          ? response.composerAddButtonCandidates : null,
+        composerAddButtonUsable: typeof response.composerAddButtonUsable === "boolean"
+          ? response.composerAddButtonUsable : null
       };
     }
     case "jobflick:diagnose": {

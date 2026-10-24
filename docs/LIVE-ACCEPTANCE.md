@@ -43,3 +43,26 @@ harmless fixtures in isolated environments; no automatic Send before
 authenticated acceptance. Work directly on `main` with narrow commits.
 Retain machine-readable percentages and cite the test run that justified a
 verified state. Never force an unsupported 100% completion claim.
+
+## General-file upload discovery hypothesis (not accepted)
+
+Public ChatGPT upload instructions use the composer add-files menu. Independent
+third-party DOM references from 2026 describe a general file input named
+`#upload-files`, separate from photo/camera inputs, and a composer add menu
+button named `[data-testid="composer-plus-btn"]`. These references are
+**hypotheses** only: they are not evidence that the current authenticated
+Firefox site still exposes or honors either selector.
+
+The production read-only content probe now reports separate bounded
+candidate counts and usable/disabled flags for the *general document* target
+and add-files control. Seeing multiple `input[type=file]` nodes is therefore
+not mistaken for several general-report destinations. Probe output never
+contains drafts, file names or URLs and never clicks, uploads or sends.
+Disposable Firefox QA exercises one general + two other inputs. M5-01 stays
+unverified until the dedicated authenticated Firefox Developer Edition
+profile independently establishes the supported route, upload behavior,
+and selector compatibility.
+
+References: https://openai.com/academy/working-with-files/
+https://github.com/Dworrall21/chatgpt-bridge/blob/main/dom-selectors.md
+https://github.com/veithly/gpt-pro-think/blob/main/references/dom-selectors.md

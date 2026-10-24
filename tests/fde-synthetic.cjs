@@ -69,6 +69,8 @@ async function main(){
   const html='<!doctype html><html><head><meta charset="utf-8"></head><body>'+
     '<main><pre><code>'+escapeHtml(yaml)+'</code></pre></main>'+
     '<div id="prompt-textarea" contenteditable="true">Private QA draft - do not transmit</div>'+
+    '<button data-testid="composer-plus-btn" type="button">Add</button>'+
+    '<input id="upload-files" type="file">'+
     '<input id="qa-original" type="file"><input id="qa-extra" type="file">'+
     '<button id="qa-inspect" type="button">Inspect synthetic composer</button></body></html>';
   const server=http.createServer((_request,response)=>{
@@ -289,12 +291,18 @@ async function main(){
       "return document.documentElement.dataset.qaProbe"));
     assert.deepEqual(Object.keys(flags).sort(),[
       "ok","composerPresent","composerAmbiguous","composerOccupied",
-      "fileInputPresent","fileInputAmbiguous","selectedFilePresent"
+      "fileInputPresent","fileInputAmbiguous","selectedFilePresent",
+      "generalUploadInputCandidates","generalUploadInputUsable",
+      "composerAddButtonCandidates","composerAddButtonUsable"
     ].sort());
     assert.equal(flags.composerOccupied,true);
     assert.equal(flags.composerAmbiguous,false);
     assert.equal(flags.fileInputAmbiguous,true);
     assert.equal(flags.selectedFilePresent,true);
+    assert.equal(flags.generalUploadInputCandidates,1);
+    assert.equal(flags.generalUploadInputUsable,true);
+    assert.equal(flags.composerAddButtonCandidates,1);
+    assert.equal(flags.composerAddButtonUsable,true);
     assert.equal(await driver.executeScript(
       "return document.querySelector('#prompt-textarea').textContent"),
       "Private QA draft - do not transmit");
@@ -317,6 +325,8 @@ async function main(){
     assert.equal(flags.composerOccupied,false);
     assert.equal(flags.fileInputAmbiguous,false);
     assert.equal(flags.selectedFilePresent,false);
+    assert.equal(flags.generalUploadInputCandidates,1);
+    assert.equal(flags.composerAddButtonCandidates,1);
     await driver.uninstallAddon(id);
     console.log("Synthetic FDE: inert YAML controls, Enter/Space keyboard activation, stale SPA route Run rejection and draft/file probes passed; no native commands executed");
   }finally{
