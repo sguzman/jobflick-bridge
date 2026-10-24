@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { nextReady } from "../scripts/qa-next.mjs";
 
 const read = path => JSON.parse(readFileSync(new URL("../"+path,import.meta.url),"utf8"));
@@ -50,4 +52,14 @@ test("next-ready selection only shows unresolved prerequisites, never inventing 
   assert.deepEqual(ready.map(g=>g.id),["M5-01"]);
   assert.equal(progress.overall.verified,52);
   assert.equal(progress.overall.total,63);
+});
+
+test("local status CLI prints only currently ready gates and evidence policy",()=>{
+  const script=fileURLToPath(new URL("../scripts/qa-next.mjs",import.meta.url));
+  const result=spawnSync(process.execPath,[script],{encoding:"utf8",timeout:10000});
+  assert.equal(result.status,0,result.stderr);
+  assert.match(result.stdout,/52\/63 verified \(82%\)/);
+  assert.match(result.stdout,/Ready acceptance gates \(1\)/);
+  assert.match(result.stdout,/M5-01/);
+  assert(!result.stdout.includes("M7-08"));
 });

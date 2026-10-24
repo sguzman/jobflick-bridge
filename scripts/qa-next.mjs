@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { pathToFileURL } from "node:url";
+import { resolve } from "node:path";
 
 export function nextReady(plan,progress) {
   const tasks=progress.milestones.flatMap(m=>m.tasks);
@@ -9,7 +10,7 @@ export function nextReady(plan,progress) {
     g.depends_on.every(id=>verified.has(id)));
 }
 
-if(process.argv[1] && import.meta.url===new URL("file://"+process.argv[1]).href) {
+if(process.argv[1] && import.meta.url===pathToFileURL(resolve(process.argv[1])).href) {
   const base=new URL("../",import.meta.url);
   const plan=JSON.parse(readFileSync(new URL("acceptance-gates.json",base),"utf8"));
   const progress=JSON.parse(readFileSync(new URL("progress.json",base),"utf8"));
