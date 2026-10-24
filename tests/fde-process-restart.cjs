@@ -73,10 +73,15 @@ async function main(){
     'document.querySelector("#read").addEventListener("click",async event=>{',
     ' if(!event.isTrusted)return;',
     ' const data=await browser.storage.local.get("jobflick_bridge_jobs_v1");',
-    ' const record=data.jobflick_bridge_jobs_v1?.job_qa000001;',
+    ' const jobs=data.jobflick_bridge_jobs_v1;',
+    ' const record=jobs?.job_qa000001;',
+    ' const send=jobs?.job_qa000002;',
+    ' const upload=jobs?.job_qa000003;',
     ' document.documentElement.dataset.qaRead=record?',
     '  JSON.stringify({id:record.id,state:record.state,',
-    '    orphaned:record.orphaned,deliveryState:record.deliveryState}):"missing";',
+    '    orphaned:record.orphaned,deliveryState:record.deliveryState,',
+    '    interruptedSend:send?{orphaned:send.orphaned,deliveryState:send.deliveryState}:null,',
+    '    interruptedUpload:upload?{orphaned:upload.orphaned,deliveryState:upload.deliveryState}:null}):"missing";',
     '});',
     'document.querySelector("#resume").addEventListener("click",async event=>{',
     ' if(!event.isTrusted)return;',
@@ -164,9 +169,21 @@ async function main(){
     // Verify the uncertain states persist rather than existing only as a
     // transient background-script response.
     await (await driver.findElement(By.id("read"))).click();
+    await driver.wait(async()=>{
+      const raw=await driver.executeScript(
+        "return document.documentElement.dataset.qaRead");
+      if(!raw||raw==="missing")return false;
+      const parsed=JSON.parse(raw);
+      return parsed.interruptedSend?.deliveryState==="delivery_uncertain" &&
+        parsed.interruptedUpload?.deliveryState==="delivery_uncertain";
+    },8000);
     const persisted=JSON.parse(await driver.executeScript(
       "return document.documentElement.dataset.qaRead"));
     assert.equal(persisted.id,"job_qa000001");
+    assert.deepEqual(persisted.interruptedSend,
+      {orphaned:true,deliveryState:"delivery_uncertain"});
+    assert.deepEqual(persisted.interruptedUpload,
+      {orphaned:true,deliveryState:"delivery_uncertain"});
 
     const log=path.join(state,"native-requests.jsonl");
     assert(fs.existsSync(log));
