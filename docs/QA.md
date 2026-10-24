@@ -613,3 +613,15 @@ This closes the scoped M7-02 browser activity and scale acceptance. It does
 memory stability on an EndeavourOS/Hyprland desktop. A genuine desktop
 profile and authenticated ChatGPT acceptance remain outside these isolated
 CI measurements.
+
+## Verified unsigned distribution preparation (M7-07 still open)
+
+[Real pinned integration](https://github.com/sguzman/jobflick-bridge/actions/runs/40044597655)
+passes deterministic Firefox ZIP generation twice (byte-identical,
+normalized metadata, intact root manifest), then installs and uninstalls the
+exact archive as a temporary XPI in isolated Firefox Developer Edition. The
+production Gecko ID is preserved and a forbidden `data:` host remains inert.
+A manual-only GitHub Actions AMO signing workflow is prepared and refuses
+signing until all prerequisites except signing and final release evidence
+are verified. No Mozilla signing, approved persistent signed installation or
+release has occurred. See [release process](RELEASE.md).

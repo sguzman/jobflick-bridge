@@ -610,7 +610,8 @@
           "title": "Packaging/signing",
           "status": "implemented",
           "evidence": [
-            "Unsigned QA archive generated in Firefox-specific CI. Signing and release distribution remain untested: https://github.com/sguzman/jobflick-bridge/actions/runs/39997227946"
+            "Unsigned QA archive generated in Firefox-specific CI. Signing and release distribution remain untested: https://github.com/sguzman/jobflick-bridge/actions/runs/39997227946",
+            "Real Linux CI creates two deterministic unsigned Firefox ZIP archives and verifies exact byte equality, valid archive/root manifest and checksum. The EXACT generated ZIP is copied to temporary XPI form and successfully installed and uninstalled in disposable Firefox Developer Edition with the production Gecko ID and forbidden-host injection rejection; pinned real Jobflick integration also passes. CI https://github.com/sguzman/jobflick-bridge/actions/runs/40044597655. An explicit manual AMO unlisted-signing workflow exists, gated on completion of every prerequisite except the signing and final-release tasks, but has not been dispatched. An actual Mozilla signature, installed signed XPI, SemVer release and authenticated ChatGPT E2E remain unverified."
           ]
         },
         {

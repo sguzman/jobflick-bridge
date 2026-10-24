@@ -29,10 +29,16 @@ jobs:
             import fs from "node:fs";
             const p=JSON.parse(fs.readFileSync("progress.json","utf8"));
             const tasks=p.milestones.flatMap(m=>m.tasks);
-            if (p.overall.total!==63 || p.overall.verified!==63 ||
-                p.overall.implemented!==0 || p.overall.planned!==0 ||
-                tasks.length!==63 || tasks.some(t=>t.status!=="verified")) {
-              console.error("Firefox signing blocked: incomplete acceptance ledger");
+            const allowedOpen=new Set(["M7-07","M7-08"]);
+            const verified=tasks.filter(t=>t.status==="verified");
+            const implemented=tasks.filter(t=>t.status==="implemented");
+            const planned=tasks.filter(t=>t.status==="planned");
+            if (p.overall.total!==63 || tasks.length!==63 ||
+                p.overall.verified!==verified.length ||
+                p.overall.implemented!==implemented.length ||
+                p.overall.planned!==planned.length ||
+                tasks.some(t=>t.status!=="verified"&&!allowedOpen.has(t.id))) {
+              console.error("Mozilla signing blocked: prerequisite acceptance incomplete");
               process.exit(1);
             }
             const manifest=JSON.parse(fs.readFileSync("extension/manifest.json","utf8"));

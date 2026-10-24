@@ -2,7 +2,7 @@
 
 **Firefox Developer Edition-first WebExtension** connecting ChatGPT-authored Execarium jobs to the user's local Jobflick executor. The repository is independent; [the legacy Script-Monkey extension](https://github.com/sguzman/script-monkey/tree/main/extensions/jobflick-bridge) is reference material, not the implementation baseline.
 
-**Status:** **77% verified (49/63 atomic tasks)**. Disposable headless Firefox Developer Edition validates and queues through the actual Jobflick daemon, executes one hardcoded harmless Fish fixture, and displays successful terminal status. Firefox Run/rerender, native transport, explicit execution tracking and manual recovery have passed their isolated acceptance gates. Authenticated ChatGPT attachment, guarded Send, live privileged-popup integration and release signing remain unverified. **Safety:** test first in a dedicated Firefox Developer Edition QA profile with harmless jobs. A browser profile does **not** sandbox commands run by Jobflick.
+**Status:** **80% verified (51/63 atomic tasks)**. Disposable headless Firefox Developer Edition validates and queues through the actual Jobflick daemon, executes one hardcoded harmless Fish fixture, and displays successful terminal status. Firefox Run/rerender, native transport, explicit execution tracking and manual recovery have passed their isolated acceptance gates. Authenticated ChatGPT attachment, guarded Send, live privileged-popup integration and release signing remain unverified. **Safety:** test first in a dedicated Firefox Developer Edition QA profile with harmless jobs. A browser profile does **not** sandbox commands run by Jobflick.
 
 ## Intended flow
 
