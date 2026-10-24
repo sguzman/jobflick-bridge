@@ -9,6 +9,7 @@ on:
       - "extension/content.js"
       - "extension/manifest.json"
       - "tests/fde-native.cjs"
+      - "tests/fde-packaged.cjs"
       - "tests/real-jobflick.cjs"
       - "tests/native-frame.test.mjs"
       - "tests/native-host-installer.test.cjs"
@@ -99,6 +100,13 @@ jobs:
           token: ${{ github.token }}
       - name: Install CI-only Selenium library
         run: npm install --no-save --no-package-lock selenium-webdriver@4.35.0
+      - name: Verify deterministic unsigned package installs in disposable Firefox
+        env:
+          FDE_BINARY: ${{ steps.fde.outputs.firefox-path }}
+          FDE_UNSIGNED_ARCHIVE: ${{ runner.temp }}/jobflick-unsigned-qa.xpi
+        run: |
+          cp "$RUNNER_TEMP/jobflick-unsigned-one.zip" "$RUNNER_TEMP/jobflick-unsigned-qa.xpi"
+          node tests/fde-packaged.cjs
       - name: Firefox Developer Edition to real isolated Jobflick daemon
         env:
           FDE_BINARY: ${{ steps.fde.outputs.firefox-path }}

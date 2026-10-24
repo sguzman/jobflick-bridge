@@ -23,6 +23,7 @@ Execarium defines the format. Jobflick owns validation enforcement, Fish executi
 - [🛡️ Security](docs/SECURITY.md): browser scope, native execution boundary and threat model.
 - [🧬 Legacy implementation audit](docs/LEGACY.md): reference files, reusable decisions, necessary replacements.
 - [🦊 Firefox QA](docs/QA.md): isolated-first acceptance plan.
+- [📦 Release and signing](docs/RELEASE.md): deterministic unsigned package, Mozilla signing and acceptance gates.
 - [🔌 Protocol](docs/PROTOCOL.md): existing Jobflick contract.
 
 ## Constraints
