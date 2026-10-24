@@ -82,11 +82,13 @@ async function main(){
     ' const byText=text=>[...document.querySelectorAll("button")].find(b=>b.textContent.trim()===text);',
     ' try{',
     '   await wait(()=>rows()===40);',
-    '   const uncertain=[...document.querySelectorAll("section.job")].find(s=>',
-    '     s.querySelector("h2")?.textContent==="Older QA 1");',
-    '   if(!uncertain||!uncertain.textContent.includes("Delivery outcome unconfirmed")',
-    '     ||!uncertain.textContent.includes("No automatic retry"))',
-    '     throw Error("Uncertain delivery state must be visible and fail closed");',
+    '   for(const name of ["Older QA 1","Older QA 2","Older QA 3"]){',
+    '     const uncertain=[...document.querySelectorAll("section.job")].find(s=>',
+    '       s.querySelector("h2")?.textContent===name);',
+    '     if(!uncertain||!uncertain.textContent.includes("Delivery outcome unconfirmed")',
+    '       ||!uncertain.textContent.includes("No automatic retry"))',
+    '       throw Error("Unresolved File/Send must remain visible: "+name);',
+    '   }',
     '   const load=byText("Load older jobs");',
     '   if(!load||load.hidden)throw Error("Older jobs control unavailable");',
     '   load.click();',
@@ -125,7 +127,10 @@ async function main(){
     '  data[id]={id,recordVersion:1,state:"succeeded",name:i===0?"QA native report":"Older QA "+i,',
     '    submittedAt:100-i,tabId:999,origin:"tab-qa",',
     '    conversation:"https://chatgpt.com/c/qa-session-1234",',
-    '    orphaned:true,deliveryState:i===1?"delivery_uncertain":"manual_only"};',
+    '    orphaned:i===1||i===2?false:true,',
+    '    deliveryState:i===1?"send_requested":',
+    '      i===2?"attachment_preparing":',
+    '      i===3?"delivery_uncertain":"manual_only"};',
     '}',
     'await browser.storage.local.set({jobflick_bridge_jobs_v1:data});',
     'document.querySelector("#qa-open").addEventListener("click",event=>{',
@@ -209,7 +214,7 @@ async function main(){
     assert.equal(requests[0].id,JOB);
 
     await driver.uninstallAddon(id);
-    console.log("Real Firefox toolbar popup: 45-row paging, filtered search, native show report, exact File export, bridge-only Forget; no submit/send. Test clicks inside popup are CI-side programmatic, not WebDriver-trusted gestures.");
+    console.log("Real Firefox toolbar popup: 45-row paging, interrupted Send/upload uncertainty, filtered native report, exact File export and Forget; no submit/send. Test clicks inside popup are CI-side programmatic, not WebDriver-trusted gestures.");
   }finally{
     if(driver)await driver.quit();
     if(server)await new Promise(resolve=>server.close(resolve));
