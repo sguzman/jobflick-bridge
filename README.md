@@ -2,7 +2,7 @@
 
 **Firefox Developer Edition-first WebExtension** connecting ChatGPT-authored Execarium jobs to the user's local Jobflick executor. The repository is independent; [the legacy Script-Monkey extension](https://github.com/sguzman/script-monkey/tree/main/extensions/jobflick-bridge) is reference material, not the implementation baseline.
 
-**Status:** **80% verified (51/63 atomic tasks)**. Disposable headless Firefox Developer Edition validates and queues through the actual Jobflick daemon, executes one hardcoded harmless Fish fixture, and displays successful terminal status. Firefox Run/rerender, native transport, explicit execution tracking and manual recovery have passed their isolated acceptance gates. Authenticated ChatGPT attachment, guarded Send, live privileged-popup integration and release signing remain unverified. **Safety:** test first in a dedicated Firefox Developer Edition QA profile with harmless jobs. A browser profile does **not** sandbox commands run by Jobflick.
+**Status:** **80% verified (51/63 atomic tasks)**. Disposable headless Firefox Developer Edition validates and queues through the actual Jobflick daemon, executes one hardcoded harmless Fish fixture, and displays successful terminal status. Firefox Run/rerender, native transport, explicit execution tracking and manual recovery have passed their isolated acceptance gates. Authenticated ChatGPT attachment, guarded Send, authenticated privileged-popup integration and release signing remain unverified. **Safety:** test first in a dedicated Firefox Developer Edition QA profile with harmless jobs. A browser profile does **not** sandbox commands run by Jobflick.
 
 ## Intended flow
 
@@ -69,7 +69,7 @@ Finished jobs whose original tab still matches its opaque session token and **ex
 
 The full **synthetic Firefox Developer Edition → actual Jobflick native-host → durable daemon → harmless Fish execution → finished-status UI** path passes in CI. The runner compiles a pinned upstream Jobflick revision and operates on private temporary XDG paths with a separate Gecko test ID. The exact executed command is a hardcoded `printf`, and no authenticated ChatGPT session is used. A separate no-execution native fixture continues to verify that the browser does not automatically fetch reports or send messages.
 
-The **Firefox popup itself** remains covered by behavioral tests because ordinary WebDriver refuses privileged `moz-extension://` browsing contexts. Uploading a report attachment, preserving a real ChatGPT draft, and automatic Send are still unavailable and must pass authenticated FDE acceptance before activation.
+The **actual Firefox `moz-extension://` toolbar popup** now has disposable Developer Edition acceptance for inbox search, Native Messaging report retrieval, exact local File download and bridge-only Forget. This does not prove an authenticated ChatGPT attachment or automatic Send, which remain disabled.
 
 ## 🧭 Conversation navigation and responsive status
 
@@ -170,3 +170,14 @@ report retrieval, an exact local File and bridge-only Forget. The CI-only
 popup gestures are programmatic; separate disposable Firefox tests cover
 real keyboard download gestures. **Authenticated ChatGPT attachment and
 Send remain unverified and disabled.**
+
+## 🚧 Explicit uncertain delivery state (not automatic Send)
+
+A saved finished record with `delivery_uncertain` is displayed distinctly
+from `report_pending_manual_delivery` and `manual_only`. It warns against
+automatic retries while keeping Save report available. Native terminal-state
+reconciliation preserves uncertainty rather than reverting it to pending;
+unknown/untrusted persisted delivery labels never become a claim of a verified
+ChatGPT Send. The current production path cannot create an automatic upload
+or Send attempt, so this supports future outcome reconciliation rather than
+claiming an already completed delivery.

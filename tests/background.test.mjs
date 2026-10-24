@@ -2286,3 +2286,41 @@ test("supplied malformed show response identity cannot escape as a report",async
     assert.equal(app.requests.length,1);
   }
 });
+
+test("terminal native reconciliation preserves uncertain delivery and never claims Send", async () => {
+  const id = "job_12345678";
+  const record = {
+    id, recordVersion: 1, state: "running", name: "Previously attempted",
+    origin: "tab-qa", tabId: 11, submittedAt: 1,
+    conversation: "https://chatgpt.com/c/testing-1234",
+    orphaned: false, deliveryState: "delivery_uncertain"
+  };
+  const app = boot(request => {
+    if (request.action === "inspect")
+      return { ok: true, job: { id, state: "succeeded", origin_tab_id: "tab-qa" } };
+    throw Error("No execution or delivery action allowed");
+  }, {
+    storage: { jobflick_bridge_jobs_v1: { [id]: record } },
+    session: { jobflick_origin_11: "tab-qa" }
+  });
+  await app.listeners.message({ type: "jobflick:refresh" }, app.popupSender);
+  const [after] = (await app.listeners.message({
+    type: "jobflick:inbox"
+  }, app.popupSender)).jobs;
+  assert.equal(after.state, "succeeded");
+  assert.equal(after.deliveryState, "delivery_uncertain");
+  assert.equal(app.storage.jobflick_bridge_jobs_v1[id].deliveryState, "delivery_uncertain");
+  assert.deepEqual(app.requests.map(request => request.action), ["inspect"]);
+});
+
+test("unknown saved delivery claims fail closed in popup projection", async () => {
+  const id = "job_12345678";
+  const app = boot(null, { storage: { jobflick_bridge_jobs_v1: {
+    [id]: { id, recordVersion: 1, state: "succeeded",
+      submittedAt: 1, orphaned: false, deliveryState: "delivery_verified",
+      conversation: "https://chatgpt.com/c/testing-1234" }
+  } } });
+  const result = await app.listeners.message({ type: "jobflick:inbox" }, app.popupSender);
+  assert.equal(result.jobs[0].deliveryState, "report_pending_manual_delivery",
+    "Unrecognized persisted status must not claim confirmed ChatGPT delivery");
+});

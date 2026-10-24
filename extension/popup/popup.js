@@ -60,7 +60,10 @@ function renderItem(job) {
   if (job.integrityIssue) {
     section.append(element("div", "meta", "Native identity mismatch. Automatic status checks and delivery are disabled for this record; inspect Jobflick directly."));
   }
-  if (job.deliveryState === "manual_only" && FINISHED.has(job.state)) {
+  if (job.deliveryState === "delivery_uncertain" && FINISHED.has(job.state)) {
+    section.append(element("div", "meta",
+      "Delivery outcome unconfirmed. No automatic retry; Save report remains available for manual recovery."));
+  } else if (job.deliveryState === "manual_only" && FINISHED.has(job.state)) {
     section.append(element("div", "meta", "Manual result retrieval only: original tab identity unavailable"));
   } else if (job.deliveryState === "report_pending_manual_delivery" && FINISHED.has(job.state)) {
     section.append(element("div", "meta", "Finished; use Save report for manual delivery"));

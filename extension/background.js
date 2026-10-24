@@ -11,6 +11,17 @@ const FAST_RECHECK_DELAY_MS = 1200;
 const FAST_RECHECK_BATCH = 4;
 const MAX_FAST_RECHECK_JOBS = 32;
 const FINISHED = new Set(["succeeded", "failed", "cancelled", "timed_out", "interrupted"]);
+// A stored uncertain *delivery* outcome is distinct from a terminal job that
+// merely awaits manual report export. Production has no automatic Send today.
+function displayDeliveryState(record) {
+  if (record.orphaned || record.integrityIssue ||
+      record.deliveryState === "manual_only") return "manual_only";
+  if (FINISHED.has(record.state) && record.deliveryState === "delivery_uncertain")
+    return "delivery_uncertain";
+  return FINISHED.has(record.state) ?
+    "report_pending_manual_delivery" : "awaiting_completion";
+}
+
 const SITES = new Set(["chatgpt.com", "chat.openai.com"]);
 
 let serializedWrite = Promise.resolve();
@@ -287,7 +298,8 @@ async function checkJobs(onlyId = null) {
             if (!sameIdentity(id, jobs[id], recordIdentity(record)) ||
                 jobs[id].integrityIssue) return;
             jobs[id].state = state;
-            if (FINISHED.has(state) && !jobs[id].orphaned) {
+            if (FINISHED.has(state) && !jobs[id].orphaned &&
+                !["manual_only", "delivery_uncertain"].includes(jobs[id].deliveryState)) {
               jobs[id].deliveryState = "report_pending_manual_delivery";
             }
             jobs[id].name = name;
@@ -492,10 +504,7 @@ async function onPopupMessage(message, sender) {
           cancelRequested: !!item.cancelRequestedAt,
           integrityIssue: typeof item.integrityIssue === "string" ?
             item.integrityIssue : "",
-          deliveryState: item.deliveryState ||
-            (item.orphaned ? "manual_only" :
-              FINISHED.has(item.state) ? "report_pending_manual_delivery" :
-                "awaiting_completion")
+          deliveryState: displayDeliveryState(item)
         })).sort((a, b) =>
           (b.submittedAt - a.submittedAt) || b.id.localeCompare(a.id));
       const page = items.slice(offset, offset + limit);
