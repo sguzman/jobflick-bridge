@@ -89,3 +89,23 @@ authenticated Firefox Developer Edition QA are still necessary.
 ## Synthetic draft-preservation acceptance
 
 Disposable real Firefox now tests the production read-only probe against an occupied synthetic contenteditable draft and a preselected `File`. Both remain unchanged; the background receives only booleans, and the probe also recognizes an empty composer after a deliberate QA reset. Because no production upload is enabled, this is a negative-test building block rather than completion of the authenticated preserve-draft and Send gates.
+
+## Inert delivery proposal state machine (not a production Send feature)
+
+`extension/delivery-policy.js` offers a side-effect-free `propose` transition
+function with negative tests. It requires per-job original tab/token/route and
+navigation-epoch matching, a single empty composer, absence of existing files,
+a separately confirmed **site** attachment receipt for the exact report and
+composer, and an independent per-job Send opt-in. It never interprets a
+FileList handoff as site acknowledgment. Send is only proposed after an
+`attachment_confirmed` state; a duplicate request, lost origin, restart, or
+unconfirmed outcome is blocked and transitions toward manual or uncertain
+recovery.
+
+The function only **proposes** a next state. A future controller must atomically
+persist its `attachment_preparing` and `send_requested` reservations and
+recheck live site authorization before carrying out any page action. This
+script is not loaded by production and has no network, DOM, Native Messaging,
+or Send side effects. Its tests are necessary negative acceptance evidence,
+not proof of a real ChatGPT site receipt or delivery. Production remains
+manual-export-only.
